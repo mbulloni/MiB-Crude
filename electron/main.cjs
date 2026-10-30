@@ -21,6 +21,7 @@ const preview = require('./preview.cjs');
 const deploy = require('./deploy.cjs');
 const git = require('./git.cjs');
 const team = require('./team.cjs');
+const updates = require('./updates.cjs');
 
 let win = null;
 let current = null; // { dir, remote?: {url, project} }
@@ -279,6 +280,9 @@ handle('ai:event', (proj, tableName, event, def, currentCode, request) => AI.wri
   apiKey: aiKey(), proj, table: proj.tables.find((t) => t.name === tableName) || null, event, def, current: currentCode, request,
   lint: (code) => preview.lintSnippet(code, def.args),
 }));
+handle('update:check', () => updates.check());
+handle('update:install', () => updates.install((p) => win && win.webContents.send('update:progress', p)));
+handle('update:restart', () => updates.restart());
 handle('php:lintEvent', (code, args) => preview.lintSnippet(code, args));
 handle('preview:start', (proj) => preview.start({ ...proj, dir: need().dir }, P.outputDir({ ...proj, dir: need().dir })));
 handle('preview:stop', () => preview.stopAll());

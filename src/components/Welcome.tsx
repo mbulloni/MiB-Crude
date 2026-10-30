@@ -3,6 +3,7 @@ import { call } from '../api';
 import { openProject, run, toast } from '../store';
 import type { Project } from '../types';
 import { Btn, I, Modal, Row, Text } from './ui';
+import { checkUpdates } from './Updates';
 
 export default function Welcome() {
   const [info, setInfo] = useState<any>(null);
@@ -50,7 +51,7 @@ export default function Welcome() {
   return (
     <div className="welcome">
       <div className="welcome-card">
-        <div className="brand"><img src="./icon.png" alt="" /><div><h1>MiB-Crude</h1><p>Generatore visuale di applicazioni web PHP · multisviluppatore · v{__APP_VERSION__}</p></div></div>
+        <div className="brand"><img src="./icon.png" alt="" /><div><h1>MiB-Crude</h1><p>Generatore visuale di applicazioni web PHP · multisviluppatore · v{__APP_VERSION__} · <a onClick={() => checkUpdates(false)}>controlla aggiornamenti</a></p></div></div>
         <div className="welcome-actions">
           <button className="big-action" onClick={() => setDlg('new')}><I n="plus-square" /><b>Nuovo progetto</b><span>Parti da un database esistente</span></button>
           <button className="big-action" onClick={() => open()}><I n="folder2-open" /><b>Apri progetto</b><span>Cartella con mibcrude.json</span></button>

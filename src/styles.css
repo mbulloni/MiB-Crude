@@ -248,3 +248,7 @@ progress { width: 100%; }
 .tpl-card { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2, transparent); color: inherit; cursor: pointer; }
 .tpl-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
 .tpl-card small { opacity: .75; }
+.update-banner { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--accent-soft); border-bottom: 1px solid var(--line); }
+.release-notes { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; margin: 6px 0; }
+.release-notes p { margin: 4px 0; } .release-notes .rn-h { display: block; margin-top: 6px; }
+.alert { padding: 8px 12px; border-radius: 6px; margin: 6px 0; } .alert.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); } .alert.err { background: color-mix(in srgb, var(--err) 15%, transparent); }

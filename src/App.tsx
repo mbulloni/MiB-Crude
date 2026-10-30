@@ -1,3 +1,4 @@
+import { checkUpdates, UpdateBanner, UpdateDialog } from './components/Updates';
 import { useEffect } from 'react';
 import { call, mc } from './api';
 import { reloadFromDisk, run, save, toast, useStore } from './store';
@@ -98,6 +99,7 @@ export default function App() {
   const remote = useStore((s) => s.remoteChanged);
   const navKind = useStore((s) => s.nav.kind);
   useTeamLocks();
+  useEffect(() => { const t = setTimeout(() => checkUpdates(true), 4000); return () => clearTimeout(t); }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -114,7 +116,7 @@ export default function App() {
 
   useEffect(() => { document.title = proj ? `${proj.project.name}${dirty ? ' •' : ''} — MiB-Crude` : 'MiB-Crude'; }, [proj?.project.name, dirty]);
 
-  if (!proj) return <><Welcome />{busy && <div className="busy"><span className="spinner" /> {busy}</div>}<Toasts toasts={toasts} /></>;
+  if (!proj) return <><UpdateBanner /><Welcome /><UpdateDialog />{busy && <div className="busy"><span className="spinner" /> {busy}</div>}<Toasts toasts={toasts} /></>;
   const close = async () => {
     if (dirty && !confirm('Chiudere senza salvare le modifiche?')) return;
     await call('project:close');
@@ -133,8 +135,10 @@ export default function App() {
         {team.connected
           ? <span className="team-pill" title={team.presence.map((p) => p.user + (p.focus ? ` (${p.focus})` : '')).join('\n')}><I n="people-fill" /> {team.project} · {team.presence.length} online</span>
           : null}
+        <Btn icon="arrow-up-circle" kind="ghost" onClick={() => checkUpdates(false)} title={`MiB-Crude ${__APP_VERSION__} · controlla aggiornamenti`} />
         <Btn icon="x-lg" kind="ghost" onClick={close} title="Chiudi progetto" />
       </header>
+      <UpdateBanner /><UpdateDialog />
       {remote.length > 0 && <div className="banner warn"><I n="cloud-arrow-down" /> Modifiche ricevute dal team ({remote.slice(0, 4).join(', ')}{remote.length > 4 ? '…' : ''}).
         {dirty ? ' Hai modifiche non salvate: salva prima, poi ricarica.' : ''} <Btn small icon="arrow-clockwise" onClick={() => run('Ricarica…', reloadFromDisk)}>Ricarica</Btn></div>}
       <div className="body">
