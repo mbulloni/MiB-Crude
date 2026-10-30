@@ -12,6 +12,7 @@
     <a class="<?= h($mcNavClass) ?> dropdown-toggle" href="#" data-bs-toggle="dropdown"><i class="bi bi-person-circle"></i> <?= h($u['fullname'] ?: $u['username']) ?></a>
     <ul class="dropdown-menu dropdown-menu-end">
       <?php if ($app->security->isManaged() && !empty($u['id'])): ?><li><a class="dropdown-item" href="<?= h($app->url('profile')) ?>"><i class="bi bi-key me-2"></i><?= h(t('profile.title')) ?></a></li><?php endif ?>
+      <?php if (\MiB\Builder::enabled($app)): ?><li><a class="dropdown-item" href="<?= h($app->url('builder')) ?>"><i class="bi bi-magic me-2"></i><?= h(t('builder.title')) ?></a></li><?php endif ?>
       <?php if ($app->security->isAdmin() && $app->security->enabled()): ?><li><a class="dropdown-item" href="<?= h($app->url('admin')) ?>"><i class="bi bi-shield-lock me-2"></i><?= h(t('admin.title')) ?></a></li><?php endif ?>
       <li><hr class="dropdown-divider"></li>
       <li><a class="dropdown-item" href="<?= h($app->url('logout')) ?>"><i class="bi bi-box-arrow-right me-2"></i><?= h(t('login.logout')) ?></a></li>

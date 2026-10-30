@@ -4,7 +4,7 @@ namespace MiB;
 /** System tables (users, groups, rights, audit, locks) created on first run in the main database. */
 class Schema
 {
-    const VERSION = 1;
+    const VERSION = 2;
 
     public static function prefix()
     {
@@ -27,7 +27,7 @@ class Schema
     {
         $c = App::$i->config;
         $s = $c['security'];
-        return ($s['enabled'] && $s['mode'] === 'database') || !empty($c['settings']['audit']) || !empty($c['settings']['recordLocking'])
+        return ($s['enabled'] && $s['mode'] === 'database') || !empty($c['settings']['audit']) || !empty($c['settings']['recordLocking']) || !empty($c['settings']['webBuilder']['enabled'])
             || (!empty($s['dynamicPermissions']) && $s['enabled']);
     }
 
@@ -70,6 +70,8 @@ class Schema
             'rights' => 'CREATE TABLE ' . $q('rights') . " ({$c('group_id')} {$vc(50)} NOT NULL, {$c('table_name')} {$vc(150)} NOT NULL, {$c('rights')} {$vc(20)}, PRIMARY KEY ({$c('group_id')}, {$c('table_name')}))$engine",
             'audit' => 'CREATE TABLE ' . $q('audit') . " ({$c('id')} $id, {$c('ts')} $ts, {$c('username')} {$vc(150)}, {$c('ip')} {$vc(64)}, {$c('table_name')} {$vc(150)}, "
                 . "{$c('action')} {$vc(20)}, {$c('keys_json')} {$vc(500)}, {$c('old_json')} $text, {$c('new_json')} $text)$engine",
+            'reports' => 'CREATE TABLE ' . $q('reports') . " ({$c('id')} $id, {$c('owner')} {$vc(150)}, {$c('kind')} {$vc(10)}, {$c('title')} {$vc(200)}, {$c('table_name')} {$vc(150)}, "
+                . "{$c('def')} $text, {$c('shared')} $int DEFAULT 0, {$c('created_at')} $ts)$engine",
             'locks' => 'CREATE TABLE ' . $q('locks') . " ({$c('table_name')} {$vc(150)} NOT NULL, {$c('keys_json')} {$vc(255)} NOT NULL, {$c('username')} {$vc(150)}, {$c('ts')} $ts, "
                 . "PRIMARY KEY ({$c('table_name')}, {$c('keys_json')}))$engine",
         ];

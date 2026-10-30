@@ -15,8 +15,10 @@ class Reports
         $this->app = $app;
     }
 
+    /** Definition from the project, or from mc_reports for user-built items ("u:<id>"). */
     private function def($kind, $name)
     {
+        if (strpos($name, 'u:') === 0) return Builder::load(substr($name, 2), $kind === 'reports' ? 'report' : 'chart');
         $all = isset($this->app->config[$kind]) ? $this->app->config[$kind] : [];
         if (!isset($all[$name])) throw new HttpError(t('error.notfound'), 404);
         $this->app->security->check(substr($kind, 0, -1) . ':' . $name, 'S');

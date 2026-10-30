@@ -99,6 +99,7 @@ test.before(async () => {
   proj.security.permissions = { users: { orders: 'SV', customers: 'SVAE' } };
   proj.project.settings.audit = true;
   proj.project.settings.api = { enabled: true };
+  proj.project.settings.webBuilder = { enabled: true };
   proj.reports.push({ name: 'sales', title: { it: 'Vendite', en: 'Sales' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'customer_id', 'total'], showDetails: true });
   proj.charts.push({ name: 'bystatus', title: { it: 'Per stato' }, table: 'orders', type: 'bar', labelField: 'status', series: [{ field: 'total', fn: 'sum' }] });
   proj.dashboards.push({ name: 'main', title: { it: 'Cruscotto' }, items: [{ type: 'count', table: 'orders', width: 4 }, { type: 'chart', ref: 'bystatus', width: 8 }, { type: 'report', ref: 'sales', width: 12 }] });
@@ -225,6 +226,19 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.strictEqual(chart.labels.length, 3);
   r = await c.req('?p=dashboard&d=main');
   assert.strictEqual(r.status, 200);
+
+  // Web report builder: a user-built report and chart.
+  r = await c.req('?p=builder&id=new&kind=report&t=orders');
+  r = await c.post('?p=builder', { _csrf: c.csrf(r.text), id: '0', kind: 'report', title: 'Per stato (utente)', table: 'orders', 'g[0][field]': 'status', 'g[0][interval]': '', 'a[0][fn]': 'sum', 'a[0][field]': 'total', 'columns[]': 'order_date', showDetails: '1' });
+  assert.strictEqual(r.status, 302, r.text.slice(0, 300));
+  r = await c.req(r.location.replace(/^.*index\.php/, ''));
+  assert.match(r.text, /Totale generale|Grand total/);
+  assert.match(r.text, /139,39/);
+  r = await c.req('?p=builder&id=new&kind=chart&t=orders');
+  r = await c.post('?p=builder', { _csrf: c.csrf(r.text), id: '0', kind: 'chart', title: 'Grafico utente', table: 'orders', type: 'pie', labelField: 'status', labelInterval: '', 's[0][fn]': 'count', 's[0][field]': 'id' });
+  const cid = (r.location.match(/c=u%3A(\d+)/) || [])[1];
+  r = await c.req(`?p=chartdata&c=u:${cid}`);
+  assert.strictEqual(JSON.parse(r.text).type, 'pie');
 
   // Audit trail recorded the edit.
   r = await c.req('?p=admin&s=audit');

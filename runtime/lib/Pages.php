@@ -752,6 +752,12 @@ class Pages
         $this->app->render('welcome', ['landing' => $l, 'sec' => $this->app->security], 'layout_welcome');
     }
 
+    /** Web report & chart builder (Project settings -> webBuilder). */
+    public function page_builder()
+    {
+        Builder::page($this->app);
+    }
+
     public function page_ping()
     {
         $this->app->json(['ok' => true, 'user' => userName()]);
