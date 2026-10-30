@@ -58,7 +58,8 @@ const DEPRECATED = [
   [/\bmhash\w*\s*\(/, 'mhash deprecata in PHP 8.1: usa hash()'],
   [/`[^`]*`/, 'operatore backtick deprecato in PHP 8.5: usa shell_exec()'],
   [/\bcase\s+[^:;{]+;/, '"case X;" con punto e virgola deprecato in PHP 8.5: usa "case X:"'],
-  [/\bimplode\s*\(\s*\$\w+\s*,\s*['"]/, 'possibile implode($array, $separatore): ordine non più ammesso in PHP 8.0, usa implode($separatore, $array)'],
+  [/(?<![\w$])(?:\$\w+|['"][^'"]*['"])\s*[-+*/%]\s*(?:\$\w+|\d+)|(?<![\w$])\$\w+\s*[-+*/%]=/, 'aritmetica: in PHP 8 un valore stringa non numerico (anche vuoto) causa TypeError; verificare i campi letti dal DB (usa (float)$x)'],
+  [/(?<![=!<>])[!=]=\s*0(?![\d.x])|(?<![\w.])0\s*[!=]=(?!=)/, 'confronto con 0: in PHP 8 "" == 0 e "abc" == 0 sono false (in 7.4 erano true), attenzione ai campi vuoti'],
 ];
 
 function lineOf(text, idx) { return text.slice(0, idx).split('\n').length; }
@@ -93,6 +94,10 @@ function upgrade(code) {
   apply(/\(\s*boolean\s*\)/, '(bool)', 'cast (boolean) → (bool)');
   apply(/\(\s*binary\s*\)/, '(string)', 'cast (binary) → (string)');
   apply(/\bis_real\s*\(/, 'is_float(', 'is_real() → is_float()');
+  // Functions that throw a TypeError in PHP 8 on null/empty/non-numeric values (from the database):
+  // routed to mc74_* helpers of the runtime that keep the PHP 7.4 result.
+  apply(/(^|[^\w$>:\\])(?<!function\s+)(number_format|round|floor|ceil|abs|count|sizeof|implode|join|in_array|array_merge|array_key_exists|array_sum|array_search|array_keys|array_slice)(\s*\()/,
+    '$1mc74_$2$3', 'chiamate rese tolleranti come in PHP 7.4 (mc74_*: valori vuoti/NULL non bloccano la pagina)');
   // "${var}" interpolation deprecated in 8.2 -> "{$var}" (masked strings keep the ${ marker).
   {
     const m = mask(src);
@@ -108,7 +113,11 @@ function upgrade(code) {
   for (const [re, msg] of [...REMOVED.map((x) => [...x, 'error']), ...DEPRECATED.map((x) => [...x, 'warning'])]) {
     const r = new RegExp(re.source, 'g');
     let x;
-    while ((x = r.exec(m))) { problems.push({ level: re === undefined ? 'warning' : (REMOVED.some((y) => y[0] === re) ? 'error' : 'warning'), line: lineOf(m, x.index), msg }); if (!x[0].length) r.lastIndex++; }
+    // One entry per kind of problem and code block: first line + number of occurrences.
+    let first = null;
+    let n = 0;
+    while ((x = r.exec(m))) { if (first === null) first = x.index; n++; if (!x[0].length) r.lastIndex++; }
+    if (n) problems.push({ level: REMOVED.some((y) => y[0] === re) ? 'error' : 'warning', line: lineOf(m, first), msg: n > 1 ? `${msg} (${n} punti)` : msg });
   }
   return { code: src, fixes, problems };
 }

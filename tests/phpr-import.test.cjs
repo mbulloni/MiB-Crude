@@ -36,3 +36,15 @@ test('real phpr 10.3 project imports and generates valid PHP', { skip: !(REAL &&
   assert.deepStrictEqual(G.lint(res.outDir), []);
   fs.rmSync(path.dirname(dir), { recursive: true, force: true }); // the import holds real DB passwords
 });
+
+test('events of tables with spaces survive save/load', () => {
+  const P = require('../core/project.cjs');
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mc-ev-')), 'p');
+  const proj = P.createProject(dir, 'x');
+  proj.tables.push({ name: 'Ordini clienti', connection: 'main', source: { type: 'table', table: 'o' }, caption: {}, keys: [], fields: [], pages: {}, details: [] });
+  proj.events['Ordini clienti'] = { BeforeAdd: '<?php\nreturn true;\n', JS_OnLoad_add: 'var a = 1;\n' };
+  P.saveProject(proj);
+  const back = P.loadProject(dir);
+  assert.deepStrictEqual(Object.keys(back.events['Ordini clienti']).sort(), ['BeforeAdd', 'JS_OnLoad_add']);
+  fs.rmSync(path.dirname(dir), { recursive: true, force: true });
+});

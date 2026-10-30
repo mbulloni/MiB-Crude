@@ -176,8 +176,24 @@ class App
         $custom = $this->root . '/custom/views/' . $view . '.php';
         include is_file($custom) ? $custom : $this->root . '/runtime/views/' . $view . '.php';
         $content = ob_get_clean();
+        // PHP snippets placed on the page (imported from phpr or defined in the designer).
+        if (isset($vars['t']) && $vars['t'] instanceof Table && !empty($vars['t']->def['snippets'])) {
+            $content = $this->snippets($vars['t'], 'top') . $content . $this->snippets($vars['t'], 'bottom');
+        }
         if ($layout) include $this->root . '/runtime/views/' . $layout . '.php';
         else echo $content;
+    }
+
+    private function snippets(Table $t, $position)
+    {
+        $html = '';
+        foreach ($t->def['snippets'] as $s) {
+            if ($s['position'] !== $position || !in_array($this->page, $s['pages'], true)) continue;
+            ob_start();
+            $this->event($t->name, $s['event'], [$this->page]);
+            $html .= '<div class="mc-snippet mc-snippet-' . h($position) . '">' . ob_get_clean() . '</div>';
+        }
+        return $html;
     }
 
     public function json($data, $code = 200)

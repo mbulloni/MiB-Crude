@@ -38,6 +38,10 @@ class Pages
         foreach ($m->details() as $d) if ($d['table'] === $t->name) $link = $d;
         if (!$link) return null;
         $this->app->security->check($m->name, 'V');
+        // phpr URLs pass master keys by position (masterkey1, masterkey2...).
+        if (empty($_GET['mk']) && !empty($_GET['mkv']) && is_array($_GET['mkv'])) {
+            foreach ($m->def['keys'] as $i => $k) if (isset($_GET['mkv'][$i])) $_GET['mk'][$k] = (string)$_GET['mkv'][$i];
+        }
         $mkeys = $m->keysFromRequest(['k' => isset($_GET['mk']) ? $_GET['mk'] : []]);
         $mrow = $m->fetchOne($mkeys);
         if (!$mrow) throw new HttpError(t('error.notfound'), 404);

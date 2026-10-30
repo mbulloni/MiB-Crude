@@ -57,8 +57,11 @@ function parseXml(file) {
 // Newest PAGES*.sqlite of the project (phpr 10 keeps page layouts there).
 async function readPages(phprFile) {
   const dir = path.dirname(phprFile);
-  const cands = fs.readdirSync(dir).filter((f) => /^PAGES.*\.sqlite3?$/i.test(f) || f === path.basename(phprFile, '.phpr') + '.pages.sqlite')
-    .map((f) => path.join(dir, f)).sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+  // phpr 10 keeps the live store in subversion/PAGES.sqlite; PAGES_<date>.sqlite are backups.
+  const live = path.join(dir, 'subversion', 'PAGES.sqlite');
+  const backups = fs.readdirSync(dir).filter((f) => /^PAGES.*\.sqlite3?$/i.test(f)).map((f) => path.join(dir, f))
+    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+  const cands = [...(fs.existsSync(live) ? [live] : []), ...backups];
   if (!cands.length) return null;
   const initSqlJs = require('sql.js');
   const SQL = await initSqlJs();
@@ -76,6 +79,37 @@ async function readPages(phprFile) {
     st.free();
   } finally { db.close(); }
   return { file: cands[0], tables: out };
+}
+
+// Latest source of every event file in subversion/EVENTS.sqlite (page snippets, button events).
+async function readEventStore(phprFile) {
+  const f = path.join(path.dirname(phprFile), 'subversion', 'EVENTS.sqlite');
+  if (!fs.existsSync(f)) return {};
+  const initSqlJs = require('sql.js');
+  const SQL = await initSqlJs();
+  const db = new SQL.Database(fs.readFileSync(f));
+  const out = {};
+  try {
+    const st = db.prepare(`SELECT f.NAME AS name, r.SOURCE AS src FROM FILES f JOIN REVISIONDATA r ON r.FILEID = f.ID
+      WHERE r.NUMBER = (SELECT MAX(NUMBER) FROM REVISIONDATA x WHERE x.FILEID = f.ID)`);
+    while (st.step()) { const r = st.getAsObject(); out[r.name] = String(r.src || ''); }
+    st.free();
+  } finally { db.close(); }
+  return out;
+}
+
+// Page snippets: [{ eventId, position: 'top' | 'bottom' }]
+function pageSnippets(info) {
+  const out = [];
+  for (const [formName, form] of Object.entries(info.forms || {})) {
+    for (const cell of Object.values(form.cells || {})) {
+      for (const id of cell.items || []) {
+        const it = (info.items || {})[id];
+        if (it && it.type === 'snippet' && it.eventId) out.push({ eventId: it.eventId, position: /footer|below|bottom/.test(formName) ? 'bottom' : 'top' });
+      }
+    }
+  }
+  return out;
 }
 
 // Fields placed on a page: walk the cells of every form, then nested item lists.
@@ -125,8 +159,8 @@ function mapEvent(name, table) {
     case 'EVENT_AFTERSUCCESSFULREGISTRATION': return { to: 'AfterRegister', use: '$values', setup: '$pageObject = \\MiB\\Compat::page(\'register\', \'\');' };
     case 'EVENT_AFTERLOGOUT': return { to: 'AfterLogout', use: '$username', setup: '' };
   }
-  if ((m = name.match(/^EVENT_BEFOREQUERY_(LIST|PRINT|EXPORT|CHART|REPORT)$/))) {
-    const pages = m[1] === 'LIST' ? ['list', 'filter', 'api'] : [pageOf[m[1]]];
+  if ((m = name.match(/^EVENT_BEFOREQUERY_(LIST|PRINT|EXPORT|CHART|REPORT|EDIT|VIEW)$/))) {
+    const pages = m[1] === 'LIST' ? ['list', 'dt', 'filter', 'api'] : [pageOf[m[1]]];
     return { to: 'BeforeSelect', use: '&$where, &$orderBy, $page', setup: `$strSQL = ''; $strWhereClause = &$where; $strOrderBy = &$orderBy; ${PO(table)}`, pages };
   }
   if ((m = name.match(/^EVENT_PROCESSVALUES_(ADD|EDIT|VIEW)$/))) return { to: 'ProcessValues', use: '&$values, $page', setup: PO(table), pages: [pageOf[m[1]]] };
@@ -264,7 +298,8 @@ function convertField(fo, ctx) {
 async function importPhpr(phprFile, targetDir, opts = {}) {
   const x = parseXml(phprFile);
   const pagesStore = await readPages(phprFile).catch(() => null);
-  const report = { php8: [], tables: 0, sqlViews: 0, charts: 0, events: 0, eventsSkipped: [], warnings: [], pagesFile: pagesStore ? pagesStore.file : null, connections: [] };
+  const eventStore = await readEventStore(phprFile).catch(() => ({}));
+  const report = { php8: [], snippets: 0, jsEvents: 0, tables: 0, sqlViews: 0, charts: 0, events: 0, eventsSkipped: [], warnings: [], pagesFile: pagesStore ? pagesStore.file : null, connections: [] };
   const name = opts.name || path.basename(phprFile, '.phpr').replace(/[^A-Za-z0-9_.-]/g, '_');
   const proj = P.createProject(targetDir, name);
   const languages = [...new Set(arr(x.m_arrLanguages && x.m_arrLanguages.v).map((l) => LANGS[str(l)] || 'en'))];
@@ -274,6 +309,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   proj.project.defaultLanguage = defLang;
   proj.project.title = Object.fromEntries(proj.project.languages.map((l) => [l, name]));
   proj.project.settings.pageSize = 20;
+  proj.project.settings.classicUrls = true;
   proj.project.importedFrom = { app: 'phpr', version: x['@version'] || '', file: path.basename(phprFile), at: new Date().toISOString() };
   const savedFiles = [];
   const keep = (rel, text) => {
@@ -396,6 +432,13 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
       const en = str(ev.m_strName);
       const code = str(ev.m_strEventCode);
       if (!code.trim()) continue;
+      const jsPage = { 'List page': 'list', 'Add page': 'add', 'Edit page': 'edit', 'View page': 'view', 'Search page': 'search', 'Printer-friendly page': 'print', 'Export page': 'export', 'Import page': 'import' }[str(ev.m_strPage)];
+      if (en === 'EVENT_JS_ONLOAD' && jsPage) {
+        // Client code runs on the generated page through runner-compat.js (Runner.getControl, pageObj.on...).
+        (proj.events[tname] ||= {})[`JS_OnLoad_${jsPage}`] = `// phpr: EVENT_JS_ONLOAD (${str(ev.m_strPage)})\n// Variabili: pageObj (anche this), proxy, pageid, inlineRow, inlineObject, row\n${code.replace(/\r\n/g, '\n')}\n`;
+        report.jsEvents++;
+        continue;
+      }
       if (/^EVENT_JS_|^EVENT_CUSTOM|^EVENT_BUTTON|^EVENT_FIELD/.test(en) || !mapEvent(en, tname)) {
         keep(`events/${tname.replace(/[^\w.-]/g, '_')}/${en}.${/^EVENT_JS_/.test(en) ? 'js' : 'php'}`, code);
         report.eventsSkipped.push(`${tname}: ${en}`);
@@ -405,6 +448,26 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
       (evGroup[w.to] ||= []).push(w.text);
       report.events++;
     }
+    // PHP code snippets placed on the pages (live source in subversion/EVENTS.sqlite).
+    const snips = {};
+    for (const pg of pagesOf) {
+      if (pg.disabled) continue;
+      const ours = { list: 'list', add: 'add', edit: 'edit', view: 'view', search: 'search', print: 'print', export: 'export', import: 'import' }[pg.type];
+      if (!ours) continue;
+      for (const sn of pageSnippets(pg.info)) {
+        const code = eventStore[`${sn.eventId}~EVENT_ONSCREEN`];
+        if (code == null) { report.warnings.push(`${tname}: snippet ${sn.eventId} senza codice in EVENTS.sqlite`); continue; }
+        const key = `${sn.eventId}|${sn.position}`;
+        if (!snips[key]) {
+          snips[key] = { event: 'Snippet_' + sn.eventId.replace(/[^A-Za-z0-9_]/g, '_'), position: sn.position, pages: [] };
+          (proj.events[tname] ||= {})[snips[key].event] = `<?php\n// phpr: snippet ${sn.eventId} (codice PHP inserito nella pagina)\n\n$__r = (function () use ($page) {\n    ${PO(tname)}\n${indent(up8(code.replace(/\r\n/g, '\n'), `${tname}: snippet ${sn.eventId}`, report), '    ')}\n})();\nreturn true;\n`;
+          report.snippets++;
+        }
+        if (!snips[key].pages.includes(ours)) snips[key].pages.push(ours);
+      }
+    }
+    if (Object.keys(snips).length) ds.snippets = Object.values(snips);
+    ds.phprShort = str(t.m_strShortTableName) || tname;
     for (const [to, blocks] of Object.entries(evGroup)) {
       (proj.events[tname] ||= {})[to] = `<?php\n// Importato da phpr: le variabili phpr sono ricreate dal runtime MiB-Crude (Compat).\n\n${blocks.join('\n')}\nreturn true;\n`;
     }
@@ -529,13 +592,14 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   P.saveProject(proj);
   const lines = [
     `# Importazione di progetti .phpr`, '', `File: ${phprFile}`, `Archivio pagine: ${report.pagesFile || 'assente'}`, '',
-    `- Tabelle: ${report.tables} (di cui query SQL: ${report.sqlViews})`, `- Grafici: ${report.charts}`, `- Eventi convertiti: ${report.events}`,
+    `- Tabelle: ${report.tables} (di cui query SQL: ${report.sqlViews})`, `- Grafici: ${report.charts}`, `- Eventi convertiti: ${report.events}`, `- Eventi JavaScript (onload) convertiti: ${report.jsEvents}`, `- Snippet PHP nelle pagine: ${report.snippets}`,
     `- Eventi non convertiti (salvati in import-phpr/events/): ${report.eventsSkipped.length}`, '',
     '## Avvisi', ...report.warnings.map((w) => `- ${w}`), '',
     '## Compatibilità PHP 8', `Correzioni automatiche in ${report.php8.filter((x) => x.fixes.length).length} blocchi di codice, problemi da rivedere in ${report.php8.filter((x) => x.problems.length).length}.`, '',
-    ...report.php8.flatMap((x) => [`### ${x.where}`, ...x.fixes.map((f) => `- corretto: ${f}`), ...x.problems.map((p) => `- ${p.level === 'error' ? 'ERRORE' : 'deprecato'} (riga ${p.line}): ${p.msg}`), '']), '## Eventi non convertiti', ...report.eventsSkipped.map((e) => `- ${e}`), '',
+    ...report.php8.flatMap((x) => [`### ${x.where}`, ...x.fixes.map((f) => `- corretto: ${f}`), ...x.problems.map((p) => `- ${p.level === 'error' ? 'ERRORE' : 'da verificare'} (riga ${p.line}): ${p.msg}`), '']), '## Eventi non convertiti', ...report.eventsSkipped.map((e) => `- ${e}`), '',
     '## Note', '- Le password dei database sono state spostate in .mibcrude-local/secrets.json (non condiviso).',
-    '- Gli eventi JavaScript (EVENT_JS_*) e i pulsanti personalizzati usano l\'API client di phpr: vanno riscritti.',
+    '- Gli eventi JavaScript "onload" girano con lo strato runner-compat.js (Runner.getControl, pageObj.on, proxy): verificare i plugin jQuery usati.',
+    '- I link in stile phpr (tabella_list.php, _edit.php?editid1=...) funzionano grazie alle pagine di inoltro generate.',
   ];
   fs.mkdirSync(path.join(targetDir, 'import-phpr'), { recursive: true });
   fs.writeFileSync(path.join(targetDir, 'import-phpr', 'REPORT.md'), lines.join('\n') + '\n');

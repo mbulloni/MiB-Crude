@@ -12,7 +12,12 @@ export default function EventEditor({ defs, code, onChange, table, readOnly }: {
   const [marker, setMarker] = useState<{ line: number; message: string } | null>(null);
   const def = defs[cur];
   const has = (n: string) => !!(code[n] && code[n].trim());
-  const lint = () => run('Controllo PHP…', async () => {
+  const lint = () => run('Controllo…', async () => {
+    if (def.lang === 'javascript') {
+      try { new Function('pageObj', 'proxy', 'pageid', 'inlineRow', 'inlineObject', 'row', code[cur] || ''); setMarker(null); toast('Nessun errore di sintassi', 'ok', 1500); }
+      catch (e: any) { setMarker({ line: 1, message: e.message }); toast(e.message, 'err'); }
+      return;
+    }
     const r = await call('php:lintEvent', code[cur] || '', def.args);
     if (r.skipped) toast('PHP non installato: controllo saltato', 'info');
     else if (r.ok) { setMarker(null); toast('Nessun errore di sintassi', 'ok', 1500); }
@@ -23,7 +28,7 @@ export default function EventEditor({ defs, code, onChange, table, readOnly }: {
     <div className="events">
       <div className="ev-list">
         {names.map((n) => <button key={n} className={`ev ${n === cur ? 'on' : ''}`} onClick={() => { setCur(n); setMarker(null); }}>
-          <I n={has(n) ? 'lightning-fill' : 'lightning'} className={has(n) ? 'accent' : 'muted'} /> {n}</button>)}
+          <I n={defs[n].lang === 'javascript' ? 'filetype-js' : has(n) ? 'lightning-fill' : 'lightning'} className={has(n) ? 'accent' : 'muted'} /> {n}</button>)}
       </div>
       <div className="ev-body">
         <div className="ev-head"><code>{cur}({def.args})</code><span className="grow" />
@@ -35,7 +40,7 @@ export default function EventEditor({ defs, code, onChange, table, readOnly }: {
             {!readOnly && <Btn small icon="trash" kind="ghost" onClick={() => { if (confirm(`Eliminare l'evento ${cur}?`)) onChange(cur, null); }} />}</>}
         </div>
         <p className="help">{def.help}</p>
-        {has(cur) ? <CodeEditor key={cur} value={code[cur]} onChange={(v) => onChange(cur, v)} height="calc(100vh - 330px)" readOnly={readOnly} marker={marker} />
+        {has(cur) ? <CodeEditor key={cur} language={def.lang || 'php'} value={code[cur]} onChange={(v) => onChange(cur, v)} height="calc(100vh - 330px)" readOnly={readOnly} marker={marker} />
           : <div className="empty small"><I n="lightning" className="big" /><p>Evento non definito: l'applicazione usa il comportamento standard.</p></div>}
       </div>
     </div>

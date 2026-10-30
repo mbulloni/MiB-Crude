@@ -133,8 +133,8 @@ function readEvents(dir) {
   let groups = [];
   try { groups = fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return out; }
   for (const g of groups.sort()) {
-    for (const f of fs.readdirSync(path.join(dir, g)).filter((x) => x.endsWith('.php')).sort()) {
-      (out[g] ||= {})[f.slice(0, -4)] = fs.readFileSync(path.join(dir, g, f), 'utf8');
+    for (const f of fs.readdirSync(path.join(dir, g)).filter((x) => /\.(php|js)$/.test(x)).sort()) {
+      (out[g] ||= {})[f.replace(/\.(php|js)$/, '')] = fs.readFileSync(path.join(dir, g, f), 'utf8');
     }
   }
   return out;
@@ -177,12 +177,20 @@ function loadProject(dir) {
   try {
     for (const f of fs.readdirSync(path.join(dir, 'lang')).filter((x) => x.endsWith('.json'))) lang[f.slice(0, -5)] = readJson(path.join(dir, 'lang', f), {});
   } catch { /* none */ }
+  const tables = listJson(path.join(dir, 'tables'));
+  // Event folders use safe file names: map them back to the real table names ("Ordini clienti" -> Ordini_clienti/).
+  const rawEvents = readEvents(path.join(dir, 'events'));
+  const events = {};
+  for (const [group, evs] of Object.entries(rawEvents)) {
+    const t = tables.find((x) => x.name === group) || tables.find((x) => safeName(x.name) === group);
+    events[t ? t.name : group] = { ...(events[t ? t.name : group] || {}), ...evs };
+  }
   return {
     dir,
     project,
     connections: listJson(path.join(dir, 'connections')),
-    tables: listJson(path.join(dir, 'tables')),
-    events: readEvents(path.join(dir, 'events')),
+    tables,
+    events,
     menu: readJson(path.join(dir, 'menu.json'), defaultMenu()),
     security,
     lang,
@@ -203,7 +211,8 @@ function serialize(proj) {
   for (const [code, dict] of Object.entries(proj.lang || {})) files[`lang/${safeName(code)}.json`] = stableStringify(dict);
   for (const kind of ['reports', 'charts', 'dashboards']) for (const r of proj[kind] || []) files[`${kind}/${safeName(r.name)}.json`] = stableStringify(r);
   for (const [group, evs] of Object.entries(proj.events || {})) {
-    for (const [name, code] of Object.entries(evs)) if (code != null && code.trim() !== '') files[`events/${safeName(group)}/${safeName(name)}.php`] = code.endsWith('\n') ? code : code + '\n';
+    // JS_* are client-side (JavaScript) events, everything else is PHP.
+    for (const [name, code] of Object.entries(evs)) if (code != null && code.trim() !== '') files[`events/${safeName(group)}/${safeName(name)}.${name.startsWith('JS_') ? 'js' : 'php'}`] = code.endsWith('\n') ? code : code + '\n';
   }
   return files;
 }
@@ -229,7 +238,7 @@ function saveProject(proj) {
   const removed = [];
   for (const d of MANAGED_DIRS) {
     for (const rel of walk(path.join(proj.dir, d)).map((r) => `${d}/${r}`)) {
-      if (!(rel in files) && /\.(json|php)$/.test(rel)) { fs.unlinkSync(path.join(proj.dir, rel)); removed.push(rel); }
+      if (!(rel in files) && /\.(json|php|js)$/.test(rel)) { fs.unlinkSync(path.join(proj.dir, rel)); removed.push(rel); }
     }
   }
   return { changed, removed };

@@ -1,5 +1,5 @@
 // Event catalogue shown in the designer (mirror of core/defaults.cjs TABLE_EVENTS/GLOBAL_EVENTS).
-export interface EventDef { args: string; help: string }
+export interface EventDef { args: string; help: string; lang?: 'javascript' }
 
 export const TABLE_EVENTS: Record<string, EventDef> = {
   BeforeSelect: { args: '&$where, &$orderBy, $page', help: 'Modifica WHERE/ORDER BY prima di leggere i record. $where è una stringa SQL (vuota = nessun filtro).' },
@@ -17,6 +17,10 @@ export const TABLE_EVENTS: Record<string, EventDef> = {
   BeforeProcess: { args: '$page', help: 'All\'inizio di ogni pagina della tabella ($page = list, add, edit, view, search, print, export, import).' },
   BeforeShow: { args: '$page', help: 'Subito prima di mostrare la pagina.' },
   AfterImport: { args: '$result, $page', help: 'Dopo un\'importazione: $result con added, updated, skipped, errors.' },
+  ...Object.fromEntries(['list', 'add', 'edit', 'view', 'search', 'print'].map((p) => [`JS_OnLoad_${p}`, {
+    args: 'pageObj, proxy, pageid', lang: 'javascript' as const,
+    help: `JavaScript eseguito al caricamento della pagina "${p}" (API compatibile phpr: Runner.getControl(pageid, 'campo'), pageObj.on/hideField/showField, proxy).`,
+  }])),
 };
 
 export const GLOBAL_EVENTS: Record<string, EventDef> = {
@@ -29,8 +33,9 @@ export const GLOBAL_EVENTS: Record<string, EventDef> = {
   AfterLogout: { args: '$username', help: 'Dopo il logout.' },
 };
 
-export const template = (name: string, def: EventDef, table?: string) =>
-  `<?php\n// ${name}(${def.args})${table ? ` — tabella ${table}` : ''}\n// ${def.help}\n// Helper: db(), user(), userId(), isAdmin(), sendMail($to, $subject, $body), redirect($url), t($key)\n\nreturn true;\n`;
+export const template = (name: string, def: EventDef, table?: string) => def.lang === 'javascript'
+  ? `// ${name}${table ? ` — tabella ${table}` : ''}\n// ${def.help}\n\nvar ctrl = Runner.getControl(pageid, 'campo');\n`
+  : `<?php\n// ${name}(${def.args})${table ? ` — tabella ${table}` : ''}\n// ${def.help}\n// Helper: db(), user(), userId(), isAdmin(), sendMail($to, $subject, $body), redirect($url), t($key)\n\nreturn true;\n`;
 
 /** Ready-made snippets, like the classic "predefined actions". */
 export const SNIPPETS: { name: string; events: string[]; code: string }[] = [

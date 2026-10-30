@@ -292,6 +292,11 @@ class Table
         $own = $this->app->security->ownership($this->name);
         if ($own) { $where[] = $this->col($own['field']) . ' = ?'; $params[] = userId(); }
         if (!empty($this->def['where'])) $where[] = '(' . $this->def['where'] . ')';
+        // BeforeSelect also restricts single records (edit/view/delete), like the classic BeforeQueryEdit/View.
+        $extra = '';
+        $order = '';
+        $this->app->event($this->name, 'BeforeSelect', [&$extra, &$order, $this->app->page]);
+        if (trim($extra) !== '') $where[] = '(' . $extra . ')';
         return $this->db->row('SELECT ' . $this->selectList($withBlobs) . ' FROM ' . $this->from() . ' WHERE ' . implode(' AND ', $where), $params);
     }
 

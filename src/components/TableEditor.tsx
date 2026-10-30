@@ -108,7 +108,8 @@ export default function TableEditor({ name }: { name: string }) {
           </tbody></table>}
       </Section>}
 
-      {tab === 'events' && <EventEditor defs={TABLE_EVENTS} table={t.name} code={p.events[name] || {}} readOnly={ro}
+      {tab === 'events' && <EventEditor table={t.name}
+        defs={{ ...TABLE_EVENTS, ...Object.fromEntries(Object.keys(p.events[name] || {}).filter((k) => k.startsWith('Snippet_')).map((k) => [k, { args: '$page', help: 'Snippet PHP inserito nella pagina (importato da phpr): stampa HTML sopra o sotto il contenuto.' }])) }} code={p.events[name] || {}} readOnly={ro}
         onChange={(ev, code) => { if (!ro) update((d) => { d.events[name] = { ...(d.events[name] || {}) }; if (code == null) delete d.events[name][ev]; else d.events[name][ev] = code; }); }} />}
 
       {tab === 'api' && <Section title="API REST" help={p.project.settings.api?.enabled ? `Endpoint: index.php?p=api&t=${t.name} — descrizione OpenAPI su index.php?p=api&openapi=1` : 'Attiva prima l\'API REST nelle impostazioni del progetto.'}>

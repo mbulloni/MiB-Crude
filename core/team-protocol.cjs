@@ -15,14 +15,14 @@ function itemOf(rel) {
   if (rel === 'security.json') return 'security';
   if (rel === 'menu.json') return 'menu';
   if (rel === P.PROJECT_FILE) return 'project';
-  if (rel.startsWith('custom/')) return 'custom';
+  if (rel.startsWith('custom/') || rel.startsWith('public/')) return 'custom';
   return 'other';
 }
 
 // Which project paths may travel over the wire (never local/secret/output files).
 function syncable(rel) {
   if (rel.includes('..') || rel.startsWith('/') || rel.startsWith(P.LOCAL_DIR) || rel.startsWith('.git/') || rel.startsWith('output/')) return false;
-  return /^(mibcrude\.json|menu\.json|security\.json|\.gitignore|(connections|tables|lang|reports|charts|dashboards)\/[^/]+\.json|events\/[^/]+\/[^/]+\.php|custom\/.+)$/.test(rel);
+  return /^(mibcrude\.json|menu\.json|security\.json|\.gitignore|(connections|tables|lang|reports|charts|dashboards)\/[^/]+\.json|events\/[^/]+\/[^/]+\.(php|js)|custom\/.+|public\/.+)$/.test(rel);
 }
 
 module.exports = { itemOf, syncable, hash: P.hash };
