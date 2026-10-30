@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { update, useStore } from '../store';
 import type { Chart, Dashboard, DashItem, Report } from '../types';
+import CodeEditor from './CodeEditor';
 import { Btn, Check, Empty, LangText, Num, Row, Section, Select, lbl, slug } from './ui';
 
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
@@ -89,6 +90,11 @@ function ChartEditor({ c, set }: { c: Chart; set: (fn: (x: Chart) => void) => vo
       <Row label="Categorie (asse X)"><span className="inline"><Select value={c.labelField} options={fields} onChange={(v) => set((x) => { x.labelField = v; })} /><Select value={c.labelInterval || ''} options={INTERVALS} onChange={(v) => set((x) => { x.labelInterval = v; })} /></span></Row>
       <Row label="Opzioni"><span className="chips"><Check label="Ordina per valore" value={c.sortByValue} onChange={(v) => set((x) => { x.sortByValue = v; })} /><Check label="Serie impilate" value={c.stacked} onChange={(v) => set((x) => { x.stacked = v; })} /></span></Row>
       <Row label="Mostra solo i primi"><Num value={c.limit} onChange={(v) => set((x) => { x.limit = v || undefined; })} /></Row>
+    </Section>
+    <Section title="Personalizzazione JavaScript" help="Codice eseguito nel browser prima di disegnare il grafico, con l'API AnyChart di phpr (chart.getSeriesAt(0).labels()…, chart.legend()…, chart.yAxis(1)…, anychart.scales.linear()) tradotta su ECharts. Importato dagli eventi JS_ModifyChart."
+      actions={!c.modifyJs ? <Btn small icon="plus-lg" onClick={() => set((x) => { x.modifyJs = '// chart: grafico, anychart: utilità (format.number, scales.linear)\nchart.legend().position("bottom");\n'; })}>Aggiungi codice</Btn>
+        : <Btn small kind="ghost" icon="trash" onClick={() => set((x) => { delete x.modifyJs; })}>Rimuovi</Btn>}>
+      {c.modifyJs !== undefined && <CodeEditor language="javascript" value={c.modifyJs} onChange={(v) => set((x) => { x.modifyJs = v; })} height="220px" />}
     </Section>
     <Section title="Serie (valori)" actions={<Btn small icon="plus-lg" onClick={() => set((x) => { x.series.push({ field: fields[0]?.[0] || '', fn: 'sum' }); })}>Serie</Btn>} help="Senza serie: conteggio dei record per categoria.">
       {c.series.map((s, i) => <div className="inline" key={i}><Select value={s.fn} options={FNS} onChange={(v) => set((x) => { x.series[i].fn = v; })} /> di

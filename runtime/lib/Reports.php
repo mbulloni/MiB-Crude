@@ -165,7 +165,10 @@ class Reports
             $datasets[] = ['label' => !empty($s['label']) ? $this->app->label($s['label']) : t('agg.' . $s['fn']) . ' ' . $t->fieldLabel($s['field']),
                 'data' => isset($values[$i]) ? $values[$i] : [], 'color' => isset($s['color']) ? $s['color'] : ''];
         }
-        $this->app->json(['type' => $def['type'], 'labels' => $labels, 'datasets' => $datasets, 'stacked' => !empty($def['stacked'])]);
+        $out = ['type' => $def['type'], 'labels' => $labels, 'datasets' => $datasets, 'stacked' => !empty($def['stacked'])];
+        // JS_ModifyChart (phpr chart event, AnyChart API) applied in the browser by anychart-compat.js.
+        if (!empty($def['modifyJs'])) $out['js'] = $def['modifyJs'];
+        $this->app->json($out);
     }
 
     public function dashboard($name)

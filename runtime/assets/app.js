@@ -286,12 +286,13 @@
       }
       return base;
     };
+    var full = function (d) { var o = option(d); return d.js && window.mcAnyChart ? window.mcAnyChart(o, d.js) : o; };
     $$('.mc-chart').forEach(function (el) {
       fetchJson(el.getAttribute('data-src')).then(function (d) {
         var chart = echarts.init(el, dark() ? 'dark' : null, { renderer: 'canvas' });
-        chart.setOption(option(d));
+        chart.setOption(full(d));
         if (window.ResizeObserver) new ResizeObserver(function () { chart.resize(); }).observe(el);
-        new MutationObserver(function () { chart.dispose(); chart = echarts.init(el, dark() ? 'dark' : null); chart.setOption(option(d)); }).observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
+        new MutationObserver(function () { chart.dispose(); chart = echarts.init(el, dark() ? 'dark' : null); chart.setOption(full(d)); }).observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
       });
     });
   }

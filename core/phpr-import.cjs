@@ -530,6 +530,12 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
         report.jsEvents++;
         continue;
       }
+      if (en === 'EVENT_JS_MODIFY_CHART' && chartTables.some((c) => c.table === tname)) {
+        // AnyChart customizations, replayed on the ECharts option by anychart-compat.js.
+        for (const c of chartTables.filter((x) => x.table === tname)) c.modifyJs = `// phpr: EVENT_JS_MODIFY_CHART (API AnyChart: chart, anychart)\n${code.replace(/\r\n/g, '\n')}\n`;
+        report.jsEvents++;
+        continue;
+      }
       if (/^EVENT_JS_|^EVENT_CUSTOM|^EVENT_BUTTON|^EVENT_FIELD/.test(en) || !mapEvent(en, tname)) {
         keep(`events/${tname.replace(/[^\w.-]/g, '_')}/${en}.${/^EVENT_JS_/.test(en) ? 'js' : 'php'}`, code);
         report.eventsSkipped.push(`${tname}: ${en}`);

@@ -39,7 +39,7 @@ export interface Security {
   providers: { ldap: { enabled: boolean; host: string; port: number; baseDn: string; domain: string; bindDn: string; userFilter: string; useTls: boolean; groupMap: Record<string, string> }; oidc: Oidc[]; saml: any };
 }
 export interface Report { name: string; title: L; table: string; groups: { field: string; interval?: string; desc?: boolean }[]; aggregates: { field: string; fn: string }[]; columns: string[]; showDetails: boolean }
-export interface Chart { name: string; title: L; table: string; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean }
+export interface Chart { name: string; title: L; table: string; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean; modifyJs?: string }
 export interface DashItem { type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html'; table?: string; ref?: string; field?: string; fn?: string; width?: number; height?: number; rows?: number; title?: L; html?: L }
 export interface Dashboard { name: string; title: L; items: DashItem[] }
 export interface ProjectMeta {

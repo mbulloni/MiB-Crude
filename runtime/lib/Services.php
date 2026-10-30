@@ -386,7 +386,7 @@ class Theme
         $s .= '<script>window.MC = ' . json_encode(['lang' => $app->lang, 'i18n' => ['confirmDelete' => t('confirm.delete'), 'confirmDeleteSel' => t('confirm.delete_sel'), 'noResults' => t('list.empty'), 'colvis' => t('dt.colvis'), 'all' => t('list.all'),
             'dt' => ['search' => t('dt.search'), 'lengthMenu' => t('dt.lengthMenu'), 'info' => t('dt.info'), 'infoEmpty' => t('dt.infoEmpty'), 'infoFiltered' => t('dt.infoFiltered'), 'zeroRecords' => t('list.empty'), 'emptyTable' => t('list.empty'), 'loadingRecords' => t('dt.loading'), 'processing' => t('dt.loading'),
             'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']]]], JSON_UNESCAPED_UNICODE) . ';</script>' . "\n";
-        if ($charts) $s .= '<script src="' . h($app->asset('vendor/echarts.min.js')) . '"></script>' . "\n";
+        if ($charts) $s .= '<script src="' . h($app->asset('vendor/echarts.min.js')) . '"></script><script src="' . h($app->asset('anychart-compat.js')) . '"></script>' . "\n";
         if (in_array('calendar', $libs, true)) $s .= '<script src="' . h($app->asset('vendor/fullcalendar.min.js')) . '"></script><script src="' . h($app->asset('vendor/fullcalendar-locales.min.js')) . '"></script>' . "\n";
         if (in_array('map', $libs, true)) $s .= '<script src="' . h($app->asset('vendor/leaflet.js')) . '"></script>' . "\n";
         $s .= '<script src="' . h($app->asset('vendor/qrcode.js')) . '"></script>' . "\n";
