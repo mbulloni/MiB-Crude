@@ -1,0 +1,76 @@
+{
+  "name": "mib-crude",
+  "version": "0.1.0",
+  "description": "MiB-Crude - generatore visuale di applicazioni web PHP per Linux, ispirato a generatori classici, multisviluppatore",
+  "main": "electron/main.cjs",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5175 && cross-env VITE_DEV=1 electron . --no-sandbox\"",
+    "build": "vite build",
+    "start": "vite build && electron . --no-sandbox",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/",
+    "server": "node server/mibcrude-server.cjs",
+    "dist": "vite build && electron-builder --linux AppImage deb"
+  },
+  "author": {
+    "name": "Michele",
+    "email": "m.bulloni@gmail.com"
+  },
+  "license": "MIT",
+  "build": {
+    "appId": "it.michele.mibcrude",
+    "productName": "MiB-Crude",
+    "files": [
+      "dist/**",
+      "electron/**",
+      "runtime/**",
+      "server/**",
+      "package.json"
+    ],
+    "linux": {
+      "category": "Development",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "executableName": "mib-crude",
+      "synopsis": "Generatore di applicazioni web PHP",
+      "maintainer": "Michele <m.bulloni@gmail.com>",
+      "vendor": "Michele"
+    },
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    }
+  },
+  "dependencies": {
+    "basic-ftp": "^6.2.4",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.2",
+    "chart.js": "^4.6.1",
+    "mariadb": "^3.5.4",
+    "mssql": "^12.7.13",
+    "oracledb": "^26.0.0",
+    "pg": "^8.23.1",
+    "sql.js": "^1.15.2",
+    "ssh2": "^1.17.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "monaco-editor": "^0.57.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "wait-on": "^9.5.1",
+    "zustand": "^5.0.16"
+  }
+}
