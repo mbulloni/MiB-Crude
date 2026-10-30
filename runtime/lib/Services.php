@@ -252,8 +252,10 @@ class Layout
         foreach ($fields as $f) $byName[$f['name']] = $f;
         $out = [];
         foreach ($def['sections'] as $s) {
+            // Field order follows the designer's field list, not the order of assignment.
+            $want = array_flip(isset($s['fields']) ? $s['fields'] : []);
             $list = [];
-            foreach (isset($s['fields']) ? $s['fields'] : [] as $n) if (isset($byName[$n])) { $list[] = $byName[$n]; unset($byName[$n]); }
+            foreach ($fields as $f) if (isset($want[$f['name']], $byName[$f['name']])) { $list[] = $f; unset($byName[$f['name']]); }
             if ($list) $out[] = ['title' => $t->app->label(isset($s['title']) ? $s['title'] : '', ''), 'fields' => $list];
         }
         // Fields not placed by the designer go to the end.

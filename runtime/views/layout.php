@@ -53,6 +53,7 @@ $sidebar = $theme['layout'] !== 'topbar';
 <html lang="<?= h($app->lang) ?>" data-bs-theme="<?= h($theme['mode'] === 'dark' ? 'dark' : 'light') ?>" data-mode="<?= h($theme['mode']) ?>">
 <head>
 <meta charset="utf-8">
+<script>(function(){try{var m=localStorage.getItem('mc-theme')||document.documentElement.getAttribute('data-mode');if(!m||m==='auto')m=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',m)}catch(e){}})()</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="<?= h($app->csrf()) ?>">
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>

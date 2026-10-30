@@ -46,6 +46,8 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   if (process.env.VITE_DEV) win.loadURL('http://localhost:5175');
   else win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  // Automation hook used by screenshot/smoke scripts: MIBCRUDE_SCRIPT=/path/script.cjs
+  if (process.env.MIBCRUDE_SCRIPT) win.webContents.once('did-finish-load', () => require(process.env.MIBCRUDE_SCRIPT)({ win, app }));
   win.on('close', (e) => {
     if (win.__allowClose) return;
     e.preventDefault();
@@ -76,7 +78,7 @@ const pwOf = (id) => ((secrets().connections || {})[id] || '');
 
 // --- app / settings ---------------------------------------------------------------
 
-handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, settings: readSettings(), home: os.homedir() }));
+handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, settings: readSettings(), home: os.homedir(), openOnStart: process.env.MIBCRUDE_OPEN || '' }));
 handle('app:settings', (patch) => { const s = { ...readSettings(), ...patch }; writeSettings(s); return s; });
 handle('app:quit', () => { win.__allowClose = true; preview.stopAll(); team.disconnect(); app.quit(); });
 handle('shell:open', (url) => shell.openExternal(url));

@@ -33,7 +33,8 @@ a { color: var(--mc-primary); }
 .mc-quicksearch { width: 260px; }
 .mc-embed { width: 100%; min-height: 220px; border: 0; display: block; }
 .mc-modal-frame { width: 100%; height: 75vh; border: 0; display: block; }
-.mc-embedded { background: var(--bs-body-bg); }
+.mc-embedded { background: var(--bs-body-bg); overflow-x: hidden; }
+.mc-embedded .row { --bs-gutter-x: 0; }
 .mc-embedded main { padding: 0 !important; }
 .mc-bare { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
 .mc-auth-card { width: 100%; max-width: 420px; }

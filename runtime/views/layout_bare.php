@@ -1,6 +1,6 @@
 <?php /** @var \MiB\App $app */ $theme = $app->config['theme']; ?><!doctype html>
 <html lang="<?= h($app->lang) ?>" data-bs-theme="<?= h($theme['mode'] === 'dark' ? 'dark' : 'light') ?>" data-mode="<?= h($theme['mode']) ?>">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<head><meta charset="utf-8"><script>(function(){try{var m=localStorage.getItem('mc-theme')||document.documentElement.getAttribute('data-mode');if(!m||m==='auto')m=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',m)}catch(e){}})()</script><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($app->title) ?> · <?= h($app->label($app->config['title'])) ?></title>
 <link rel="stylesheet" href="<?= h($app->asset('vendor/bootstrap.min.css')) ?>"><link rel="stylesheet" href="<?= h($app->asset('vendor/bootstrap-icons.min.css')) ?>"><link rel="stylesheet" href="<?= h($app->asset('app.css')) ?>">
 <style>:root{--mc-primary:<?= h($theme['primary']) ?>;}</style></head>

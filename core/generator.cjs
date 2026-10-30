@@ -170,6 +170,8 @@ function generate(proj, opts = {}) {
   w('runtime/bootstrap.php', fs.readFileSync(path.join(RUNTIME, 'bootstrap.php'), 'utf8'));
   copied += copyDir(path.join(RUNTIME, 'assets'), path.join(out, 'assets'));
   copied += copyDir(path.join(proj.dir, 'custom'), path.join(out, 'custom'));
+  const logo = path.join(proj.dir, 'custom', 'logo.png');
+  if (fs.existsSync(logo)) fs.copyFileSync(logo, path.join(out, 'assets', 'logo.png'));
 
   // Tables.
   const tablesIndex = {};

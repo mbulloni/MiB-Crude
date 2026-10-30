@@ -21,8 +21,7 @@ function guessDisplayField(columns) {
   const pref = ['name', 'nome', 'title', 'titolo', 'description', 'descrizione', 'label', 'code', 'codice', 'email', 'username'];
   for (const p of pref) { const hit = names.find((n) => n.toLowerCase() === p); if (hit) return hit; }
   for (const p of pref) { const hit = names.find((n) => n.toLowerCase().includes(p)); if (hit) return hit; }
-  const str = columns.find((c) => c.type === 'string' && !c.pk);
-  return str ? str.name : names[0];
+  return null; // no descriptive column: show the key itself
 }
 
 function defaultViewAs(col) {
@@ -124,11 +123,14 @@ function datasourceFromSchema(desc, opts) {
       type: 'select',
       lookup: {
         kind: 'table', table: fk.refTable, key: fk.refColumns[0],
-        display: target ? guessDisplayField(target.columns) : fk.refColumns[0],
+        display: (target && guessDisplayField(target.columns)) || fk.refColumns[0],
         where: '', orderBy: '', dependsOn: null, addNew: false, multiple: false,
       },
     };
     f.viewAs = { type: 'lookup' };
+    // customer_id -> "Customer"
+    const short = f.name.replace(/[_ ]?(id|ID|Id)$/, '');
+    if (short && short !== f.name) f.label = label(short, languages);
   }
   return {
     name: desc.name,
