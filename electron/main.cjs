@@ -2,7 +2,7 @@
 // MiB-Crude designer: Electron main process. The renderer edits the project object;
 // everything touching disk, databases, PHP, Git, deploy targets or the team server lives here.
 
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, safeStorage } = require('electron');
 
 // `mib-crude --team-server --data DIR [--port N] [--add-user NAME]`: run the team server headless.
 const TEAM_SERVER = process.argv.includes('--team-server');
@@ -257,6 +257,28 @@ handle('gen:generate', (proj, opts = {}) => {
 });
 handle('gen:hash', (pw) => G.hashPassword(pw));
 handle('php:info', () => preview.phpInfo(true));
+// --- AI assistant: API key encrypted with the OS keyring (safeStorage), never in the project ---
+
+const AI = require('../core/ai.cjs');
+const AI_KEY_FILE = path.join(app.getPath('userData'), 'anthropic-key.bin');
+function aiKey() {
+  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+  try {
+    const buf = fs.readFileSync(AI_KEY_FILE);
+    return safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(buf) : buf.toString('utf8');
+  } catch { return ''; }
+}
+handle('ai:status', () => ({ hasKey: !!aiKey(), fromEnv: !!process.env.ANTHROPIC_API_KEY, encrypted: safeStorage.isEncryptionAvailable(), model: AI.MODEL }));
+handle('ai:setKey', (key) => {
+  if (!key) { fs.rmSync(AI_KEY_FILE, { force: true }); return true; }
+  const data = safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(key) : Buffer.from(key, 'utf8');
+  fs.writeFileSync(AI_KEY_FILE, data, { mode: 0o600 });
+  return true;
+});
+handle('ai:event', (proj, tableName, event, def, currentCode, request) => AI.writeEvent({
+  apiKey: aiKey(), proj, table: proj.tables.find((t) => t.name === tableName) || null, event, def, current: currentCode, request,
+  lint: (code) => preview.lintSnippet(code, def.args),
+}));
 handle('php:lintEvent', (code, args) => preview.lintSnippet(code, args));
 handle('preview:start', (proj) => preview.start({ ...proj, dir: need().dir }, P.outputDir({ ...proj, dir: need().dir })));
 handle('preview:stop', () => preview.stopAll());
