@@ -159,6 +159,46 @@ function ScriptDialog({ onClose, conn }: { onClose: () => void; conn: string }) 
   );
 }
 
+// --- REST datasource: a JSON API resource used like a table --------------------------------
+
+function RestDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: string }) {
+  const p = useStore((s) => s.proj)!;
+  const rest = p.connections.filter((c) => c.driver === 'rest');
+  const [conn, setConn] = useState(rest.some((c) => c.id === conn0) ? conn0 : rest[0]?.id || '');
+  const [o, setO] = useState({ name: '', path: '', dataPath: '', key: '', itemPath: '', updateMethod: 'PUT', readOnly: false });
+  const [prev, setPrev] = useState<{ dataPath: string; rows: any[]; columns: { name: string }[]; total: number } | null>(null);
+  const s = (patch: Partial<typeof o>) => setO({ ...o, ...patch });
+  const preview = () => run('Lettura dal servizio…', async () => {
+    const r = await call('rest:sample', p, conn, o.path, o.dataPath);
+    setPrev(r);
+    setO((x) => ({ ...x, dataPath: r.dataPath, key: x.key || (r.columns.find((c: any) => c.name === 'id') ? 'id' : ''), name: x.name || slug(x.path.split('?')[0].split('/').filter(Boolean).pop() || 'risorsa') }));
+  });
+  const ok = () => run('Creazione…', async () => {
+    if (!o.name || !o.path) throw new Error('Indica nome e percorso');
+    setProj(await call<Project>('rest:add', p, conn, o), p.dir);
+    toast(`Origine REST "${o.name}" aggiunta`, 'ok');
+    onClose();
+  });
+  const cols = prev?.columns.map((c) => c.name) || [];
+  return (
+    <Modal wide title="Nuova origine dati REST" onClose={onClose}
+      footer={<><Btn icon="play" onClick={preview} disabled={!o.path}>Leggi e mostra i campi</Btn><span className="grow" /><Btn onClick={onClose}>Annulla</Btn><Btn kind="primary" icon="check-lg" onClick={ok} disabled={!prev}>Crea</Btn></>}>
+      <p className="help">Una risorsa di un'API JSON diventa una tabella dell'applicazione: lista con ricerca, filtri, ordinamento e totali (eseguiti dall'app), visualizza, modifica ed eliminazione tramite l'API.</p>
+      <Row label="Connessione"><Select value={conn} options={rest.map((c) => [c.id, `${c.name} — ${c.url}`])} onChange={setConn} /></Row>
+      <Row label="Percorso elenco" hint="GET che restituisce i record, es. /users o /orders?status=open"><Text value={o.path} onChange={(v) => s({ path: v })} mono /></Row>
+      <Row label="Percorso dei dati" hint="Dove si trova l'elenco nella risposta JSON (es. data, result.items); vuoto = rilevato automaticamente"><Text value={o.dataPath} onChange={(v) => s({ dataPath: v })} mono /></Row>
+      <Row label="Nome"><Text value={o.name} onChange={(v) => s({ name: slug(v) })} mono /></Row>
+      <Row label="Campo chiave"><Select value={o.key} options={[['', '(nessuno: sola lettura)'], ...cols.map((c) => [c, c] as [string, string])]} onChange={(v) => s({ key: v })} /></Row>
+      <Row label="Percorso record" hint="Per visualizza/modifica/elimina; {campo} = valore della chiave. Vuoto = percorso elenco/{chiave}"><Text value={o.itemPath} onChange={(v) => s({ itemPath: v })} mono placeholder={o.key ? `${o.path.split('?')[0].replace(/\/$/, '')}/{${o.key}}` : ''} /></Row>
+      <Row label="Modifica con"><span className="inline"><Select value={o.updateMethod} options={[['PUT', 'PUT (record completo)'], ['PATCH', 'PATCH (solo campi cambiati)']]} onChange={(v) => s({ updateMethod: v })} />
+        <Check label="Sola lettura" value={o.readOnly} onChange={(v) => s({ readOnly: v })} /></span></Row>
+      {prev && <><p className="help">{prev.total} record letti, {cols.length} campi{prev.dataPath ? ` (dati in "${prev.dataPath}")` : ''}.</p>
+        <div className="preview-table"><table className="grid"><thead><tr>{cols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+          <tbody>{prev.rows.slice(0, 10).map((r, i) => <tr key={i}>{cols.map((c) => <td key={c}>{String(r[c] ?? '')}</td>)}</tr>)}</tbody></table></div></>}
+    </Modal>
+  );
+}
+
 // --- business templates: create tables + configured pages in one click -------------------
 
 interface Tpl { id: string; icon: string; name: Record<string, string>; description: Record<string, string>; tables: string[] }
@@ -304,7 +344,7 @@ export default function TablesPanel() {
   const [multi, setMulti] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<Menu>(null);
-  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template'; conn?: string; table?: string | null; t?: Table }>(null);
+  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table }>(null);
 
   const load = (connId: string) => call<DbTable[]>('db:tables', p, connId).then((r) => setDbt((x) => ({ ...x, [connId]: r }))).catch((e) => toast(`${connId}: ${e.message}`, 'err'));
   useEffect(() => { p.connections.forEach((c) => load(c.id)); }, [p.connections.length]);
@@ -441,7 +481,7 @@ export default function TablesPanel() {
   const Item = ({ t, depth }: { t: Table; depth: number }) => (
     <div className={`tt-item ${selected === t.name ? 'on' : ''} ${multi.has(t.name) && multi.size > 1 ? 'multi' : ''}`} style={{ paddingLeft: 10 + depth * 16 }}
       onClick={(e) => pick(e, t.name)} onDoubleClick={() => goTable(t.name)} onContextMenu={(e) => tableMenu(e, t)}>
-      <I n={t.source.type === 'sql' ? 'code-square' : 'window-stack'} className="muted" /> <span className="grow">{t.name}</span>
+      <I n={t.source.type === 'sql' ? 'code-square' : t.source.type === 'rest' ? 'cloud' : 'window-stack'} className="muted" /> <span className="grow">{t.name}</span>
       {p.reports.filter((r) => r.table === t.name).length > 0 && <I n="file-earmark-bar-graph" className="muted" />}
       {p.charts.filter((r) => r.table === t.name).length > 0 && <I n="bar-chart" className="muted" />}
       <button type="button" className="tt-more" onClick={(e) => tableMenu(e, t)}><I n="three-dots-vertical" /></button>
@@ -465,6 +505,7 @@ export default function TablesPanel() {
         <span className="sep" />
         <Btn small icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn>
         <Btn small icon="code-square" onClick={() => setDlg({ kind: 'sql', conn: p.project.defaultConnection })}>Nuova query SQL</Btn>
+        {p.connections.some((c) => c.driver === 'rest') && <Btn small icon="cloud" onClick={() => setDlg({ kind: 'rest', conn: '' })}>Nuova origine REST</Btn>}
         <Btn small icon="magic" onClick={() => setDlg({ kind: 'template', conn: p.project.defaultConnection })}>Da modello</Btn>
         <Btn small icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn>
         <Btn small icon="database-add" onClick={() => setDlg({ kind: 'conn' })}>Aggiungi connessione</Btn>
@@ -501,7 +542,7 @@ export default function TablesPanel() {
                       </div>
                     );
                   })}
-                  {g.orphans.filter((t) => match(t.name)).length > 0 && <div className="tt-group">Query SQL e viste senza tabella base</div>}
+                  {g.orphans.filter((t) => match(t.name)).length > 0 && <div className="tt-group">{c.driver === 'rest' ? 'Risorse REST' : 'Query SQL e viste senza tabella base'}</div>}
                   {g.orphans.filter((t) => match(t.name)).map((t) => <Item key={t.name} t={t} depth={1} />)}
                 </>}
               </div>
@@ -534,6 +575,7 @@ export default function TablesPanel() {
       {dlg?.kind === 'advanced' && dlg.t && <AdvancedDialog t={dlg.t} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'relation' && <RelationDialog master={dlg.table || undefined} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'script' && <ScriptDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
+      {dlg?.kind === 'rest' && <RestDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'template' && <TemplateDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'conn' && <ConnectionDialog initial={null} onClose={() => setDlg(null)} />}
     </div>

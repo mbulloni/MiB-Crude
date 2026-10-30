@@ -150,13 +150,16 @@ handle('local:set', (name, data) => {
 // --- database -----------------------------------------------------------------------
 
 handle('db:drivers', () => D.DRIVERS);
+const REST = require('../core/rest.cjs');
 handle('db:test', async (conn, password) => {
   const started = Date.now();
+  if (conn.driver === 'rest') { await REST.request(conn, password, 'GET', ''); return { ms: Date.now() - started }; }
   await W.withConnection(conn, password, async (c) => { await D.listTables(c, conn); });
   return { ms: Date.now() - started };
 });
 handle('db:tables', async (proj, connId) => {
   const conn = connById(proj, connId);
+  if (conn.driver === 'rest') return [];
   return W.withConnection(conn, pwOf(connId), (c) => D.listTables(c, conn));
 });
 handle('db:describe', async (proj, connId, table) => {
@@ -177,6 +180,8 @@ handle('templates:apply', async (proj, connId, id, opts) => {
   const r = await TPL.apply(proj, connById(proj, connId), pwOf(connId), id, opts || {});
   return { proj, ...r };
 });
+handle('rest:sample', (proj, connId, p, dataPath) => REST.sample(connById(proj, connId), pwOf(connId), p, dataPath));
+handle('rest:add', async (proj, connId, opts) => { await REST.addRestView(proj, connById(proj, connId), pwOf(connId), opts); return proj; });
 handle('wizard:sqlview', async (proj, connId, name, sql) => {
   await W.addSqlView(proj, connById(proj, connId), pwOf(connId), name, sql);
   return proj;

@@ -4,7 +4,7 @@ import { run, saveSecrets, toast, update, useStore } from '../store';
 import type { Connection } from '../types';
 import { Btn, Check, Empty, I, Modal, Row, Section, Select, Text, slug } from './ui';
 
-const DRIVERS: [Connection['driver'], string][] = [['mysql', 'MariaDB / MySQL'], ['pgsql', 'PostgreSQL'], ['sqlsrv', 'SQL Server'], ['oracle', 'Oracle'], ['sqlite', 'SQLite']];
+const DRIVERS: [Connection['driver'], string][] = [['mysql', 'MariaDB / MySQL'], ['pgsql', 'PostgreSQL'], ['sqlsrv', 'SQL Server'], ['oracle', 'Oracle'], ['sqlite', 'SQLite'], ['rest', 'Servizio REST (JSON)']];
 const PORTS: Record<string, number> = { mysql: 3306, pgsql: 5432, sqlsrv: 1433, oracle: 1521, sqlite: 0 };
 
 export function ConnectionDialog({ initial, onClose }: { initial: Connection | null; onClose: () => void }) {
@@ -16,7 +16,7 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
   useEffect(() => { call('php:info').then(setPhp); }, []);
   const s = (patch: Partial<Connection>) => setC({ ...c, ...patch });
   const id = c.id || slug(c.name || c.database || 'db');
-  const ext = { mysql: 'pdo_mysql', pgsql: 'pdo_pgsql', sqlsrv: 'pdo_sqlsrv', oracle: 'pdo_oci', sqlite: 'pdo_sqlite' }[c.driver];
+  const ext = ({ mysql: 'pdo_mysql', pgsql: 'pdo_pgsql', sqlsrv: 'pdo_sqlsrv', oracle: 'pdo_oci', sqlite: 'pdo_sqlite' } as Record<string, string>)[c.driver];
   const test = () => run('Test connessione…', async () => { const r = await call('db:test', { ...c, id }, pw); toast(`Connessione riuscita (${r.ms} ms)`, 'ok'); });
   const ok = async () => {
     if (!initial && p.connections.some((x) => x.id === id)) return toast(`Esiste già una connessione "${id}"`, 'err');
@@ -35,7 +35,12 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
       <Row label="Database"><Select value={c.driver} options={DRIVERS} onChange={(v) => s({ driver: v, port: PORTS[v] || undefined })} /></Row>
       <Row label="Nome"><Text value={c.name} onChange={(v) => s({ name: v })} placeholder={c.database || 'Principale'} /></Row>
       {!initial && <Row label="ID" hint="Usato nel progetto e in db('id') negli eventi"><Text value={c.id} onChange={(v) => s({ id: slug(v) })} placeholder={id} mono /></Row>}
-      {c.driver === 'sqlite' ? <Row label="File" hint="Percorso sul server; relativo = rispetto all'applicazione generata">
+      {c.driver === 'rest' ? <>
+        <Row label="URL di base" hint="Es. https://api.esempio.it/v1 — le risorse si aggiungono da Tabelle e query › Nuova origine REST"><Text value={c.url} onChange={(v) => s({ url: v })} mono placeholder="https://" /></Row>
+        <Row label="Autenticazione"><Select value={c.auth || 'none'} options={[['none', 'Nessuna'], ['bearer', 'Token Bearer'], ['basic', 'Utente e password (Basic)'], ['header', 'Chiave in un header'], ['query', 'Chiave nell\'URL']]} onChange={(v) => s({ auth: v as any })} /></Row>
+        {(c.auth === 'basic' || c.auth === 'header' || c.auth === 'query') && <Row label={c.auth === 'basic' ? 'Utente' : c.auth === 'header' ? 'Nome header' : 'Nome parametro'}><Text value={c.user} onChange={(v) => s({ user: v })} placeholder={c.auth === 'header' ? 'X-API-Key' : c.auth === 'query' ? 'api_key' : ''} /></Row>}
+        {c.auth && c.auth !== 'none' && <Row label={c.auth === 'basic' ? 'Password' : 'Token / chiave'} hint="Salvato solo sul tuo computer (.mibcrude-local), mai nel progetto condiviso"><Text type="password" value={pw} onChange={setPw} /></Row>}
+      </> : c.driver === 'sqlite' ? <Row label="File" hint="Percorso sul server; relativo = rispetto all'applicazione generata">
         <span className="inline"><Text value={c.file} onChange={(v) => s({ file: v })} mono /><Btn icon="folder" onClick={async () => { const f = await call('dialog:file', 'Database SQLite'); if (f) s({ file: f }); }} /></span></Row> : <>
         <Row label="Server"><span className="inline"><Text value={c.host} onChange={(v) => s({ host: v })} /><input className="inp num" type="number" value={c.port ?? ''} onChange={(e) => s({ port: Number(e.target.value) })} /></span></Row>
         <Row label={c.driver === 'oracle' ? 'Service name' : 'Database'}><Text value={c.database} onChange={(v) => s({ database: v })} /></Row>
@@ -44,7 +49,7 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
         <Row label="Password" hint="Salvata solo sul tuo computer (.mibcrude-local), mai nel progetto condiviso"><Text type="password" value={pw} onChange={setPw} /></Row>
         {c.driver === 'sqlsrv' && <Row label="Cifratura"><Check value={c.encrypt} onChange={(v) => s({ encrypt: v })} label="Encrypt" /></Row>}
       </>}
-      {php && <p className="help">{php.ok ? <>PHP locale {php.version}: {php.modules.includes(ext) ? <span className="ok"><I n="check-circle" /> {ext} presente</span> : <span className="warn"><I n="exclamation-triangle" /> {ext} assente{php.docker ? ' — l\'anteprima userà Docker' : ' — installalo per l\'anteprima'}</span>}</> : php.error}</p>}
+      {php && c.driver !== 'rest' && <p className="help">{php.ok ? <>PHP locale {php.version}: {php.modules.includes(ext) ? <span className="ok"><I n="check-circle" /> {ext} presente</span> : <span className="warn"><I n="exclamation-triangle" /> {ext} assente{php.docker ? ' — l\'anteprima userà Docker' : ' — installalo per l\'anteprima'}</span>}</> : php.error}</p>}
     </Modal>
   );
 }

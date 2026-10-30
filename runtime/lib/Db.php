@@ -11,6 +11,8 @@ class Db
     public $driver;
     public $id;
     public $schema;
+    /** @var Rest|null REST connections have no PDO */
+    public $rest;
 
     public function __construct($id, array $c, $password)
     {
@@ -34,6 +36,9 @@ class Db
             case 'oracle':
                 $dsn = "oci:dbname=//$host:" . ($port ?: 1521) . "/$db;charset=AL32UTF8";
                 break;
+            case 'rest':
+                $this->rest = new Rest($c, $password);
+                return;
             case 'sqlite':
                 $file = $c['file'];
                 if ($file !== '' && $file[0] !== '/' && !preg_match('~^[A-Za-z]:~', $file)) $file = App::$i->root . '/' . $file;

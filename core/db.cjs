@@ -11,6 +11,7 @@ const DRIVERS = {
   sqlsrv: { label: 'SQL Server', port: 1433 },
   oracle: { label: 'Oracle', port: 1521 },
   sqlite: { label: 'SQLite', port: 0 },
+  rest: { label: 'Servizio REST (JSON)', port: 0 },
 };
 
 // Generic column types used by the designer to pick defaults.

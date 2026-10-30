@@ -9,6 +9,8 @@ class Table
     public $name;
     /** @var Db */
     public $db;
+    /** @var Rest|null set for REST datasources */
+    public $rest;
     private $fieldsByName = [];
 
     public function __construct(App $app, array $def)
@@ -17,6 +19,7 @@ class Table
         $this->def = $def;
         $this->name = $def['name'];
         $this->db = $app->db($def['connection']);
+        if ($def['source']['type'] === 'rest') $this->rest = $this->db->rest;
         foreach ($def['fields'] as $f) $this->fieldsByName[$f['name']] = $f;
         $app->event($this->name, 'TableInit', []);
     }
@@ -84,6 +87,7 @@ class Table
     {
         $s = $this->def['source'];
         if ($s['type'] === 'table') return $s['table'];
+        if ($s['type'] === 'rest') return empty($this->def['readOnly']) ? $s['path'] : null;
         return !empty($s['updateTable']) ? $s['updateTable'] : null;
     }
 
@@ -230,12 +234,14 @@ class Table
 
     public function count(array $req, $page = 'list')
     {
+        if ($this->rest) return count(Rest::filter($this, $req));
         list($w, $p) = $this->buildWhere($req, $page);
         return (int)$this->db->value('SELECT COUNT(*) FROM ' . $this->from() . " WHERE $w", $p);
     }
 
     public function fetch(array $req, $limit, $offset, $sort = '', $dir = 'asc', $page = 'list')
     {
+        if ($this->rest) return Rest::fetch($this, $req, $limit, $offset, $sort, $dir);
         list($w, $p, $eo) = $this->buildWhere($req, $page);
         $sql = 'SELECT ' . $this->selectList() . ' FROM ' . $this->from() . " WHERE $w";
         $sql = $limit > 0 ? $this->db->limit($sql, $limit, $offset, $this->orderBy($sort, $dir, $eo))
@@ -246,6 +252,7 @@ class Table
     /** Aggregates for list totals: field => [sum|avg|count => value] */
     public function totals(array $req, $page = 'list')
     {
+        if ($this->rest) return Rest::totals($this, $req);
         $exprs = [];
         foreach ($this->fields('list') as $f) {
             if (empty($f['totals'])) continue;
@@ -286,6 +293,7 @@ class Table
 
     public function fetchOne(array $keys, $withBlobs = false)
     {
+        if ($this->rest) return Rest::fetchOne($this, $keys);
         $where = [];
         $params = [];
         foreach ($keys as $c => $v) { $where[] = $this->col($c) . ' = ?'; $params[] = $v; }
@@ -577,9 +585,12 @@ class Table
         if ($this->app->event($this->name, 'BeforeAdd', [&$vals, &$msg, $page]) === false) return [false, null, $msg ?: t('msg.cancelled')];
         $vals = $this->onlyWritable($vals);
         $auto = $this->autoField();
-        $id = $this->db->insert($wt, $this->blobs($vals), $auto);
-        $keys = [];
-        foreach ($this->def['keys'] as $k) $keys[$k] = ($k === $auto) ? $id : (isset($vals[$k]) ? $vals[$k] : null);
+        if ($this->rest) $keys = Rest::insert($this, $vals);
+        else {
+            $id = $this->db->insert($wt, $this->blobs($vals), $auto);
+            $keys = [];
+            foreach ($this->def['keys'] as $k) $keys[$k] = ($k === $auto) ? $id : (isset($vals[$k]) ? $vals[$k] : null);
+        }
         Audit::log($this, 'add', $keys, null, $vals);
         $this->app->event($this->name, 'AfterAdd', [$vals, $keys, $page]);
         return [true, $keys, ''];
@@ -594,7 +605,8 @@ class Table
         $msg = '';
         if ($this->app->event($this->name, 'BeforeEdit', [&$vals, $old, &$msg, $page]) === false) return [false, $msg ?: t('msg.cancelled')];
         $vals = $this->onlyWritable($vals);
-        $this->db->update($wt, $this->blobs($vals), $keys);
+        if ($this->rest) Rest::update($this, $keys, $vals, $old);
+        else $this->db->update($wt, $this->blobs($vals), $keys);
         $newKeys = $keys;
         foreach ($keys as $k => $v) if (array_key_exists($k, $vals)) $newKeys[$k] = $vals[$k];
         Audit::log($this, 'edit', $keys, $old, $vals);
@@ -610,7 +622,8 @@ class Table
         if (!$old) return [false, t('error.notfound')];
         $msg = '';
         if ($this->app->event($this->name, 'BeforeDelete', [$old, &$msg, $page]) === false) return [false, $msg ?: t('msg.cancelled')];
-        $this->db->delete($wt, $keys);
+        if ($this->rest) Rest::delete($this, $keys);
+        else $this->db->delete($wt, $keys);
         Upload::removeFiles($this, $old);
         Audit::log($this, 'delete', $keys, $old, null);
         $this->app->event($this->name, 'AfterDelete', [$old, $page]);

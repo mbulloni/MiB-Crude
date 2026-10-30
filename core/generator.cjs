@@ -112,6 +112,7 @@ function check(proj) {
   const tableNames = new Set(proj.tables.map((t) => t.name));
   const connIds = new Set(proj.connections.map((c) => c.id));
   if (!proj.connections.length) problems.push({ level: 'error', msg: 'Nessuna connessione al database' });
+  if (proj.connections.find((c) => c.id === proj.project.defaultConnection)?.driver === 'rest') problems.push({ level: 'error', msg: 'La connessione principale deve essere un database (utenti, permessi e registro vivono lì), non un servizio REST' });
   if (proj.connections.length && !connIds.has(proj.project.defaultConnection)) problems.push({ level: 'error', msg: `Connessione predefinita "${proj.project.defaultConnection}" inesistente` });
   for (const t of proj.tables) {
     if (!connIds.has(t.connection)) problems.push({ level: 'error', msg: `${t.name}: connessione "${t.connection}" inesistente` });
@@ -265,6 +266,7 @@ function generate(proj, opts = {}) {
   for (const c of proj.connections) {
     const { id, driver, host, port, database, user, schema, file } = c;
     connections[id] = { driver, host: host || '', port: port || '', database: database || '', user: user || '', schema: schema || '', file: file || '' };
+    if (driver === 'rest') Object.assign(connections[id], { url: c.url || '', auth: c.auth || 'none' });
   }
   const byName = (list) => Object.fromEntries((list || []).map((x) => [x.name, x]));
   const settings = { ...proj.project.settings };

@@ -57,6 +57,13 @@ async function addSqlView(proj, conn, password, name, sql) {
 
 // Compare a datasource with the database: add new columns, flag dropped ones, refresh types.
 async function refreshTable(proj, conn, password, table) {
+  if (conn.driver === 'rest') {
+    const ds = proj.tables.find((t) => t.name === table);
+    const s = await require('./rest.cjs').sample(conn, password, ds.source.path, ds.source.dataPath);
+    const added = [];
+    for (const col of s.columns) if (!ds.fields.some((f) => f.name === col.name)) { ds.fields.push(defaultField(col, proj.project.languages)); added.push(col.name); }
+    return { added, removed: [] };
+  }
   return withConnection(conn, password, async (c) => {
     const ds = proj.tables.find((t) => t.name === table);
     if (!ds) throw new Error(`Origine dati ${table} non trovata`);

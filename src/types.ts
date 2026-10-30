@@ -1,7 +1,7 @@
 // Project shapes (mirror of core/project.cjs and core/defaults.cjs).
 export type L = Record<string, string>;
 
-export interface Connection { id: string; name: string; driver: 'mysql' | 'pgsql' | 'sqlsrv' | 'oracle' | 'sqlite'; host?: string; port?: number | string; database?: string; user?: string; schema?: string; file?: string; encrypt?: boolean }
+export interface Connection { id: string; name: string; driver: 'mysql' | 'pgsql' | 'sqlsrv' | 'oracle' | 'sqlite' | 'rest'; url?: string; auth?: 'none' | 'bearer' | 'basic' | 'header' | 'query'; host?: string; port?: number | string; database?: string; user?: string; schema?: string; file?: string; encrypt?: boolean }
 
 export interface Lookup {
   kind: 'table' | 'list'; table?: string; key?: string; display?: string; where?: string; orderBy?: string;
@@ -19,7 +19,7 @@ export interface Field {
 }
 export interface Detail { table: string; masterKeys: string[]; detailKeys: string[]; showIn: string[]; listPreview?: boolean }
 export interface Table {
-  name: string; connection: string; source: { type: 'table' | 'sql'; table?: string; sql?: string; updateTable?: string };
+  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest'; table?: string; sql?: string; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
   layout?: Record<string, { sections: { title: L; fields: string[]; style?: 'card' | 'tab'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;
