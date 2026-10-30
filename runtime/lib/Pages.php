@@ -473,7 +473,9 @@ class Pages
         if ($this->post()) {
             if ($useCaptcha && !$sec->captchaOk('login', isset($_POST['captcha']) ? $_POST['captcha'] : '')) $msg = t('captcha.wrong');
             else $msg = $sec->login(isset($_POST['username']) ? $_POST['username'] : '', isset($_POST['password']) ? $_POST['password'] : '');
+            if ($msg === '2fa') redirect($this->app->url('twofactor'));
             if ($msg === '') {
+                if ($sec->twoFactorRequired() && !$sec->totpSecret($sec->user()['id'])) { $this->app->flash('warning', t('2fa.setup_required')); redirect($this->app->url('profile')); }
                 $ret = isset($_SESSION['mc_return']) ? $_SESSION['mc_return'] : '';
                 unset($_SESSION['mc_return']);
                 redirect($ret !== '' && strpos($ret, '//') === false ? $ret : $this->app->url('home'));
@@ -481,6 +483,23 @@ class Pages
         }
         $this->app->title = t('login.title');
         $this->app->render('login', ['msg' => $msg, 'captcha' => $useCaptcha ? $sec->captchaQuestion('login') : '', 'sec' => $sec], 'layout_bare');
+    }
+
+    public function page_twofactor()
+    {
+        $sec = $this->app->security;
+        if (empty($_SESSION['mc_2fa_pending'])) redirect($this->app->url('login'));
+        $msg = '';
+        if ($this->post()) {
+            $msg = $sec->completeTwoFactor(isset($_POST['code']) ? $_POST['code'] : '');
+            if ($msg === '') {
+                $ret = isset($_SESSION['mc_return']) ? $_SESSION['mc_return'] : '';
+                unset($_SESSION['mc_return']);
+                redirect($ret !== '' && strpos($ret, '//') === false ? $ret : $this->app->url('home'));
+            }
+        }
+        $this->app->title = t('2fa.title');
+        $this->app->render('twofactor', ['msg' => $msg], 'layout_bare');
     }
 
     public function page_logout()
@@ -629,6 +648,27 @@ class Pages
         $msg = '';
         if ($this->post()) {
             $row = array_change_key_case($db->row('SELECT * FROM ' . $db->table(Schema::t('users')) . ' WHERE ' . $db->q('id') . ' = ?', [$u['id']]), CASE_LOWER);
+            if (isset($_POST['totp_start'])) {
+                $_SESSION['mc_totp_new'] = Totp::secret();
+                redirect($this->app->url('profile') . '#twofactor');
+            }
+            if (isset($_POST['totp_confirm'])) {
+                $secret = isset($_SESSION['mc_totp_new']) ? $_SESSION['mc_totp_new'] : '';
+                if ($secret !== '' && Totp::verify($secret, $_POST['code'])) {
+                    $sec->setTotpSecret($u['id'], $secret);
+                    unset($_SESSION['mc_totp_new']);
+                    Audit::raw('2fa_enabled', $u['username']);
+                    $this->app->flash('success', t('2fa.enabled'));
+                } else $this->app->flash('danger', t('2fa.wrong'));
+                redirect($this->app->url('profile') . '#twofactor');
+            }
+            if (isset($_POST['totp_disable'])) {
+                if (!$sec->twoFactorRequired() && Totp::verify($sec->totpSecret($u['id']), $_POST['code'])) {
+                    $sec->setTotpSecret($u['id'], '');
+                    $this->app->flash('success', t('2fa.disabled'));
+                } else $this->app->flash('danger', t('2fa.wrong'));
+                redirect($this->app->url('profile'));
+            }
             if (isset($_POST['apikey'])) {
                 $db->update(Schema::t('users'), ['api_key' => hash('sha256', $key = bin2hex(random_bytes(20)))], ['id' => $u['id']]);
                 $this->app->flash('success', t('profile.apikey_new', $key));

@@ -422,3 +422,49 @@ class Buttons
         return $h;
     }
 }
+
+/** Time-based one-time passwords (RFC 6238): 6 digits, 30 seconds, SHA-1, like the authenticator apps. */
+class Totp
+{
+    const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+    public static function secret()
+    {
+        $s = '';
+        $bytes = random_bytes(20);
+        for ($i = 0; $i < 32; $i++) $s .= self::ALPHABET[ord($bytes[$i % 20]) % 32];
+        return $s;
+    }
+
+    private static function base32($s)
+    {
+        $bits = '';
+        foreach (str_split(strtoupper(preg_replace('/[^A-Za-z2-7]/', '', $s))) as $c) $bits .= str_pad(decbin(strpos(self::ALPHABET, $c)), 5, '0', STR_PAD_LEFT);
+        $out = '';
+        foreach (str_split($bits, 8) as $byte) if (strlen($byte) === 8) $out .= chr(bindec($byte));
+        return $out;
+    }
+
+    public static function code($secret, $time = null)
+    {
+        $counter = (int)floor(($time === null ? time() : $time) / 30);
+        $hash = hash_hmac('sha1', pack('N*', 0) . pack('N*', $counter), self::base32($secret), true);
+        $o = ord($hash[19]) & 0xf;
+        $n = ((ord($hash[$o]) & 0x7f) << 24) | (ord($hash[$o + 1]) << 16) | (ord($hash[$o + 2]) << 8) | ord($hash[$o + 3]);
+        return str_pad((string)($n % 1000000), 6, '0', STR_PAD_LEFT);
+    }
+
+    /** Accepts the previous and next 30-second window too (clock drift). */
+    public static function verify($secret, $code)
+    {
+        $code = preg_replace('/\D/', '', (string)$code);
+        if (strlen($code) !== 6 || !$secret) return false;
+        foreach ([-1, 0, 1] as $d) if (hash_equals(self::code($secret, time() + $d * 30), $code)) return true;
+        return false;
+    }
+
+    public static function uri($secret, $account, $issuer)
+    {
+        return 'otpauth://totp/' . rawurlencode($issuer . ':' . $account) . '?secret=' . $secret . '&issuer=' . rawurlencode($issuer) . '&digits=6&period=30';
+    }
+}

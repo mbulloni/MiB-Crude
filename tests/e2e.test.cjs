@@ -95,6 +95,7 @@ test.before(async () => {
     BeforeDelete: "<?php\nif ((int)$old['id'] === 1) { $message = 'Categoria protetta'; return false; }\nreturn true;\n",
   };
   proj.security.enabled = true;
+  proj.security.twoFactor = { enabled: true, required: false };
   proj.security.permissions = { users: { orders: 'SV', customers: 'SVAE' } };
   proj.project.settings.audit = true;
   proj.project.settings.api = { enabled: true };
@@ -249,6 +250,51 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.strictEqual(r.status, 401);
   r = await api.req('?p=api&openapi=1');
   assert.strictEqual(JSON.parse(r.text).openapi, '3.0.3');
+});
+
+// RFC 6238 code for the tests.
+function totp(secret, t = Date.now() / 1000) {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const ch of secret) bits += A.indexOf(ch).toString(2).padStart(5, '0');
+  const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const msg = Buffer.alloc(8);
+  msg.writeUInt32BE(Math.floor(t / 30), 4);
+  const h = require('node:crypto').createHmac('sha1', key).update(msg).digest();
+  const o = h[19] & 15;
+  return String(((h.readUInt32BE(o) & 0x7fffffff) % 1000000)).padStart(6, '0');
+}
+
+test('two-step verification', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=profile');
+  assert.match(r.text, /twofactor/);
+  r = await c.post('?p=profile', { _csrf: c.csrf(r.text), totp_start: '1' });
+  r = await c.req('?p=profile');
+  const secret = (r.text.match(/secret=([A-Z2-7]+)/) || [])[1];
+  assert.ok(secret, 'secret shown as QR');
+  r = await c.post('?p=profile', { _csrf: c.csrf(r.text), totp_confirm: '1', code: totp(secret) });
+  r = await c.req('?p=profile');
+  assert.match(r.text, /Attiva sul tuo account|Active on your account/);
+  const d = client();
+  r = await d.req('?p=login');
+  r = await d.post('?p=login', { _csrf: d.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  assert.match(r.location, /p=twofactor/);
+  r = await d.req('?p=list&t=orders');
+  assert.strictEqual(r.status, 302, 'not logged in before the code');
+  r = await d.req('?p=twofactor');
+  r = await d.post('?p=twofactor', { _csrf: d.csrf(r.text), code: '000000' === totp(secret) ? '111111' : '000000' });
+  assert.match(r.text, /Codice non valido|Invalid code/);
+  r = await d.post('?p=twofactor', { _csrf: d.csrf(r.text), code: totp(secret) });
+  assert.strictEqual(r.status, 302);
+  r = await d.req('?p=list&t=orders');
+  assert.strictEqual(r.status, 200);
+  // admin resets it again for the other tests
+  r = await d.req('?p=admin&s=users');
+  const id = (r.text.match(/name="action" value="reset2fa"><input type="hidden" name="id" value="(\d+)"/) || [])[1];
+  await d.post('?p=admin&s=users', { _csrf: d.csrf(r.text), action: 'reset2fa', id });
 });
 
 test('permissions for a non-admin group', async () => {

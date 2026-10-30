@@ -159,6 +159,11 @@ class Security
             Audit::raw('login_failed', $username);
             return t('login.failed');
         }
+        // Second factor: users with an authenticator app confirm with a code.
+        if ($this->twoFactorEnabled() && !empty($user['id']) && $this->totpSecret($user['id'])) {
+            $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time()];
+            return '2fa';
+        }
         $this->startUserSession($user);
         return '';
     }
@@ -332,6 +337,38 @@ class Security
             return hash_equals($p[4], hash_pbkdf2($p[1], $password, $p[3], (int)$p[2], 64));
         }
         return password_verify($password, $stored);
+    }
+
+    public function twoFactorEnabled()
+    {
+        return $this->enabled() && $this->managed() && !empty($this->cfg['twoFactor']['enabled']);
+    }
+
+    public function twoFactorRequired()
+    {
+        return $this->twoFactorEnabled() && !empty($this->cfg['twoFactor']['required']);
+    }
+
+    public function totpSecret($userId)
+    {
+        $db = $this->app->db();
+        return (string)$db->value('SELECT ' . $db->q('totp_secret') . ' FROM ' . $db->table(Schema::t('users')) . ' WHERE ' . $db->q('id') . ' = ?', [$userId]);
+    }
+
+    public function setTotpSecret($userId, $secret)
+    {
+        $this->app->db()->update(Schema::t('users'), ['totp_secret' => $secret === '' ? null : $secret], ['id' => $userId]);
+    }
+
+    /** Second step of the login. Returns '' or an error. */
+    public function completeTwoFactor($code)
+    {
+        $p = isset($_SESSION['mc_2fa_pending']) ? $_SESSION['mc_2fa_pending'] : null;
+        if (!$p || time() - $p['at'] > 300) { unset($_SESSION['mc_2fa_pending']); return t('2fa.expired'); }
+        if (!Totp::verify($this->totpSecret($p['user']['id']), $code)) { Audit::raw('2fa_failed', $p['user']['username']); return t('2fa.wrong'); }
+        unset($_SESSION['mc_2fa_pending']);
+        $this->startUserSession($p['user']);
+        return '';
     }
 
     public function isManaged()

@@ -76,6 +76,9 @@ class Admin
                 $u = $this->db->value('SELECT ' . $this->db->q('username') . ' FROM ' . $this->db->table($tu) . ' WHERE ' . $this->db->q('id') . ' = ?', [$id]);
                 if ($u === userName()) $this->app->flash('danger', t('admin.self'));
                 else { $this->db->delete($tm, ['username' => $u]); $this->db->delete($tu, ['id' => $id]); $this->app->flash('success', t('msg.deleted', 1)); }
+            } elseif ($a === 'reset2fa' && $id) {
+                $this->db->update($tu, ['totp_secret' => null], ['id' => $id]);
+                $this->app->flash('success', t('2fa.reset_done'));
             } elseif ($a === 'unlock' && $id) {
                 $this->db->update($tu, ['failed' => 0, 'locked_until' => null], ['id' => $id]);
                 $this->app->flash('success', t('msg.saved'));

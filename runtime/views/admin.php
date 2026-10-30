@@ -26,6 +26,7 @@
     <td class="small"><?= h($u['last_login'] ? \MiB\Format::date($u['last_login'], 'dateTimeFormat') : '') ?></td>
     <td class="text-end text-nowrap">
       <a class="btn btn-sm btn-link" href="<?= h($app->url('admin', ['s' => 'users', 'id' => $u['id']])) ?>"><i class="bi bi-pencil"></i></a>
+      <?php if ($app->security->twoFactorEnabled()): ?><form method="post" class="d-inline"><?= $app->csrfField() ?><input type="hidden" name="action" value="reset2fa"><input type="hidden" name="id" value="<?= (int)$u['id'] ?>"><button class="btn btn-sm btn-link" title="<?= h(t('2fa.reset')) ?>"><i class="bi bi-phone-flip"></i></button></form><?php endif ?>
       <?php if (!empty($u['locked_until'])): ?><form method="post" class="d-inline"><?= $app->csrfField() ?><input type="hidden" name="action" value="unlock"><input type="hidden" name="id" value="<?= (int)$u['id'] ?>"><button class="btn btn-sm btn-link"><i class="bi bi-unlock"></i></button></form><?php endif ?>
       <form method="post" class="d-inline mc-confirm-delete"><?= $app->csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$u['id'] ?>"><button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button></form>
     </td></tr><?php endforeach ?>
