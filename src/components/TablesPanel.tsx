@@ -370,13 +370,13 @@ export default function TablesPanel() {
       const all = exportBundle(p, [...names, ...related]);
       Object.assign(bundle, all.bundle);
     }
-    const f = await call<string | null>('file:save', 'Esporta tabelle', `${p.project.name}_tabelle.mibtables.json`, JSON.stringify(bundle, null, 1));
+    const f = await call<string | null>('tables:exportZip', `${p.project.name}_tabelle.zip`, bundle);
     if (f) toast(`${bundle.tables.length} tabelle esportate in ${f}`, 'ok');
   });
   const doImport = () => run('Importazione…', async () => {
-    const f = await call<{ path: string; content: string } | null>('file:read', 'Importa tabelle', [{ name: 'Tabelle MiB-Crude', extensions: ['json'] }]);
-    if (!f) return;
-    const n = importBundle(JSON.parse(f.content));
+    const b = await call('tables:importFile');
+    if (!b) return;
+    const n = importBundle(b);
     toast(`${n} tabelle importate`, 'ok');
   });
 

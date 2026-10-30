@@ -232,6 +232,19 @@ handle('file:save', async (title, defaultName, content) => {
   fs.writeFileSync(r.filePath, content);
   return r.filePath;
 });
+const BUNDLE = require('../core/bundle.cjs');
+handle('tables:exportZip', async (defaultName, bundle) => {
+  const r = await dialog.showSaveDialog(win, { title: 'Esporta tabelle', defaultPath: path.join(os.homedir(), defaultName), filters: [{ name: 'Tabelle MiB-Crude', extensions: ['zip'] }] });
+  if (r.canceled || !r.filePath) return null;
+  fs.writeFileSync(r.filePath, BUNDLE.toZip(bundle));
+  return r.filePath;
+});
+handle('tables:importFile', async () => {
+  const r = await dialog.showOpenDialog(win, { title: 'Importa tabelle', properties: ['openFile'], filters: [{ name: 'Tabelle MiB-Crude', extensions: ['zip', 'json'] }] });
+  if (r.canceled) return null;
+  const f = r.filePaths[0];
+  return /\.zip$/i.test(f) ? BUNDLE.fromZip(fs.readFileSync(f)) : JSON.parse(fs.readFileSync(f, 'utf8'));
+});
 handle('file:read', async (title, filters) => {
   const r = await dialog.showOpenDialog(win, { title, properties: ['openFile'], filters: filters || [] });
   if (r.canceled) return null;
