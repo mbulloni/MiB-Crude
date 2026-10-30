@@ -22,7 +22,8 @@ export interface Table {
   name: string; connection: string; source: { type: 'table' | 'sql'; table?: string; sql?: string; updateTable?: string };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
-  layout?: Record<string, { sections: { title: L; fields: string[] }[] }>;
+  layout?: Record<string, { sections: { title: L; fields: string[]; style?: 'card' | 'tab'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;
+  buttons?: { id: string; label: L; icon?: string; pages: string[]; row?: boolean }[];
 }
 export interface MenuItem { type: 'table' | 'group' | 'link' | 'report' | 'chart' | 'dashboard' | 'separator' | 'header'; table?: string; page?: string; ref?: string; url?: string; label?: L; icon?: string; items?: MenuItem[]; newWindow?: boolean }
 export interface Group { id: string; label: L; admin?: boolean }

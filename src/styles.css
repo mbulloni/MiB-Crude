@@ -217,3 +217,30 @@ progress { width: 100%; }
 .theme-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 .theme-opt { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
 .theme-opt.on { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Page designer */
+.pd-body { display: grid; grid-template-columns: 1fr 250px; gap: 14px; }
+.pd-canvas { min-width: 0; }
+.pd-empty { text-align: center; color: var(--muted); padding: 40px; border: 2px dashed var(--border); border-radius: 10px; }
+.pd-empty .big { font-size: 40px; }
+.pd-section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; padding: 10px 12px 12px; }
+.pd-section.tab { border-top: 3px solid var(--accent); }
+.pd-section.over { outline: 2px dashed var(--accent); }
+.pd-shead { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.pd-shead .langtext { flex: 1; }
+.pd-shead select { width: auto; }
+.pd-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; min-height: 60px; }
+.pd-drop { grid-column: span 12; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 6px; padding: 16px; }
+.pd-tile { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; cursor: grab; position: relative; min-width: 0; }
+.pd-tile.over { border-left: 3px solid var(--accent); }
+.pd-label { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-label .req { color: var(--err); margin-left: 2px; }
+.pd-control { height: 26px; border: 1px solid var(--border); border-radius: 4px; background: var(--input); margin-top: 4px; padding: 2px 6px; overflow: hidden; }
+.pd-control.textarea, .pd-control.richtext, .pd-control.signature { height: 56px; }
+.pd-tools { position: absolute; top: 3px; right: 4px; display: none; gap: 2px; align-items: center; font-size: 11px; background: var(--panel); border-radius: 4px; padding: 0 3px; }
+.pd-tile:hover .pd-tools { display: flex; }
+.pd-tools button { border: 0; background: none; color: var(--text); cursor: pointer; padding: 0 2px; }
+.pd-block { display: flex; gap: 8px; align-items: flex-start; border: 1px dashed var(--border); border-radius: 6px; padding: 6px; margin-bottom: 8px; }
+.pd-block .langtext { flex: 1; }
+.pd-palette { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; align-self: start; position: sticky; top: 0; max-height: calc(100vh - 220px); overflow: auto; }
+.pd-pitem { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; cursor: grab; background: var(--bg); font-size: 12.5px; }

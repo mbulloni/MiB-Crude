@@ -75,6 +75,10 @@ test.before(async () => {
   await W.importTables(proj, CONN, PW, ['categories', 'products', 'countries', 'cities', 'customers', 'orders', 'order_items']);
   // Dependent dropdown city <- country.
   const cust = proj.tables.find((t) => t.name === 'customers');
+  cust.layout = { edit: { sections: [
+    { title: { it: 'Anagrafica' }, style: 'tab', fields: ['email', 'name'], blocks: [{ type: 'html', html: { it: '<p class="mc-test-block">Compila i dati</p>' } }] },
+    { title: { it: 'Indirizzo' }, style: 'tab', columns: 2, fields: ['country_id', 'city_id'] },
+  ] } };
   cust.fields.find((f) => f.name === 'city_id').editAs.lookup.dependsOn = { field: 'country_id', linkField: 'country_id' };
   // Status as a static list.
   const orders = proj.tables.find((t) => t.name === 'orders');
@@ -195,6 +199,12 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.strictEqual(feed.rows.find((x) => String(x.k.id) === '3').v.status, 'closed');
   assert.strictEqual(feed.options.status.length, 3);
   await dbExec(`UPDATE orders SET status = 'new' WHERE id = 3`);
+
+  // Page designer layout: tabs, field order, HTML block.
+  r = await c.req('?p=edit&t=customers&k[id]=1');
+  assert.match(r.text, /data-bs-toggle="tab"[^>]*>Anagrafica/);
+  assert.match(r.text, /mc-test-block/);
+  assert.ok(r.text.indexOf('name="email"') < r.text.indexOf('name="name"'), 'designed field order');
 
   // Dependent lookup.
   r = await c.req('?p=lookup&t=customers&f=city_id&parent=2');

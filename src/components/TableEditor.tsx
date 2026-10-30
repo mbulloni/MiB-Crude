@@ -7,6 +7,7 @@ import EventEditor from './EventEditor';
 import FieldDialog, { EDIT_AS, VIEW_AS } from './FieldDialog';
 import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
 import { useItemLock } from './TeamPanel';
+import PageDesigner from './PageDesigner';
 
 const SHOW: [string, string][] = [['list', 'Lista'], ['view', 'Vista'], ['add', 'Nuovo'], ['edit', 'Modifica'], ['search', 'Ricerca'], ['export', 'Esporta'], ['import', 'Importa'], ['print', 'Stampa']];
 type TabKey = 'general' | 'fields' | 'pages' | 'layout' | 'details' | 'events' | 'api';
@@ -29,7 +30,7 @@ export default function TableEditor({ name }: { name: string }) {
     <div className="panel">
       <div className="title-row"><h2>{lbl(t.caption, t.name)} <small className="muted mono">{t.name}</small></h2>
         {lock.banner}</div>
-      <Tabs value={tab} onChange={setTab} tabs={[['fields', `Campi (${t.fields.length})`, 'list-columns'], ['general', 'Generale', 'sliders'], ['pages', 'Pagine', 'window-stack'], ['layout', 'Layout moduli', 'layout-text-window'],
+      <Tabs value={tab} onChange={setTab} tabs={[['fields', `Campi (${t.fields.length})`, 'list-columns'], ['general', 'Generale', 'sliders'], ['pages', 'Pagine', 'window-stack'], ['layout', 'Designer pagine', 'layout-text-window'],
         ['details', `Master-dettaglio (${t.details.length})`, 'diagram-3'], ['events', `Eventi${evCount ? ` (${evCount})` : ''}`, 'lightning'], ['api', 'API', 'braces']]} />
       <fieldset disabled={ro} className="plain">
       {tab === 'fields' && <div className="fields-wrap">
@@ -112,7 +113,7 @@ export default function TableEditor({ name }: { name: string }) {
         </Section>
       </div>}
 
-      {tab === 'layout' && <LayoutEditor t={t} set={set} />}
+      {tab === 'layout' && <PageDesigner t={t} readOnly={ro} />}
 
       {tab === 'details' && <Section title="Tabelle di dettaglio" actions={<Btn icon="plus-lg" onClick={() => set((x) => { x.details.push({ table: '', masterKeys: [...x.keys], detailKeys: [], showIn: ['view', 'edit'] }); })}>Aggiungi</Btn>}
         help="Il dettaglio compare come scheda nella vista/modifica del record master e come icona nella lista. I nuovi record di dettaglio ricevono automaticamente la chiave del master.">
@@ -139,42 +140,6 @@ export default function TableEditor({ name }: { name: string }) {
       </Section>}
       </fieldset>
       {fieldDlg && t.fields.find((f) => f.name === fieldDlg) && <FieldDialog t={t} field={t.fields.find((f) => f.name === fieldDlg)!} onChange={(f) => setField(fieldDlg, f)} onClose={() => setFieldDlg(null)} />}
-    </div>
-  );
-}
-
-/** Form layout: sections (cards) with their fields, per page. */
-function LayoutEditor({ t, set }: { t: Table; set: (fn: (x: Table) => void) => void }) {
-  const [page, setPage] = useState<'edit' | 'add' | 'view'>('edit');
-  const fields = t.fields.filter((f) => f.show[page]);
-  const sections = t.layout?.[page]?.sections || [];
-  const sectionOf = (n: string) => sections.findIndex((s) => s.fields.includes(n));
-  const setSections = (fn: (s: { title: any; fields: string[] }[]) => void) => set((x) => {
-    x.layout = x.layout || {};
-    const cur = structuredClone(x.layout[page]?.sections || []);
-    fn(cur);
-    x.layout[page] = { sections: cur };
-    if (page === 'edit' && !x.layout.add) x.layout.add = { sections: structuredClone(cur) };
-  });
-  return (
-    <div>
-      <div className="inline"><Tabs value={page} onChange={setPage} tabs={[['edit', 'Modifica'], ['add', 'Nuovo'], ['view', 'Visualizza']]} /><span className="grow" />
-        <Btn icon="plus-lg" onClick={() => setSections((s) => { s.push({ title: { it: `Sezione ${s.length + 1}` }, fields: [] }); })}>Nuova sezione</Btn>
-        {sections.length > 0 && <Btn kind="ghost" icon="arrow-counterclockwise" onClick={() => setSections((s) => { s.length = 0; })}>Layout automatico</Btn>}</div>
-      <p className="help">Raggruppa i campi in sezioni (riquadri con titolo). I campi non assegnati vanno in fondo. L'ordine dei campi segue la scheda Campi; la larghezza si imposta nel campo (Altro → Larghezza).</p>
-      <div className="layout-board">
-        {sections.map((s, si) => <div className="lb-section" key={si}>
-          <div className="lb-head"><LangText value={s.title} onChange={(v) => setSections((ss) => { ss[si].title = v; })} />
-            <Btn small kind="ghost" icon="chevron-up" onClick={() => setSections((ss) => { if (si > 0) [ss[si - 1], ss[si]] = [ss[si], ss[si - 1]]; })} />
-            <Btn small kind="ghost" icon="trash" onClick={() => setSections((ss) => { ss.splice(si, 1); })} /></div>
-          <div className="lb-fields">{fields.filter((f) => sectionOf(f.name) === si).map((f) => <span key={f.name} className="chip">{lbl(f.label, f.name)}
-            <button type="button" onClick={() => setSections((ss) => { ss[si].fields = ss[si].fields.filter((x) => x !== f.name); })}><I n="x" /></button></span>)}</div>
-        </div>)}
-        <div className="lb-section free"><div className="lb-head"><b>Campi non assegnati</b></div>
-          <div className="lb-fields">{fields.filter((f) => sectionOf(f.name) < 0).map((f) => <span key={f.name} className="chip">{lbl(f.label, f.name)}
-            {sections.length > 0 && <select className="inp sm" value="" onChange={(e) => { const si = Number(e.target.value); setSections((ss) => { ss[si].fields.push(f.name); }); }}>
-              <option value="">→</option>{sections.map((s, i) => <option key={i} value={i}>{lbl(s.title, `Sezione ${i + 1}`)}</option>)}</select>}</span>)}</div></div>
-      </div>
     </div>
   );
 }
