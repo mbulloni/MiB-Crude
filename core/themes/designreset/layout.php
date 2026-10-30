@@ -86,6 +86,6 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
  </div>
 </div>
 <?php include $app->root . '/runtime/views/partials/modal.php' ?>
-<?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts)) ?>
+<?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>
 </html>

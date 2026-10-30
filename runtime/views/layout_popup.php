@@ -7,5 +7,5 @@
 <body class="mc-popup mc-themed-content<?= !empty($_GET['embed']) ? ' mc-embedded' : '' ?> mc-<?= h($theme['density']) ?>"><main class="p-3">
 <?php include __DIR__ . '/partials/flash.php' ?>
 <?= $content ?></main>
-<?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts)) ?>
+<?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body></html>

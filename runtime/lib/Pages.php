@@ -101,6 +101,64 @@ class Pages
         ], !empty($_GET['embed']) ? 'layout_popup' : $this->layout());
     }
 
+    /** Inline edit of one cell: JSON {k:{..}, f, v} -> {html} or {error}. */
+    public function page_inline()
+    {
+        $t = $this->table();
+        $this->app->security->check($t->name, 'E');
+        $in = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($in)) throw new HttpError(t('error.notfound'), 400);
+        $name = isset($in['f']) ? (string)$in['f'] : '';
+        if (!in_array($name, Grid::inlineFields($t), true)) throw new HttpError(t('error.denied'), 403);
+        $keys = $t->keysFromRequest(['k' => isset($in['k']) ? $in['k'] : []]);
+        $old = $t->fetchOne($keys);
+        if (!$old) throw new HttpError(t('error.notfound'), 404);
+        $f = $t->field($name);
+        $v = $f['editAs']['type'] === 'checkbox' ? (!empty($in['v']) ? 1 : 0) : $t->normalizeInput($f, isset($in['v']) ? (string)$in['v'] : '');
+        $errors = $t->validateField($f, $v, $keys);
+        if ($errors) { $this->app->json(['error' => implode(' ', $errors)], 422); return; }
+        try {
+            list($ok, $msg) = $t->update($keys, [$name => $v], 'inline');
+        } catch (\PDOException $e) {
+            $this->app->json(['error' => $this->dbError($e)], 409);
+            return;
+        }
+        if (!$ok) { $this->app->json(['error' => $msg], 409); return; }
+        $row = $t->fetchOne($keys);
+        $rows = [$row];
+        $t->resolveLookups($rows, [$f]);
+        $this->app->json(['html' => Format::html($t, $f, $rows[0], 'list'), 'raw' => $rows[0][$name]]);
+    }
+
+    /** Data for the calendar, gallery, kanban and map views of the list page. */
+    public function page_feed()
+    {
+        $t = $this->table();
+        $this->app->security->check($t->name, 'S');
+        $master = $this->master($t);
+        $req = $this->listRequest($t, $master);
+        $rows = $t->fetch($req, 2000, 0);
+        $t->resolveLookups($rows, $t->def['fields']);
+        $out = [];
+        foreach ($rows as $r) {
+            $keys = $t->keysFromRow($r);
+            $item = ['k' => $keys, 'url' => $t->enabled('view') ? $this->app->url('view', ['t' => $t->name, 'k' => $keys]) : '', 'v' => [], 'd' => []];
+            foreach ($t->def['fields'] as $f) {
+                if ($t->isDbFile($f)) continue;
+                $item['v'][$f['name']] = isset($r[$f['name']]) ? $r[$f['name']] : null;
+                $item['d'][$f['name']] = Format::plain($t, $f, isset($r[$f['name']]) ? $r[$f['name']] : null, $r);
+            }
+            foreach ($t->def['fields'] as $f) if (in_array($f['viewAs']['type'], ['image', 'file'], true) && !$t->isDbFile($f)) {
+                $files = Upload::files(isset($r[$f['name']]) ? $r[$f['name']] : null);
+                if ($files) $item['img'][$f['name']] = $this->app->url('file', ['t' => $t->name, 'f' => $f['name'], 'k' => $keys, 'i' => 0, 'thumb' => empty($files[0]['thumb']) ? null : 1]);
+            }
+            $out[] = $item;
+        }
+        $lists = [];
+        foreach ($t->def['fields'] as $f) if ($t->lookupDef($f)) $lists[$f['name']] = $t->lookupOptions($f, '', null, 200);
+        $this->app->json(['rows' => $out, 'options' => $lists, 'canEdit' => $t->enabled('edit') && $this->app->security->can($t->name, 'E')]);
+    }
+
     /** DataTables server-side data for the list page. */
     public function page_dt()
     {

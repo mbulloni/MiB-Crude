@@ -372,10 +372,11 @@ class Theme
     }
 
     /** <script> tags before </body>. */
-    public static function js(App $app, $t = null, $charts = false)
+    public static function js(App $app, $t = null, $charts = false, array $libs = [])
     {
         $pack = self::pack($app);
         $s = '';
+        if (in_array('map', $libs, true)) $s .= '<link rel="stylesheet" href="' . h($app->asset('vendor/leaflet.css')) . '">' . "\n";
         if ($pack && !empty($pack['providesJquery']) && !empty($pack['jsFirst'])) foreach ($pack['jsFirst'] as $j) $s .= '<script src="' . h(self::url($app, 'theme/' . $pack['id'] . '/' . $j)) . '"></script>' . "\n";
         if (!$pack || empty($pack['providesBootstrap'])) $s .= '<script src="' . h($app->asset('vendor/bootstrap.bundle.min.js')) . '"></script>' . "\n";
         if ($pack) foreach ($pack['js'] as $j) $s .= '<script src="' . h(self::url($app, 'theme/' . $pack['id'] . '/' . $j)) . '"></script>' . "\n";
@@ -386,6 +387,9 @@ class Theme
             'dt' => ['search' => t('dt.search'), 'lengthMenu' => t('dt.lengthMenu'), 'info' => t('dt.info'), 'infoEmpty' => t('dt.infoEmpty'), 'infoFiltered' => t('dt.infoFiltered'), 'zeroRecords' => t('list.empty'), 'emptyTable' => t('list.empty'), 'loadingRecords' => t('dt.loading'), 'processing' => t('dt.loading'),
             'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']]]], JSON_UNESCAPED_UNICODE) . ';</script>' . "\n";
         if ($charts) $s .= '<script src="' . h($app->asset('vendor/echarts.min.js')) . '"></script>' . "\n";
+        if (in_array('calendar', $libs, true)) $s .= '<script src="' . h($app->asset('vendor/fullcalendar.min.js')) . '"></script><script src="' . h($app->asset('vendor/fullcalendar-locales.min.js')) . '"></script>' . "\n";
+        if (in_array('map', $libs, true)) $s .= '<script src="' . h($app->asset('vendor/leaflet.js')) . '"></script>' . "\n";
+        $s .= '<script src="' . h($app->asset('vendor/qrcode.js')) . '"></script>' . "\n";
         $s .= '<script src="' . h($app->asset('app.js')) . '"></script>' . "\n";
         if ($t instanceof Table && !empty($t->def['jsFile'])) {
             $s .= '<script>window.MC.page = ' . json_encode(['type' => $app->page, 'table' => $t->name, 'proxy' => Compat::$proxy], JSON_UNESCAPED_UNICODE) . ';</script>'

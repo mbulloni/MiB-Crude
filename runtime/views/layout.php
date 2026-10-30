@@ -58,6 +58,6 @@ $sidebar = $theme['layout'] !== 'topbar';
   </main>
 </div>
 <?php include __DIR__ . '/partials/modal.php' ?>
-<?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts)) ?>
+<?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>
 </html>

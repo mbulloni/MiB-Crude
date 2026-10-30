@@ -56,6 +56,10 @@ class Controls
                 return '<input type="time" class="form-control' . $inv . '"' . $attr . $req . ' value="' . h(substr($v, 0, 5)) . '">';
             case 'email':
                 return '<input type="email" class="form-control' . $inv . '"' . $attr . $req . ' value="' . h($v) . '">';
+            case 'signature':
+                // Drawn with the mouse/finger, stored as a PNG data URL in a text column.
+                return '<div class="mc-sign" data-target="' . h($id) . '"><canvas width="500" height="160"></canvas><div class="mt-1"><button type="button" class="btn btn-sm btn-outline-secondary mc-sign-clear">'
+                    . h(t('sign.clear')) . '</button></div></div><input type="hidden"' . $attr . ' value="' . h($v) . '">';
             case 'color':
                 return '<input type="color" class="form-control form-control-color' . $inv . '"' . $attr . ' value="' . h($v !== '' ? $v : '#000000') . '">';
             case 'select':

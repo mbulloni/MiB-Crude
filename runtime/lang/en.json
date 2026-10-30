@@ -79,6 +79,7 @@
  "import.rolledback": "No changes applied because of errors",
  "import.row": "Row {0}",
  "import.update": "Update existing records (same key)",
+ "inline.saved": "Saved",
  "list.advanced": "Advanced",
  "list.all": "All",
  "list.clear": "Clear filters",
@@ -163,6 +164,7 @@
  "setup.help": "Create the first administrator of the application.",
  "setup.submit": "Create administrator",
  "setup.title": "Initial setup",
+ "sign.clear": "Clear signature",
  "theme.toggle": "Light/dark theme",
  "val.email": "{0}: invalid email",
  "val.format": "{0}: invalid format",
@@ -173,6 +175,11 @@
  "val.number": "{0} must be a number",
  "val.required": "{0} is required",
  "val.unique": "{0}: value already exists",
+ "view.calendar": "Calendar",
+ "view.gallery": "Gallery",
+ "view.kanban": "Kanban",
+ "view.map": "Map",
+ "view.table": "Table",
  "welcome.enter": "Enter",
  "yes": "Yes"
 }

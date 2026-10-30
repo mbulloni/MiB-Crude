@@ -86,6 +86,26 @@ export default function TableEditor({ name }: { name: string }) {
           <Row label="Ordinamento iniziale"><span className="inline"><Select value={t.pages.list.defaultSort?.field || ''} options={[['', '(chiave)'], ...t.fields.map((f) => [f.name, f.name] as [string, string])]} onChange={(v) => set((x) => { x.pages.list.defaultSort = v ? { field: v, dir: x.pages.list.defaultSort?.dir || 'asc' } : null; })} />
             <Select value={t.pages.list.defaultSort?.dir || 'asc'} options={[['asc', 'Crescente'], ['desc', 'Decrescente']]} onChange={(v) => set((x) => { if (x.pages.list.defaultSort) x.pages.list.defaultSort.dir = v; })} /></span></Row>
         </Section>
+        <Section title="Modifica e finestre">
+          <Row label="Modifica in linea" hint="Doppio clic su una cella della lista per modificarla"><Check value={t.pages.list.inlineEdit} onChange={(v) => set((x) => { x.pages.list.inlineEdit = v; })} /></Row>
+          {(['add', 'edit', 'view'] as const).map((k) => <Row key={k} label={{ add: 'Nuovo', edit: 'Modifica', view: 'Visualizza' }[k]}>
+            <Select value={t.pages[k]?.mode || 'page'} options={[['page', 'Pagina'], ['popup', 'Finestra popup sopra la lista']]} onChange={(v) => set((x) => { x.pages[k] = { ...(x.pages[k] || {}), mode: v }; })} /></Row>)}
+        </Section>
+        <Section title="Viste della lista" help="Oltre alla tabella: calendario (campo data), galleria (campo immagine), kanban (trascina le schede tra i valori di un campo), mappa (latitudine/longitudine)."
+          actions={<Select value="" options={[['', 'Aggiungi vista…'], ['calendar', 'Calendario'], ['gallery', 'Galleria'], ['kanban', 'Kanban'], ['map', 'Mappa']]} onChange={(v) => v && set((x) => { x.pages.list.views = [...(x.pages.list.views || []).filter((y: any) => y.type !== v), { type: v, titleField: x.fields.find((f) => f.type === 'string')?.name || x.fields[0]?.name }]; })} />}>
+          {(t.pages.list.views || []).map((v: any, i: number) => {
+            const fo = [['', '—'], ...t.fields.map((f) => [f.name, f.name] as [string, string])] as [string, string][];
+            const sv = (k: string) => (val: string) => set((x) => { x.pages.list.views[i] = { ...x.pages.list.views[i], [k]: val }; });
+            return <div className="card" key={v.type}><div className="inline"><b>{({ calendar: 'Calendario', gallery: 'Galleria', kanban: 'Kanban', map: 'Mappa' } as any)[v.type]}</b><span className="grow" />
+              <Btn small kind="ghost" icon="trash" onClick={() => set((x) => { x.pages.list.views.splice(i, 1); })} /></div>
+              <Row label="Titolo"><Select value={v.titleField} options={fo} onChange={sv('titleField')} /></Row>
+              {v.type === 'calendar' && <><Row label="Data inizio"><Select value={v.dateField} options={fo} onChange={sv('dateField')} /></Row><Row label="Data fine"><Select value={v.endField} options={fo} onChange={sv('endField')} /></Row></>}
+              {v.type === 'gallery' && <><Row label="Immagine"><Select value={v.imageField} options={fo} onChange={sv('imageField')} /></Row><Row label="Sottotitolo"><Select value={v.subtitleField} options={fo} onChange={sv('subtitleField')} /></Row></>}
+              {v.type === 'kanban' && <><Row label="Colonne (campo)"><Select value={v.statusField} options={fo} onChange={sv('statusField')} /></Row><Row label="Sottotitolo"><Select value={v.subtitleField} options={fo} onChange={sv('subtitleField')} /></Row></>}
+              {v.type === 'map' && <><Row label="Latitudine"><Select value={v.latField} options={fo} onChange={sv('latField')} /></Row><Row label="Longitudine"><Select value={v.lngField} options={fo} onChange={sv('lngField')} /></Row></>}
+            </div>;
+          })}
+        </Section>
         <Section title="Moduli ed esportazione">
           <Row label="Colonne nei moduli"><Select value={String(t.pages.edit?.columns || 1)} options={[['1', '1'], ['2', '2'], ['3', '3']]} onChange={(v) => set((x) => { x.pages.edit = { ...x.pages.edit, columns: Number(v) }; x.pages.add = { ...x.pages.add, columns: Number(v) }; })} /></Row>
           <Row label="Formati di esportazione"><span className="chips">{['csv', 'xlsx', 'json'].map((fm) => <Check key={fm} label={fm.toUpperCase()} value={(t.pages.export?.formats || []).includes(fm)} onChange={(v) => set((x) => { const cur: string[] = x.pages.export.formats || []; x.pages.export.formats = v ? [...cur, fm] : cur.filter((y) => y !== fm); if (!x.pages.export.formats.length) x.pages.export.formats = ['csv']; })} />)}</span></Row>

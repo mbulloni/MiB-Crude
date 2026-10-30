@@ -72,3 +72,21 @@ table.mc-grid.dataTable td .mc-thumb { max-height: 40px; }
 .mc-hero .container { padding-top: 6rem !important; padding-bottom: 6rem !important; }
 .mc-hero .mc-welcome-text { max-width: 680px; opacity: .92; }
 .mc-welcome-nav a { color: #fff; margin-left: 1rem; font-weight: 600; text-decoration: none; }
+
+td.mc-inline { cursor: cell; }
+td.mc-inline:hover { outline: 1px dashed var(--bs-border-color); outline-offset: -2px; }
+td.mc-saving { opacity: .5; }
+td.mc-saved { background: color-mix(in srgb, var(--bs-success) 18%, transparent) !important; transition: background .6s; }
+.mc-tip { position: absolute; z-index: 1080; width: 360px; display: none; max-height: 340px; overflow: auto; }
+.mc-tip dl { margin: 0; }
+.mc-qr svg { display: block; }
+.mc-signature { max-height: 90px; background: #fff; border: 1px solid var(--bs-border-color); border-radius: 4px; }
+.mc-sign canvas { border: 1px dashed var(--bs-border-color); border-radius: 6px; background: #fff; touch-action: none; }
+.mc-kanban { display: flex; gap: 12px; overflow-x: auto; align-items: flex-start; padding-bottom: 8px; }
+.mc-kcol { flex: 0 0 270px; background: var(--bs-tertiary-bg); border-radius: 8px; padding: 8px; min-height: 120px; }
+.mc-kcol.over { outline: 2px dashed var(--mc-primary); }
+.mc-khead { font-weight: 600; margin-bottom: 8px; }
+.mc-kcard { margin-bottom: 8px; cursor: grab; }
+.mc-kcard.dragging { opacity: .5; }
+.mc-gallery-card img { height: 180px; object-fit: cover; }
+.mc-noimg { height: 180px; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--bs-secondary-color); background: var(--bs-tertiary-bg); }

@@ -89,6 +89,10 @@ class Format
                 return self::files($t, $f, $row, $context);
             case 'color':
                 return '<span class="mc-swatch" style="background:' . h($v) . '"></span> ' . h($v);
+            case 'qrcode':
+                return '<span class="mc-qr" data-qr="' . h($v) . '" data-size="' . ($context === 'list' ? 2 : 4) . '" title="' . h($v) . '"></span>';
+            case 'signature':
+                return strpos((string)$v, 'data:image/png;base64,') === 0 ? '<img class="mc-signature" src="' . h($v) . '" alt="">' : '';
         }
         $text = self::plain($t, $f, $v);
         if (in_array($va['type'], ['number', 'currency', 'percent'], true)) return '<span class="mc-num">' . h($text) . '</span>';

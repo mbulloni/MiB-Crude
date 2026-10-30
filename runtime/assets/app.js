@@ -70,6 +70,8 @@
       language: Object.assign({ lengthMenu: '_MENU_' }, i18n.dt || {}),
       createdRow: function (row, data) {
         if (data.rowcss) row.setAttribute('style', data.rowcss);
+        if (data.k) row.setAttribute('data-keys', JSON.stringify(data.k));
+        cfg.columns.forEach(function (c, i) { if (c.inline && row.cells[i]) { row.cells[i].setAttribute('data-inline', c.key); row.cells[i].classList.add('mc-inline'); } });
         if (data.css) Object.keys(data.css).forEach(function (i) { if (row.cells[i]) row.cells[i].setAttribute('style', data.css[i]); });
       },
       drawCallback: function () {
@@ -191,7 +193,11 @@
     done: function (value) {
       if (modal) modal.hide();
       var el = modalTarget && document.getElementById(modalTarget);
-      if (!el) return;
+      if (!el) {
+        // Popup add/edit from a list: refresh the grid (or the page).
+        if (window.MC && window.MC.grid) window.MC.grid.ajax.reload(null, false); else if (!modalTarget) location.reload();
+        return;
+      }
       var url = el.getAttribute('data-lookup') + '&limit=2000';
       fetchJson(url).then(function (opts) {
         el.innerHTML = '<option value=""></option>';
@@ -299,4 +305,176 @@
   });
   window.MC = window.MC || {};
   window.MC.csrf = csrf;
+})();
+
+/* --- popup pages, inline edit, hover preview, QR codes, signatures, alternative list views --- */
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var csrf = ($('meta[name="csrf-token"]') || {}).content || '';
+  var post = function (url, body) {
+    return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.statusText); return j; }); });
+  };
+
+  // Add/edit/view in a modal window ("popup" mode of the page).
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a.mc-popup-link');
+    if (!a || e.ctrlKey || e.metaKey || !window.MCModal) return;
+    e.preventDefault();
+    window.MCModal.open(a.href + (a.href.indexOf('?') > 0 ? '&' : '?') + 'popup=1', a.title || a.textContent.trim(), null);
+  });
+
+  // Inline edit: double click on an editable cell.
+  var grid = $('#mcGrid');
+  if (grid) {
+    var cfg = JSON.parse(grid.getAttribute('data-dt'));
+    grid.addEventListener('dblclick', function (e) {
+      var td = e.target.closest('td.mc-inline');
+      if (!td || td.querySelector('input,select')) return;
+      var tr = td.closest('tr');
+      var keys = JSON.parse(tr.getAttribute('data-keys') || '{}');
+      var field = td.getAttribute('data-inline');
+      var old = td.innerHTML;
+      var text = td.textContent.trim();
+      var input = document.createElement('input');
+      input.className = 'form-control form-control-sm';
+      input.value = text;
+      td.innerHTML = '';
+      td.appendChild(input);
+      input.focus(); input.select();
+      var done = false;
+      var finish = function (save) {
+        if (done) return; done = true;
+        if (!save || input.value === text) { td.innerHTML = old; return; }
+        td.classList.add('mc-saving');
+        post(cfg.inlineUrl, { k: keys, f: field, v: input.value }).then(function (r) { td.innerHTML = r.html; td.classList.remove('mc-saving'); td.classList.add('mc-saved'); setTimeout(function () { td.classList.remove('mc-saved'); }, 900); })
+          .catch(function (err) { td.innerHTML = old; td.classList.remove('mc-saving'); alert(err.message); });
+      };
+      input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finish(true); if (ev.key === 'Escape') finish(false); });
+      input.addEventListener('blur', function () { finish(true); });
+    });
+  }
+
+  // Hover preview of linked records (lookup values).
+  var tip = null, tipTimer = null;
+  document.addEventListener('mouseover', function (e) {
+    var a = e.target.closest && e.target.closest('a.mc-preview');
+    if (!a) return;
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(function () {
+      fetch(a.getAttribute('data-preview'), { credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var dl = doc.querySelector('dl.mc-view');
+        if (!dl) return;
+        if (!tip) { tip = document.createElement('div'); tip.className = 'mc-tip card shadow'; document.body.appendChild(tip); }
+        tip.innerHTML = '<div class="card-body small">' + dl.outerHTML + '</div>';
+        var r = a.getBoundingClientRect();
+        tip.style.left = Math.min(window.innerWidth - 380, r.left) + 'px';
+        tip.style.top = (r.bottom + window.scrollY + 6) + 'px';
+        tip.style.display = 'block';
+      });
+    }, 450);
+  });
+  document.addEventListener('mouseout', function (e) {
+    if (e.target.closest && e.target.closest('a.mc-preview')) { clearTimeout(tipTimer); if (tip) tip.style.display = 'none'; }
+  });
+
+  // QR codes (viewAs "qrcode"), also inside grids redrawn by DataTables.
+  var drawQr = function () {
+    if (!window.qrcode) return;
+    $$('.mc-qr:not([data-done])').forEach(function (el) {
+      try { var q = qrcode(0, 'M'); q.addData(el.getAttribute('data-qr')); q.make(); el.innerHTML = q.createSvgTag(Number(el.getAttribute('data-size')) || 3, 0); } catch (e) {}
+      el.setAttribute('data-done', '1');
+    });
+  };
+  drawQr();
+  if (window.MC && window.MC.grid) window.MC.grid.on('draw', drawQr);
+
+  // Signature pad (editAs "signature").
+  $$('.mc-sign').forEach(function (box) {
+    var cv = box.querySelector('canvas'), ctx = cv.getContext('2d'), input = document.getElementById(box.getAttribute('data-target'));
+    var drawing = false, last = null;
+    cv.style.width = '100%'; cv.style.maxWidth = '500px';
+    if (input.value) { var img = new Image(); img.onload = function () { ctx.drawImage(img, 0, 0); }; img.src = input.value; }
+    var pos = function (e) { var r = cv.getBoundingClientRect(); var p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * cv.width / r.width, (p.clientY - r.top) * cv.height / r.height]; };
+    var start = function (e) { drawing = true; last = pos(e); e.preventDefault(); };
+    var move = function (e) { if (!drawing) return; var p = pos(e); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); last = p; e.preventDefault(); };
+    var end = function () { if (drawing) { drawing = false; input.value = cv.toDataURL('image/png'); } };
+    cv.addEventListener('mousedown', start); cv.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+    cv.addEventListener('touchstart', start); cv.addEventListener('touchmove', move); cv.addEventListener('touchend', end);
+    box.querySelector('.mc-sign-clear').addEventListener('click', function () { ctx.clearRect(0, 0, cv.width, cv.height); input.value = ''; });
+  });
+
+  // Alternative views of the list page.
+  var view = $('#mcView');
+  if (!view) return;
+  var vcfg = JSON.parse(view.getAttribute('data-cfg') || '{}');
+  var type = view.getAttribute('data-view');
+  var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+  var update = function (row, field, value) { return post(view.getAttribute('data-inline'), { k: row.k, f: field, v: value }); };
+  fetch(view.getAttribute('data-feed'), { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(function (r) { return r.json(); }).then(function (data) {
+    var rows = data.rows;
+    var title = function (r) { return r.d[vcfg.titleField] || ''; };
+    if (type === 'calendar' && window.FullCalendar) {
+      view.style.minHeight = '640px';
+      var cal = new FullCalendar.Calendar(view, {
+        initialView: 'dayGridMonth', locale: (window.MC && window.MC.lang) || 'it', height: 'auto',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
+        editable: !!data.canEdit,
+        events: rows.filter(function (r) { return r.v[vcfg.dateField]; }).map(function (r) {
+          return { title: title(r), start: String(r.v[vcfg.dateField]).replace(' ', 'T'), end: vcfg.endField && r.v[vcfg.endField] ? String(r.v[vcfg.endField]).replace(' ', 'T') : undefined, url: r.url, extendedProps: { row: r } };
+        }),
+        eventDrop: function (info) {
+          var d = info.event.start; var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+          var val = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + (String(info.event.extendedProps.row.v[vcfg.dateField]).length > 10 ? ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00' : '');
+          update(info.event.extendedProps.row, vcfg.dateField, val).catch(function (e) { alert(e.message); info.revert(); });
+        }
+      });
+      cal.render();
+    } else if (type === 'gallery') {
+      view.className += ' row g-3';
+      view.innerHTML = rows.map(function (r) {
+        var img = r.img && r.img[vcfg.imageField];
+        return '<div class="col-6 col-md-4 col-xl-3"><a class="card h-100 text-decoration-none mc-gallery-card" href="' + esc(r.url) + '">' + (img ? '<img class="card-img-top" src="' + esc(img) + '" alt="">' : '<div class="mc-noimg"><i class="bi bi-image"></i></div>')
+          + '<div class="card-body"><div class="fw-semibold">' + esc(title(r)) + '</div>' + (vcfg.subtitleField ? '<div class="small text-secondary">' + esc(r.d[vcfg.subtitleField]) + '</div>' : '') + '</div></a></div>';
+      }).join('');
+    } else if (type === 'kanban') {
+      var opts = data.options[vcfg.statusField] || [];
+      if (!opts.length) { var seen = {}; rows.forEach(function (r) { var v = r.v[vcfg.statusField]; if (v != null && !seen[v]) { seen[v] = 1; opts.push({ value: String(v), label: r.d[vcfg.statusField] }); } }); }
+      view.className += ' mc-kanban';
+      view.innerHTML = opts.map(function (o) {
+        var cards = rows.filter(function (r) { return String(r.v[vcfg.statusField]) === String(o.value); });
+        return '<div class="mc-kcol" data-value="' + esc(o.value) + '"><div class="mc-khead">' + esc(o.label) + ' <span class="badge text-bg-secondary">' + cards.length + '</span></div>'
+          + cards.map(function (r) { return '<div class="card mc-kcard" draggable="' + (data.canEdit ? 'true' : 'false') + '" data-k=\'' + esc(JSON.stringify(r.k)) + '\'><div class="card-body p-2"><a href="' + esc(r.url) + '">' + esc(title(r)) + '</a>'
+            + (vcfg.subtitleField ? '<div class="small text-secondary">' + esc(r.d[vcfg.subtitleField]) + '</div>' : '') + '</div></div>'; }).join('') + '</div>';
+      }).join('');
+      var dragged = null;
+      $$('.mc-kcard', view).forEach(function (c) { c.addEventListener('dragstart', function () { dragged = c; c.classList.add('dragging'); }); c.addEventListener('dragend', function () { c.classList.remove('dragging'); }); });
+      $$('.mc-kcol', view).forEach(function (col) {
+        col.addEventListener('dragover', function (e) { e.preventDefault(); col.classList.add('over'); });
+        col.addEventListener('dragleave', function () { col.classList.remove('over'); });
+        col.addEventListener('drop', function (e) {
+          e.preventDefault(); col.classList.remove('over');
+          if (!dragged) return;
+          var from = dragged.parentNode;
+          col.appendChild(dragged);
+          update({ k: JSON.parse(dragged.getAttribute('data-k')) }, vcfg.statusField, col.getAttribute('data-value')).catch(function (err) { from.appendChild(dragged); alert(err.message); });
+        });
+      });
+    } else if (type === 'map' && window.L) {
+      view.style.height = '600px';
+      var map = L.map(view);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+      var pts = [];
+      rows.forEach(function (r) {
+        var lat = parseFloat(r.v[vcfg.latField]), lng = parseFloat(r.v[vcfg.lngField]);
+        if (isNaN(lat) || isNaN(lng)) return;
+        pts.push([lat, lng]);
+        L.marker([lat, lng]).addTo(map).bindPopup('<a href="' + esc(r.url) + '">' + esc(title(r)) + '</a>');
+      });
+      if (pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 14 }); else map.setView([42, 12.5], 5);
+    }
+  });
 })();

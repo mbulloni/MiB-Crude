@@ -502,6 +502,14 @@ class Table
         return strtr((string)$expr, $map);
     }
 
+    /** Validation of a single field (inline edit, kanban moves). */
+    public function validateField(array $f, $v, $keys = null)
+    {
+        $vals = [$f['name'] => $v];
+        $all = $this->validate($vals, 'edit', $keys);
+        return isset($all[$f['name']]) ? [$all[$f['name']]] : [];
+    }
+
     /** Validation errors: field => message */
     public function validate(array $vals, $mode, $keys = null)
     {

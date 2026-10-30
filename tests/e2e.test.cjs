@@ -40,6 +40,10 @@ function phpServer(outDir) {
 function resetDb() {
   return S.reset(CONN, PW);
 }
+async function dbExec(sql) {
+  const c = await require('../core/db.cjs').connect(CONN, PW);
+  try { await c.query(sql.replace(/\b(orders|status|id)\b/g, (m) => require('../core/ddl.cjs').quote(CONN.driver, m))); } finally { await c.close(); }
+}
 
 // Tiny cookie-keeping HTTP client.
 function client() {
@@ -78,6 +82,8 @@ test.before(async () => {
   orders.fields.find((f) => f.name === 'total').totals = 'sum';
   orders.api = { enabled: true, methods: ['list', 'view', 'add', 'edit', 'delete'] };
   orders.pages.list.filterPanel = true;
+  orders.pages.list.inlineEdit = true;
+  orders.pages.list.views = [{ type: 'kanban', statusField: 'status', titleField: 'customer_id' }, { type: 'calendar', dateField: 'order_date', titleField: 'customer_id' }];
   orders.fields.find((f) => f.name === 'status').filter = true;
   // Event: uppercase category names; block deleting category 1.
   proj.events.categories = {
@@ -173,6 +179,22 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.match(r.text, /mt=orders/);
   d = await dt('t=order_items&mt=orders&mk[id]=1&embed=1');
   assert.strictEqual(d.recordsTotal, 2);
+
+  // Inline edit of one cell (JSON + CSRF header) and data of the kanban/calendar views.
+  r = await c.req('?p=list&t=orders&v=kanban');
+  assert.match(r.text, /id="mcView"/);
+  const token = (r.text.match(/name="csrf-token" content="([a-f0-9]+)"/) || [])[1];
+  r = await c.req('?p=inline&t=orders', { method: 'POST', headers: { 'content-type': 'application/json', 'x-csrf-token': token }, body: JSON.stringify({ k: { id: 3 }, f: 'status', v: 'closed' }) });
+  assert.strictEqual(r.status, 200, r.text);
+  assert.match(JSON.parse(r.text).html, /Chiuso/);
+  r = await c.req('?p=inline&t=orders', { method: 'POST', headers: { 'content-type': 'application/json', 'x-csrf-token': token }, body: JSON.stringify({ k: { id: 3 }, f: 'order_date', v: '' }) });
+  assert.strictEqual(r.status, 422);
+  r = await c.req('?p=feed&t=orders');
+  const feed = JSON.parse(r.text);
+  assert.strictEqual(feed.rows.length, 4);
+  assert.strictEqual(feed.rows.find((x) => String(x.k.id) === '3').v.status, 'closed');
+  assert.strictEqual(feed.options.status.length, 3);
+  await dbExec(`UPDATE orders SET status = 'new' WHERE id = 3`);
 
   // Dependent lookup.
   r = await c.req('?p=lookup&t=customers&f=city_id&parent=2');

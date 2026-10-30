@@ -24,6 +24,16 @@ $dtConfig = [
     'totals' => $hasTotals && !empty($page['totals']),
 ];
 $curUrl = $_SERVER['REQUEST_URI'];
+$inline = \MiB\Grid::inlineFields($t);
+foreach ($dtConfig['columns'] as $i => $c) $dtConfig['columns'][$i]['inline'] = in_array($c['key'], $inline, true);
+$dtConfig['inlineUrl'] = $app->url('inline', ['t' => $t->name]);
+// Alternative views: calendar, gallery, kanban, map (pages.list.views)
+$views = array_values(array_filter(isset($page['views']) ? $page['views'] : [], function ($v) { return !empty($v['type']); }));
+$curView = isset($_GET['v']) ? (string)$_GET['v'] : 'table';
+$viewDef = null;
+foreach ($views as $v) if ($v['type'] === $curView) $viewDef = $v;
+if (!$viewDef) $curView = 'table';
+if ($viewDef && in_array($curView, ['calendar', 'map'], true)) $needLibs = [$curView];
 ?>
 <?php if (!$embedded): ?>
 <?php if ($master): $mt = $master['table']; $mrow = $master['row']; $mrows = [$mrow]; $mt->resolveLookups($mrows, $mt->fields('list')); $mrow = $mrows[0]; ?>
@@ -89,6 +99,16 @@ $curUrl = $_SERVER['REQUEST_URI'];
 <?php else: ?>
   <div class="col-12">
 <?php endif ?>
+<?php if ($views && !$embedded): ?>
+<ul class="nav nav-tabs mb-2 mc-viewtabs">
+  <li class="nav-item"><a class="nav-link<?= $curView === 'table' ? ' active' : '' ?>" href="<?= h($app->url('list', array_merge($keep, ['v' => 'table']))) ?>"><i class="bi bi-table"></i> <?= h(t('view.table')) ?></a></li>
+  <?php foreach ($views as $v): ?><li class="nav-item"><a class="nav-link<?= $curView === $v['type'] ? ' active' : '' ?>" href="<?= h($app->url('list', array_merge($keep, ['v' => $v['type']]))) ?>"><i class="bi bi-<?= h(['calendar' => 'calendar3', 'gallery' => 'grid-3x3-gap', 'kanban' => 'kanban', 'map' => 'geo-alt'][$v['type']] ?? 'eye') ?>"></i> <?= h(t('view.' . $v['type'])) ?></a></li><?php endforeach ?>
+</ul>
+<?php endif ?>
+<?php if ($curView !== 'table'): ?>
+<div class="card"><div class="card-body"><div id="mcView" class="mc-view-<?= h($curView) ?>" data-view="<?= h($curView) ?>" data-feed="<?= h($app->url('feed', $keep)) ?>"
+  data-inline="<?= h($app->url('inline', ['t' => $t->name])) ?>" data-cfg="<?= h(json_encode($viewDef, JSON_UNESCAPED_UNICODE)) ?>"></div></div></div>
+<?php else: ?>
 <form method="post" action="<?= h($app->url('delete', ['t' => $t->name])) ?>" id="mcListForm" class="mc-list-form">
 <?= $app->csrfField() ?><input type="hidden" name="_back" value="<?= h($curUrl) ?>">
 <div class="card mc-grid-card"><div class="card-body p-2">
@@ -107,5 +127,6 @@ $curUrl = $_SERVER['REQUEST_URI'];
 </table>
 </div></div>
 </form>
+<?php endif ?>
   </div>
 </div>

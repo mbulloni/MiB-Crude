@@ -79,6 +79,7 @@
  "import.rolledback": "Nessuna modifica applicata a causa degli errori",
  "import.row": "Riga {0}",
  "import.update": "Aggiorna i record esistenti (stessa chiave)",
+ "inline.saved": "Salvato",
  "list.advanced": "Avanzata",
  "list.all": "Tutti",
  "list.clear": "Azzera filtri",
@@ -163,6 +164,7 @@
  "setup.help": "Crea il primo amministratore dell'applicazione.",
  "setup.submit": "Crea amministratore",
  "setup.title": "Configurazione iniziale",
+ "sign.clear": "Cancella firma",
  "theme.toggle": "Tema chiaro/scuro",
  "val.email": "{0}: email non valida",
  "val.format": "{0}: formato non valido",
@@ -173,6 +175,11 @@
  "val.number": "{0}: deve essere un numero",
  "val.required": "{0}: campo obbligatorio",
  "val.unique": "{0}: valore già presente",
+ "view.calendar": "Calendario",
+ "view.gallery": "Galleria",
+ "view.kanban": "Kanban",
+ "view.map": "Mappa",
+ "view.table": "Tabella",
  "welcome.enter": "Entra",
  "yes": "Sì"
 }

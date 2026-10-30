@@ -37,8 +37,9 @@ class Grid
         $actions = isset($t->def['pages']['list']['rowActions']) ? $t->def['pages']['list']['rowActions'] : ['view', 'edit', 'delete'];
         $top = $embedded ? ' target="_top"' : '';
         $h = '';
-        if (in_array('view', $actions, true) && $t->enabled('view') && $sec->can($t->name, 'V')) $h .= '<a class="btn btn-sm btn-link px-1" title="' . h(t('btn.view')) . '" href="' . h($app->url('view', $kq)) . '"' . $top . '><i class="bi bi-eye"></i></a>';
-        if (in_array('edit', $actions, true) && $t->enabled('edit') && $sec->can($t->name, 'E')) $h .= '<a class="btn btn-sm btn-link px-1" title="' . h(t('btn.edit')) . '" href="' . h($app->url('edit', $kq)) . '"' . $top . '><i class="bi bi-pencil"></i></a>';
+        $pop = function ($type) use ($t) { return (isset($t->def['pages'][$type]['mode']) && $t->def['pages'][$type]['mode'] === 'popup') ? ' mc-popup-link' : ''; };
+        if (in_array('view', $actions, true) && $t->enabled('view') && $sec->can($t->name, 'V')) $h .= '<a class="btn btn-sm btn-link px-1' . $pop('view') . '" title="' . h(t('btn.view')) . '" href="' . h($app->url('view', $kq)) . '"' . $top . '><i class="bi bi-eye"></i></a>';
+        if (in_array('edit', $actions, true) && $t->enabled('edit') && $sec->can($t->name, 'E')) $h .= '<a class="btn btn-sm btn-link px-1' . $pop('edit') . '" title="' . h(t('btn.edit')) . '" href="' . h($app->url('edit', $kq)) . '"' . $top . '><i class="bi bi-pencil"></i></a>';
         if (in_array('copy', $actions, true) && $t->enabled('add') && $sec->can($t->name, 'A')) $h .= '<a class="btn btn-sm btn-link px-1" title="' . h(t('btn.copy')) . '" href="' . h($app->url('add', array_merge($kq, ['copy' => 1]))) . '"' . $top . '><i class="bi bi-copy"></i></a>';
         if (in_array('delete', $actions, true) && $t->enabled('delete') && $sec->can($t->name, 'D') && !$embedded) $h .= '<button class="btn btn-sm btn-link px-1 text-danger mc-delete-one" title="' . h(t('btn.delete')) . '" type="button" data-keys="' . h(json_encode($keys)) . '"><i class="bi bi-trash"></i></button>';
         $h .= Buttons::html($t, 'list', true, $keys);
@@ -46,6 +47,28 @@ class Grid
             $h .= '<a class="btn btn-sm btn-link px-1" title="' . h($app->table($d['table'])->caption()) . '" href="' . h($app->url('list', ['t' => $d['table'], 'mt' => $t->name, 'mk' => $keys])) . '"' . $top . '><i class="bi bi-diagram-3"></i></a>';
         }
         return $h;
+    }
+
+    const INLINE_TYPES = ['text', 'textarea', 'number', 'email', 'date', 'datetime', 'time', 'select', 'radio', 'checkbox', 'color'];
+
+    /** Field names editable directly in the grid cells (pages.list.inlineEdit). */
+    public static function inlineFields(Table $t)
+    {
+        if (empty($t->def['pages']['list']['inlineEdit']) || !$t->enabled('edit') || !$t->app->security->can($t->name, 'E') || !$t->def['keys']) return self::viewFields($t);
+        $out = [];
+        foreach ($t->fields('edit') as $f) if (in_array($f['editAs']['type'], self::INLINE_TYPES, true) && empty($f['editAs']['lookup']['multiple'])) $out[] = $f['name'];
+        return $out;
+    }
+
+    /** Fields changed by dragging in calendar/kanban views (always allowed with the Edit right). */
+    public static function viewFields(Table $t)
+    {
+        if (!$t->enabled('edit') || !$t->app->security->can($t->name, 'E') || !$t->def['keys']) return [];
+        $out = [];
+        foreach (isset($t->def['pages']['list']['views']) ? $t->def['pages']['list']['views'] : [] as $v) {
+            foreach (['dateField', 'endField', 'statusField'] as $k) if (!empty($v[$k])) $out[] = $v[$k];
+        }
+        return $out;
     }
 
     /** One DataTables row: cell HTML by position, plus row/cell styles from events. */
@@ -61,7 +84,7 @@ class Grid
                 if (isset($row['__css'][$c['key']])) $css[$i] = $row['__css'][$c['key']];
             }
         }
-        $out = ['cells' => $cells];
+        $out = ['cells' => $cells, 'k' => $t->keysFromRow($row)];
         if ($css) $out['css'] = $css;
         if (isset($row['__rowcss'])) $out['rowcss'] = $row['__rowcss'];
         return $out;

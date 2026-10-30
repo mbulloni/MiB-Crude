@@ -6,10 +6,10 @@ import CodeEditor from './CodeEditor';
 import { Btn, Check, LangText, Modal, Num, Row, Section, Select, Tabs, Text } from './ui';
 
 export const VIEW_AS: [string, string][] = [['text', 'Testo'], ['number', 'Numero'], ['currency', 'Valuta'], ['percent', 'Percentuale'], ['date', 'Data'], ['datetime', 'Data e ora'], ['time', 'Ora'],
-  ['checkbox', 'Casella'], ['email', 'Email (link)'], ['url', 'Link'], ['image', 'Immagine'], ['file', 'File'], ['longtext', 'Testo lungo'], ['html', 'HTML'], ['color', 'Colore'], ['lookup', 'Valore lookup'], ['custom', 'Codice PHP']];
+  ['checkbox', 'Casella'], ['email', 'Email (link)'], ['url', 'Link'], ['image', 'Immagine'], ['file', 'File'], ['longtext', 'Testo lungo'], ['html', 'HTML'], ['color', 'Colore'], ['lookup', 'Valore lookup'], ['qrcode', 'Codice QR'], ['signature', 'Firma (immagine)'], ['custom', 'Codice PHP']];
 export const EDIT_AS: [string, string][] = [['text', 'Casella di testo'], ['textarea', 'Area di testo'], ['richtext', 'Editor testo formattato'], ['number', 'Numero'], ['password', 'Password'], ['email', 'Email'],
   ['date', 'Data'], ['datetime', 'Data e ora'], ['time', 'Ora'], ['checkbox', 'Casella / interruttore'], ['select', 'Menu a tendina (lookup)'], ['radio', 'Pulsanti di scelta (lookup)'],
-  ['checkboxes', 'Caselle multiple (lookup)'], ['autocomplete', 'Completamento automatico (lookup)'], ['file', 'Caricamento file'], ['image', 'Caricamento immagine'], ['color', 'Selettore colore'], ['readonly', 'Sola lettura'], ['hidden', 'Nascosto']];
+  ['checkboxes', 'Caselle multiple (lookup)'], ['autocomplete', 'Completamento automatico (lookup)'], ['file', 'Caricamento file'], ['image', 'Caricamento immagine'], ['color', 'Selettore colore'], ['signature', 'Firma a mano'], ['readonly', 'Sola lettura'], ['hidden', 'Nascosto']];
 const LOOKUP_TYPES = ['select', 'radio', 'checkboxes', 'autocomplete'];
 
 function LookupEditor({ t, lk, onChange }: { t: Table; lk: Lookup; onChange: (l: Lookup) => void }) {
