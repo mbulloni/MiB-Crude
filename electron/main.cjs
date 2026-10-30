@@ -180,6 +180,57 @@ handle('wizard:refresh', async (proj, table) => {
   return { proj, ...res };
 });
 
+// --- table structure (create/alter/drop), SQL scripts --------------------------------------
+
+const DDL = require('../core/ddl.cjs');
+handle('ddl:build', (kind, ...args) => {
+  if (kind === 'create') return [DDL.createTable(...args)];
+  if (kind === 'alter') return DDL.alterTable(...args);
+  if (kind === 'drop') return [DDL.dropTable(...args)];
+  throw new Error(`DDL sconosciuto: ${kind}`);
+});
+handle('db:columns', async (proj, connId, table) => {
+  const conn = connById(proj, connId);
+  const d = await W.withConnection(conn, pwOf(connId), (c) => D.describeTable(c, conn, table));
+  return d.columns.map(DDL.fromDb);
+});
+handle('db:exec', async (proj, connId, statements) => {
+  const conn = connById(proj, connId);
+  return W.withConnection(conn, pwOf(connId), async (c) => {
+    let n = 0;
+    for (const sql of statements) { if (!/^\s*--/.test(sql)) { await c.query(sql); n++; } }
+    return n;
+  });
+});
+handle('ddl:script', async (proj, connId, tables, dialect, withData, limit) => {
+  const conn = connById(proj, connId);
+  return W.withConnection(conn, pwOf(connId), async (c) => {
+    const out = [];
+    for (const name of tables) {
+      const d = await D.describeTable(c, conn, name);
+      const t = { name, columns: d.columns.map(DDL.fromDb) };
+      if (withData) {
+        const q = DDL.quote(conn.driver === 'oracle' ? 'oracle' : conn.driver, name);
+        const sql = conn.driver === 'sqlsrv' ? `SELECT TOP ${Number(limit) || 1000} * FROM ${q}` : conn.driver === 'oracle' ? `SELECT * FROM ${q} WHERE ROWNUM <= ${Number(limit) || 1000}` : `SELECT * FROM ${q} LIMIT ${Number(limit) || 1000}`;
+        t.rows = await c.query(sql);
+      }
+      out.push(t);
+    }
+    return DDL.script(dialect, out, { drop: true });
+  });
+});
+handle('file:save', async (title, defaultName, content) => {
+  const r = await dialog.showSaveDialog(win, { title, defaultPath: path.join(os.homedir(), defaultName) });
+  if (r.canceled || !r.filePath) return null;
+  fs.writeFileSync(r.filePath, content);
+  return r.filePath;
+});
+handle('file:read', async (title, filters) => {
+  const r = await dialog.showOpenDialog(win, { title, properties: ['openFile'], filters: filters || [] });
+  if (r.canceled) return null;
+  return { path: r.filePaths[0], content: fs.readFileSync(r.filePaths[0], 'utf8') };
+});
+
 // --- generate, preview, deploy ---------------------------------------------------------
 
 handle('gen:check', (proj) => G.check(proj));

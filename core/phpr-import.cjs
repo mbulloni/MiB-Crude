@@ -468,6 +468,8 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
     }
     if (Object.keys(snips).length) ds.snippets = Object.values(snips);
     ds.phprShort = str(t.m_strShortTableName) || tname;
+    const dc = t.DiagramCoordinates;
+    if (dc && str(dc.x1) !== '') ds.diagram = { x: Number(str(dc.x1)) || 0, y: Number(str(dc.y1)) || 0 };
     for (const [to, blocks] of Object.entries(evGroup)) {
       (proj.events[tname] ||= {})[to] = `<?php\n// Importato da phpr: le variabili phpr sono ricreate dal runtime MiB-Crude (Compat).\n\n${blocks.join('\n')}\nreturn true;\n`;
     }

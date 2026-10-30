@@ -96,6 +96,7 @@ export default function App() {
   const toasts = useStore((s) => s.toasts);
   const team = useStore((s) => s.team);
   const remote = useStore((s) => s.remoteChanged);
+  const navKind = useStore((s) => s.nav.kind);
   useTeamLocks();
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export default function App() {
         {dirty ? ' Hai modifiche non salvate: salva prima, poi ricarica.' : ''} <Btn small icon="arrow-clockwise" onClick={() => run('Ricarica…', reloadFromDisk)}>Ricarica</Btn></div>}
       <div className="body">
         <Sidebar />
-        <main className="main"><Main /></main>
+        <main className={`main ${navKind === 'tables' ? 'flush' : ''}`}><Main /></main>
       </div>
       {busy && <div className="busy"><span className="spinner" /> {busy}</div>}
       <Toasts toasts={toasts} />

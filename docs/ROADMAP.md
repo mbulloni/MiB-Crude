@@ -22,3 +22,5 @@ Stato v0.1.0 (2026-10-30): nucleo completo e testato end-to-end su MariaDB.
 15. Layout grafici delle pagine (celle, tab, stili per pagina) non importati: si usa il layout standard.
 16. `$xt->assign`, `$pageObject->hideItem` e simili sono accettati ma senza effetto.
 17. Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto.
+18. Pulsanti personalizzati phpr (OnBefore/OnServer/OnAfter in subversion/EVENTS.sqlite) non ancora convertiti.
+19. Tabelle e query: import/export tabelle in formato JSON (.mibtables.json), non ZIP come phpr; connessioni REST non supportate.

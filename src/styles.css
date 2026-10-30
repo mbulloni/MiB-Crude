@@ -177,3 +177,39 @@ progress { width: 100%; }
 .recent { list-style: none; padding: 0; margin: 6px 0 0; }
 .recent button { display: flex; gap: 8px; align-items: baseline; width: 100%; border: 0; background: none; color: var(--text); cursor: pointer; padding: 6px 4px; font: inherit; text-align: left; border-radius: 5px; }
 .recent button:hover { background: var(--hover); } .recent small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+
+/* Tables and queries (phpr "Datasource tables" screen) */
+.ds-screen { display: flex; flex-direction: column; height: 100%; }
+.ds-info { background: var(--accent); color: #fff; padding: 7px 16px; display: flex; gap: 8px; align-items: baseline; }
+.ds-info small { opacity: .8; }
+.ds-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 12px; border-bottom: 1px solid var(--border); background: var(--panel); align-items: center; }
+.ds-toolbar .sep { width: 1px; height: 20px; background: var(--border); }
+.ds-body { display: flex; flex: 1; min-height: 0; }
+.ds-tree { width: 330px; min-width: 220px; max-width: 70%; resize: horizontal; overflow: auto; border-right: 1px solid var(--border); background: var(--side); padding: 8px 0; }
+.ds-tree > .inp { margin: 0 8px 8px; width: calc(100% - 16px); }
+.tt-conn, .tt-item { display: flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer; user-select: none; }
+.tt-conn { font-size: 13px; }
+.tt-item:hover, .tt-conn:hover { background: var(--hover); }
+.tt-item.on { background: var(--accent-soft); color: var(--accent); }
+.tt-item.multi { outline: 1px dashed var(--accent); outline-offset: -1px; }
+.tt-more { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; visibility: hidden; }
+.tt-item:hover .tt-more, .tt-conn:hover .tt-more { visibility: visible; }
+.tt-group { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 10px 12px 4px; }
+.tt-actions { display: flex; gap: 6px; padding: 10px 12px; flex-wrap: wrap; }
+.ds-main { flex: 1; min-width: 0; position: relative; }
+.diagram { position: absolute; inset: 0; overflow: auto; background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px; }
+.diagram-lines { position: absolute; left: 0; top: 0; pointer-events: none; }
+.diagram-lines path { fill: none; stroke: var(--accent); stroke-width: 1.6; opacity: .7; }
+.diagram-lines marker path { fill: var(--accent); }
+.dg-box { position: absolute; background: var(--panel); border: 1px solid var(--border); border-radius: 7px; box-shadow: 0 2px 8px rgba(0,0,0,.08); cursor: move; user-select: none; overflow: hidden; }
+.dg-box.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.dg-head { display: flex; gap: 6px; align-items: center; padding: 6px 9px; background: var(--head); font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-box.sql .dg-head { background: color-mix(in srgb, var(--warn) 15%, var(--head)); }
+.dg-fields { padding: 4px 9px 6px; font-size: 11.5px; line-height: 18px; }
+.dg-fields > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); margin: 0 3px 1px 2px; }
+.ctx { position: fixed; z-index: 80; background: var(--panel); border: 1px solid var(--border); border-radius: 7px; box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 4px 0; min-width: 230px; }
+.ctx button { display: flex; width: 100%; gap: 8px; align-items: center; border: 0; background: none; color: var(--text); padding: 6px 14px; cursor: pointer; font: inherit; text-align: left; }
+.ctx button:hover { background: var(--hover); }
+.ctx hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+.main.flush { overflow: hidden; }
