@@ -14,6 +14,11 @@
     var mode = pref || root.getAttribute('data-mode') || 'auto';
     if (mode === 'auto') mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     root.setAttribute('data-bs-theme', mode);
+    // Graphic themes have their own dark switch: an attribute on <html> or a class on <body>.
+    var attr = root.getAttribute('data-mc-dark-attr');
+    if (attr) root.setAttribute(attr, mode);
+    var cls = root.getAttribute('data-mc-dark-class');
+    if (cls && document.body) document.body.classList.toggle(cls, mode === 'dark');
   }
   applyTheme();
   var tbtn = $('#mcTheme');

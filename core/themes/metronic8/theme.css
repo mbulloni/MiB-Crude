@@ -1,0 +1,10 @@
+/* MiB-Crude pages inside Metronic 8 */
+.mc-metronic .mc-pagehead h1 { font-weight: 700; }
+.mc-metronic .card { border: 0; box-shadow: 0 0 20px 0 rgba(76, 87, 125, .02); }
+.mc-metronic .mc-usermenu .dropdown-menu { z-index: 1060; }
+.mc-metronic .mc-brand { color: var(--kt-text-white, #fff); }
+.mc-metronic[data-kt-app-layout="light-sidebar"] .mc-brand { color: var(--kt-text-gray-800, #181c32); }
+.mc-metronic .menu-icon .bi { line-height: 1; }
+.mc-metronic table.dataTable thead th { font-weight: 600; }
+.mc-metronic .mc-filters .card-header { justify-content: flex-start; gap: .4rem; min-height: auto; padding: .75rem 1rem; }
+.mc-metronic .mc-grid-card .card-body { padding: 1rem; }

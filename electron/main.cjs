@@ -231,6 +231,14 @@ handle('file:read', async (title, filters) => {
   return { path: r.filePaths[0], content: fs.readFileSync(r.filePaths[0], 'utf8') };
 });
 
+// --- graphic themes (purchased templates) -------------------------------------------------------
+
+const Themes = require('../core/themes/index.cjs');
+handle('themes:list', () => Themes.list(Themes.DEFAULT_LIB));
+handle('themes:scan', (dir) => Themes.scan(dir));
+handle('themes:install', (found, variant) => Themes.install(found, variant, Themes.DEFAULT_LIB));
+handle('themes:remove', (id) => Themes.remove(Themes.DEFAULT_LIB, id));
+
 // --- generate, preview, deploy ---------------------------------------------------------
 
 handle('gen:check', (proj) => G.check(proj));

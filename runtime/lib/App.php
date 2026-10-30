@@ -180,7 +180,11 @@ class App
         if (isset($vars['t']) && $vars['t'] instanceof Table && !empty($vars['t']->def['snippets'])) {
             $content = $this->snippets($vars['t'], 'top') . $content . $this->snippets($vars['t'], 'bottom');
         }
-        if ($layout) include $this->root . '/runtime/views/' . $layout . '.php';
+        if ($layout) {
+            $pack = isset($this->config['theme']['pack']['id']) ? $this->config['theme']['pack']['id'] : '';
+            $themed = $pack !== '' ? $this->root . '/runtime/themes/' . $pack . '/' . $layout . '.php' : '';
+            include $themed !== '' && is_file($themed) ? $themed : $this->root . '/runtime/views/' . $layout . '.php';
+        }
         else echo $content;
     }
 

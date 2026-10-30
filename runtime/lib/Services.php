@@ -263,3 +263,127 @@ class Layout
         return $out;
     }
 }
+
+/** Menu tree filtered by permissions, independent from the markup (used by every layout/theme). */
+class Menu
+{
+    /** @return array [['kind'=>link|group|header|separator, 'label', 'icon', 'url', 'active', 'newWindow', 'items'=>[]], ...] */
+    public static function tree(App $app, ?array $items = null)
+    {
+        $out = [];
+        foreach ($items === null ? $app->config['menu'] : $items as $it) {
+            $label = $app->label(isset($it['label']) ? $it['label'] : '', '');
+            $icon = !empty($it['icon']) ? $it['icon'] : '';
+            switch ($it['type']) {
+                case 'group':
+                    $sub = self::tree($app, isset($it['items']) ? $it['items'] : []);
+                    if (!$sub) break;
+                    $active = false;
+                    foreach ($sub as $s) if (!empty($s['active'])) $active = true;
+                    $out[] = ['kind' => 'group', 'label' => $label, 'icon' => $icon ?: 'folder', 'items' => $sub, 'active' => $active, 'id' => 'mg' . substr(md5(json_encode($it)), 0, 8)];
+                    break;
+                case 'separator':
+                    $out[] = ['kind' => 'separator'];
+                    break;
+                case 'header':
+                    $out[] = ['kind' => 'header', 'label' => $label];
+                    break;
+                case 'link':
+                    $out[] = ['kind' => 'link', 'label' => $label, 'icon' => $icon ?: 'link-45deg', 'url' => $it['url'], 'newWindow' => !empty($it['newWindow']), 'active' => false];
+                    break;
+                case 'table':
+                    if (!$app->hasTable($it['table']) || !$app->security->can($it['table'], 'S')) break;
+                    $t = $app->table($it['table']);
+                    $page = isset($it['page']) ? $it['page'] : 'list';
+                    if (!$t->enabled($page)) break;
+                    $out[] = ['kind' => 'link', 'label' => $label !== '' ? $label : $t->caption(), 'icon' => $icon ?: (!empty($t->def['icon']) ? $t->def['icon'] : 'table'),
+                        'url' => $app->url($page, ['t' => $it['table']]), 'active' => isset($_GET['t']) && $_GET['t'] === $it['table'], 'newWindow' => false];
+                    break;
+                case 'report':
+                case 'chart':
+                case 'dashboard':
+                    $kind = $it['type'] . 's';
+                    if (!isset($app->config[$kind][$it['ref']]) || !$app->security->can($it['type'] . ':' . $it['ref'], 'S')) break;
+                    $param = ['report' => 'r', 'chart' => 'c', 'dashboard' => 'd'][$it['type']];
+                    $out[] = ['kind' => 'link', 'label' => $label !== '' ? $label : $app->label($app->config[$kind][$it['ref']]['title'], $it['ref']),
+                        'icon' => $icon ?: ['report' => 'file-earmark-bar-graph', 'chart' => 'bar-chart', 'dashboard' => 'speedometer2'][$it['type']],
+                        'url' => $app->url($it['type'], [$param => $it['ref']]), 'active' => isset($_GET[$param]) && $_GET[$param] === $it['ref'], 'newWindow' => false];
+                    break;
+            }
+        }
+        return $out;
+    }
+}
+
+/** CSS/JS of the page: default Bootstrap or the graphic theme imported from a purchased template. */
+class Theme
+{
+    public static function pack(App $app)
+    {
+        return isset($app->config['theme']['pack']['id']) ? $app->config['theme']['pack'] : null;
+    }
+
+    private static function url(App $app, $path)
+    {
+        $f = $app->root . '/' . $path;
+        return $path . (is_file($f) ? '?v=' . filemtime($f) : '');
+    }
+
+    /** <link> tags for <head>. */
+    public static function css(App $app)
+    {
+        $pack = self::pack($app);
+        $h = '';
+        if ($pack && !empty($pack['fonts'])) $h .= '<link rel="stylesheet" href="' . h($pack['fonts']) . '">' . "\n";
+        if (!$pack || empty($pack['providesBootstrap'])) $h .= '<link rel="stylesheet" href="' . h($app->asset('vendor/bootstrap.min.css')) . '">' . "\n";
+        if ($pack) foreach ($pack['css'] as $c) $h .= '<link rel="stylesheet" href="' . h(self::url($app, 'theme/' . $pack['id'] . '/' . $c)) . '">' . "\n";
+        foreach (['bootstrap-icons.min.css', 'dataTables.bootstrap5.min.css', 'responsive.bootstrap5.min.css', 'buttons.bootstrap5.min.css'] as $c) $h .= '<link rel="stylesheet" href="' . h($app->asset('vendor/' . $c)) . '">' . "\n";
+        $h .= '<link rel="stylesheet" href="' . h($app->asset('app.css')) . '">' . "\n";
+        if (!$pack || !empty($app->config['theme']['primaryOverride'])) $h .= '<style>:root{--mc-primary:' . h($app->config['theme']['primary']) . ';}</style>' . "\n";
+        if (is_file($app->root . '/custom/custom.css')) $h .= '<link rel="stylesheet" href="custom/custom.css?v=' . filemtime($app->root . '/custom/custom.css') . '">' . "\n";
+        // jQuery early: page snippets imported from phpr may load jQuery plugins.
+        if (!$pack || empty($pack['providesJquery'])) $h .= '<script src="' . h($app->asset('vendor/jquery.min.js')) . '"></script>' . "\n";
+        return $h;
+    }
+
+    /** Attributes for <html>: dark mode handling of the theme. */
+    public static function htmlAttrs(App $app)
+    {
+        $pack = self::pack($app);
+        $theme = $app->config['theme'];
+        $a = ' data-bs-theme="' . h($theme['mode'] === 'dark' ? 'dark' : 'light') . '" data-mode="' . h($theme['mode']) . '"';
+        if ($pack && !empty($pack['dark']['attr'])) $a .= ' data-mc-dark-attr="' . h($pack['dark']['attr']) . '"';
+        if ($pack && !empty($pack['dark']['bodyClass'])) $a .= ' data-mc-dark-class="' . h($pack['dark']['bodyClass']) . '"';
+        return $a;
+    }
+
+    /** <script> tags before </body>. */
+    public static function js(App $app, $t = null, $charts = false)
+    {
+        $pack = self::pack($app);
+        $s = '';
+        if ($pack && !empty($pack['providesJquery']) && !empty($pack['jsFirst'])) foreach ($pack['jsFirst'] as $j) $s .= '<script src="' . h(self::url($app, 'theme/' . $pack['id'] . '/' . $j)) . '"></script>' . "\n";
+        if (!$pack || empty($pack['providesBootstrap'])) $s .= '<script src="' . h($app->asset('vendor/bootstrap.bundle.min.js')) . '"></script>' . "\n";
+        if ($pack) foreach ($pack['js'] as $j) $s .= '<script src="' . h(self::url($app, 'theme/' . $pack['id'] . '/' . $j)) . '"></script>' . "\n";
+        foreach (['dataTables.min.js', 'dataTables.bootstrap5.min.js', 'dataTables.responsive.min.js', 'responsive.bootstrap5.min.js', 'dataTables.buttons.min.js', 'buttons.bootstrap5.min.js', 'buttons.colVis.min.js'] as $j) {
+            $s .= '<script src="' . h($app->asset('vendor/' . $j)) . '"></script>' . "\n";
+        }
+        $s .= '<script>window.MC = ' . json_encode(['lang' => $app->lang, 'i18n' => ['confirmDelete' => t('confirm.delete'), 'confirmDeleteSel' => t('confirm.delete_sel'), 'noResults' => t('list.empty'), 'colvis' => t('dt.colvis'), 'all' => t('list.all'),
+            'dt' => ['search' => t('dt.search'), 'lengthMenu' => t('dt.lengthMenu'), 'info' => t('dt.info'), 'infoEmpty' => t('dt.infoEmpty'), 'infoFiltered' => t('dt.infoFiltered'), 'zeroRecords' => t('list.empty'), 'emptyTable' => t('list.empty'), 'loadingRecords' => t('dt.loading'), 'processing' => t('dt.loading'),
+            'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']]]], JSON_UNESCAPED_UNICODE) . ';</script>' . "\n";
+        if ($charts) $s .= '<script src="' . h($app->asset('vendor/echarts.min.js')) . '"></script>' . "\n";
+        $s .= '<script src="' . h($app->asset('app.js')) . '"></script>' . "\n";
+        if ($t instanceof Table && !empty($t->def['jsFile'])) {
+            $s .= '<script>window.MC.page = ' . json_encode(['type' => $app->page, 'table' => $t->name, 'proxy' => Compat::$proxy], JSON_UNESCAPED_UNICODE) . ';</script>'
+                . '<script src="' . h($app->asset($t->def['jsFile'])) . '"></script><script src="' . h($app->asset('runner-compat.js')) . '"></script>' . "\n";
+        }
+        if (is_file($app->root . '/custom/custom.js')) $s .= '<script src="custom/custom.js?v=' . filemtime($app->root . '/custom/custom.js') . '"></script>' . "\n";
+        return $s;
+    }
+
+    /** Inline script for <head>: apply the remembered light/dark mode before the first paint. */
+    public static function modeScript()
+    {
+        return "<script>(function(){try{var d=document.documentElement,m=localStorage.getItem('mc-theme')||d.getAttribute('data-mode');if(!m||m==='auto')m=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.setAttribute('data-bs-theme',m);var a=d.getAttribute('data-mc-dark-attr');if(a)d.setAttribute(a,m);var c=d.getAttribute('data-mc-dark-class');if(c)document.addEventListener('DOMContentLoaded',function(){document.body.classList.toggle(c,m==='dark')})}catch(e){}})()</script>";
+    }
+}

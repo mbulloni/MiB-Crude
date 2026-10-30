@@ -18,6 +18,7 @@ const on = (channel) => (cb) => {
 const channels = [
   'app:info', 'app:settings', 'app:quit', 'shell:open', 'shell:showItem', 'shell:openPath', 'dialog:dir', 'dialog:file',
   'project:new', 'project:open', 'import:phpr', 'project:save', 'project:close', 'project:reload', 'secrets:get', 'secrets:set', 'local:get', 'local:set',
+  'themes:list', 'themes:scan', 'themes:install', 'themes:remove',
   'ddl:build', 'db:columns', 'db:exec', 'ddl:script', 'file:save', 'file:read',
   'db:drivers', 'db:test', 'db:tables', 'db:describe', 'db:preview', 'wizard:import', 'wizard:sqlview', 'wizard:refresh',
   'gen:check', 'gen:generate', 'gen:hash', 'php:info', 'php:lintEvent', 'preview:start', 'preview:stop', 'preview:status', 'preview:open',

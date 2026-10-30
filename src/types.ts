@@ -43,7 +43,7 @@ export interface DashItem { type: 'count' | 'kpi' | 'chart' | 'report' | 'list' 
 export interface Dashboard { name: string; title: L; items: DashItem[] }
 export interface ProjectMeta {
   formatVersion: number; name: string; title: L; languages: string[]; defaultLanguage: string; defaultConnection: string;
-  theme: { name: string; primary: string; mode: string; layout: string; density: string };
+  theme: { name: string; primary: string; mode: string; layout: string; density: string; pack?: string; primaryOverride?: boolean };
   settings: Record<string, any>; output: { dir: string }; mail?: { from?: string; smtpHost?: string; smtpPort?: number; smtpUser?: string }; systemPrefix?: string;
 }
 export interface Project {

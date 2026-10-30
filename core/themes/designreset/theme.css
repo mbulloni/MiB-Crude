@@ -1,0 +1,14 @@
+/* MiB-Crude pages inside DesignReset templates (Cork, Equation) */
+.mc-designreset #sidebar ul.menu-categories li.menu > .dropdown-toggle > div:first-child { display: flex; align-items: center; }
+.mc-designreset #sidebar ul.menu-categories li.menu > .dropdown-toggle i.bi { font-size: 18px; width: 22px; margin-right: 12px; }
+.mc-designreset #sidebar ul.menu-categories li.menu > .dropdown-toggle[aria-expanded="true"] .mc-chevron { transform: rotate(90deg); }
+.mc-designreset .mc-chevron { transition: transform .2s; font-size: 12px; }
+.mc-designreset .header.navbar { display: flex; align-items: center; gap: 12px; }
+.mc-designreset .mc-dr-title { font-weight: 600; font-size: 16px; }
+.mc-designreset .mc-usermenu .nav-link { padding: 6px 10px; }
+.mc-designreset .mc-usermenu .dropdown-menu { z-index: 1060; }
+.mc-designreset .card { margin-bottom: 0; }
+.mc-designreset .alert { margin-bottom: 1rem; }
+.mc-designreset #mcTheme { background: transparent; border: 0; box-shadow: none; color: inherit; }
+.mc-designreset .mc-col-actions .btn-link { background: transparent; box-shadow: none; border: 0; }
+.mc-designreset table.mc-grid a { color: var(--bs-primary, #4361ee); }

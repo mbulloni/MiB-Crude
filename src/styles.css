@@ -213,3 +213,7 @@ progress { width: 100%; }
 .ctx button:hover { background: var(--hover); }
 .ctx hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 .main.flush { overflow: hidden; }
+
+.theme-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.theme-opt { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.theme-opt.on { border-color: var(--accent); background: var(--accent-soft); }
