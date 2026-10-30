@@ -170,6 +170,12 @@ handle('wizard:import', async (proj, connId, names) => {
   const added = await W.importTables(proj, connById(proj, connId), pwOf(connId), names);
   return { proj, added };
 });
+const TPL = require('../core/templates.cjs');
+handle('templates:list', () => TPL.list());
+handle('templates:apply', async (proj, connId, id, opts) => {
+  const r = await TPL.apply(proj, connById(proj, connId), pwOf(connId), id, opts || {});
+  return { proj, ...r };
+});
 handle('wizard:sqlview', async (proj, connId, name, sql) => {
   await W.addSqlView(proj, connById(proj, connId), pwOf(connId), name, sql);
   return proj;

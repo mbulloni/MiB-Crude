@@ -244,3 +244,7 @@ progress { width: 100%; }
 .pd-block .langtext { flex: 1; }
 .pd-palette { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; align-self: start; position: sticky; top: 0; max-height: calc(100vh - 220px); overflow: auto; }
 .pd-pitem { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; cursor: grab; background: var(--bg); font-size: 12.5px; }
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin: 8px 0; }
+.tpl-card { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2, transparent); color: inherit; cursor: pointer; }
+.tpl-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.tpl-card small { opacity: .75; }

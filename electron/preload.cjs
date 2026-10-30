@@ -20,7 +20,7 @@ const channels = [
   'project:new', 'project:open', 'import:phpr', 'project:save', 'project:close', 'project:reload', 'secrets:get', 'secrets:set', 'local:get', 'local:set',
   'themes:list', 'themes:scan', 'themes:install', 'themes:remove',
   'ddl:build', 'db:columns', 'db:exec', 'ddl:script', 'file:save', 'file:read',
-  'db:drivers', 'db:test', 'db:tables', 'db:describe', 'db:preview', 'wizard:import', 'wizard:sqlview', 'wizard:refresh',
+  'db:drivers', 'db:test', 'db:tables', 'db:describe', 'db:preview', 'wizard:import', 'wizard:sqlview', 'wizard:refresh', 'templates:list', 'templates:apply',
   'gen:check', 'gen:generate', 'gen:hash', 'php:info', 'php:lintEvent', 'preview:start', 'preview:stop', 'preview:status', 'preview:open',
   'deploy:run', 'deploy:test',
   'git:status', 'git:log', 'git:diff', 'git:commit', 'git:pull', 'git:push', 'git:init', 'git:setRemote', 'git:resolve', 'git:clone',

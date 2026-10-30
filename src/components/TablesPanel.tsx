@@ -159,6 +159,36 @@ function ScriptDialog({ onClose, conn }: { onClose: () => void; conn: string }) 
   );
 }
 
+// --- business templates: create tables + configured pages in one click -------------------
+
+interface Tpl { id: string; icon: string; name: Record<string, string>; description: Record<string, string>; tables: string[] }
+
+function TemplateDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: string }) {
+  const p = useStore((s) => s.proj)!;
+  const [list, setList] = useState<Tpl[]>([]);
+  const [sel, setSel] = useState('');
+  const [conn, setConn] = useState(conn0);
+  const [sample, setSample] = useState(true);
+  useEffect(() => { call<Tpl[]>('templates:list').then((l) => { setList(l); setSel(l[0]?.id || ''); }); }, []);
+  const ok = () => run('Creazione dal modello…', async () => {
+    const r = await call<{ proj: Project; created: string[]; tables: string[] }>('templates:apply', p, conn, sel, { sample });
+    setProj(r.proj, p.dir);
+    toast(`Modello applicato: ${r.created.length} tabelle create nel database, ${r.tables.length} configurate nel progetto`, 'ok');
+    onClose();
+  });
+  const cur = list.find((t) => t.id === sel);
+  return (
+    <Modal title="Nuove tabelle da modello" onClose={onClose} footer={<><Btn onClick={onClose}>Annulla</Btn><Btn kind="primary" icon="magic" onClick={ok} disabled={!sel}>Crea</Btn></>}>
+      <p className="help">Crea nel database le tabelle di un'applicazione gestionale pronta (con dati di esempio) e configura pagine, viste, menu, grafici ed eventi. Le tabelle già presenti non vengono toccate.</p>
+      <div className="tpl-grid">{list.map((t) => <button type="button" key={t.id} className={`tpl-card ${sel === t.id ? 'on' : ''}`} onClick={() => setSel(t.id)}>
+        <I n={t.icon} className="big" /><b>{lbl(t.name)}</b><small>{lbl(t.description)}</small></button>)}</div>
+      {cur && <p className="help">Tabelle: {cur.tables.join(', ')}</p>}
+      <Row label="Connessione"><Select value={conn} options={p.connections.map((c) => [c.id, c.name])} onChange={setConn} /></Row>
+      <Row label=""><Check label="Inserisci dati di esempio" value={sample} onChange={setSample} /></Row>
+    </Modal>
+  );
+}
+
 // --- export / import of tables between projects ---------------------------------------------
 
 function exportBundle(p: Project, names: string[]) {
@@ -274,7 +304,7 @@ export default function TablesPanel() {
   const [multi, setMulti] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<Menu>(null);
-  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn'; conn?: string; table?: string | null; t?: Table }>(null);
+  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template'; conn?: string; table?: string | null; t?: Table }>(null);
 
   const load = (connId: string) => call<DbTable[]>('db:tables', p, connId).then((r) => setDbt((x) => ({ ...x, [connId]: r }))).catch((e) => toast(`${connId}: ${e.message}`, 'err'));
   useEffect(() => { p.connections.forEach((c) => load(c.id)); }, [p.connections.length]);
@@ -435,6 +465,7 @@ export default function TablesPanel() {
         <span className="sep" />
         <Btn small icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn>
         <Btn small icon="code-square" onClick={() => setDlg({ kind: 'sql', conn: p.project.defaultConnection })}>Nuova query SQL</Btn>
+        <Btn small icon="magic" onClick={() => setDlg({ kind: 'template', conn: p.project.defaultConnection })}>Da modello</Btn>
         <Btn small icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn>
         <Btn small icon="database-add" onClick={() => setDlg({ kind: 'conn' })}>Aggiungi connessione</Btn>
       </div>
@@ -503,6 +534,7 @@ export default function TablesPanel() {
       {dlg?.kind === 'advanced' && dlg.t && <AdvancedDialog t={dlg.t} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'relation' && <RelationDialog master={dlg.table || undefined} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'script' && <ScriptDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
+      {dlg?.kind === 'template' && <TemplateDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'conn' && <ConnectionDialog initial={null} onClose={() => setDlg(null)} />}
     </div>
   );
