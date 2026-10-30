@@ -4,7 +4,7 @@ import { call } from '../api';
 import { run, toast, update, useStore } from '../store';
 import { Btn, Check, I, Modal, Row, Section, Select, Text } from './ui';
 
-interface ThemeInfo { id: string; name: string; adapter: string; variant: string; source: string; installedAt: string }
+interface ThemeInfo { id: string; name: string; adapter: string; variant: string; source: string; installedAt: string; kind?: 'app' | 'auth' }
 interface Found { adapter: string; adapterName: string; root: string; name: string; slug: string; variants: { id: string; label: string }[] }
 
 function ImportDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
@@ -50,17 +50,31 @@ export default function ThemesSection() {
   const reload = () => call<ThemeInfo[]>('themes:list').then(setThemes);
   useEffect(() => { reload(); }, []);
   const cur = p.project.theme.pack || '';
+  const curAuth = p.project.theme.authPack || '';
   const set = (id: string) => update((d) => { d.project.theme.pack = id || undefined; });
+  const setAuth = (id: string) => update((d) => { d.project.theme.authPack = id || undefined; });
+  const appThemes = themes.filter((t) => (t.kind || 'app') === 'app');
+  const authThemes = themes.filter((t) => t.kind === 'auth');
+  const remove = (t: ThemeInfo) => { if (confirm(`Rimuovere ${t.name} dalla libreria?`)) call('themes:remove', t.id).then(reload); };
   return (
     <Section title="Temi grafici" actions={<Btn small icon="box-arrow-in-down" onClick={() => setDlg(true)}>Importa template…</Btn>}
       help="Il tema cambia l'aspetto di tutta l'applicazione generata (menu, intestazione, pagine). Liste, moduli e grafici restano quelli di MiB-Crude, con lo stile del tema.">
       <div className="theme-list">
         <label className={`theme-opt ${!cur ? 'on' : ''}`}><input type="radio" checked={!cur} onChange={() => set('')} /> <b>Standard MiB-Crude</b> <small className="muted">Bootstrap 5</small></label>
-        {themes.map((t) => <label key={t.id} className={`theme-opt ${cur === t.id ? 'on' : ''}`}>
+        {appThemes.map((t) => <label key={t.id} className={`theme-opt ${cur === t.id ? 'on' : ''}`}>
           <input type="radio" checked={cur === t.id} onChange={() => set(t.id)} /> <b>{t.name}</b>
-          <span className="grow" /><button type="button" className="btn ghost sm" title="Rimuovi dalla libreria" onClick={(e) => { e.preventDefault(); if (confirm(`Rimuovere ${t.name} dalla libreria?`)) call('themes:remove', t.id).then(reload); }}><I n="trash" /></button>
+          <span className="grow" /><button type="button" className="btn ghost sm" title="Rimuovi dalla libreria" onClick={(e) => { e.preventDefault(); remove(t); }}><I n="trash" /></button>
         </label>)}
       </div>
+      <h4>Pagine di accesso e presentazione</h4>
+      <div className="theme-list">
+        <label className={`theme-opt ${!curAuth ? 'on' : ''}`}><input type="radio" checked={!curAuth} onChange={() => setAuth('')} /> <b>Come il tema dell'applicazione</b></label>
+        {authThemes.map((t) => <label key={t.id} className={`theme-opt ${curAuth === t.id ? 'on' : ''}`}>
+          <input type="radio" checked={curAuth === t.id} onChange={() => setAuth(t.id)} /> <b>{t.name}</b>
+          <span className="grow" /><button type="button" className="btn ghost sm" title="Rimuovi dalla libreria" onClick={(e) => { e.preventDefault(); remove(t); }}><I n="trash" /></button>
+        </label>)}
+      </div>
+      {curAuth && !themes.some((t) => t.id === curAuth) && <p className="warn"><I n="exclamation-triangle" /> Il tema "{curAuth}" non è installato su questo computer.</p>}
       {cur && !themes.some((t) => t.id === cur) && <p className="warn"><I n="exclamation-triangle" /> Il tema "{cur}" scelto per il progetto non è installato su questo computer: importalo per generare l'applicazione.</p>}
       {cur && <Row label="Colore principale"><Check value={!!(p.project.theme as any).primaryOverride} onChange={(v) => update((d) => { (d.project.theme as any).primaryOverride = v; })} label="Usa il colore scelto sopra invece di quello del tema" /></Row>}
       {dlg && <ImportDialog onClose={() => setDlg(false)} onDone={reload} />}

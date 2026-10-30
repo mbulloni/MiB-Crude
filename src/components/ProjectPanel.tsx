@@ -52,6 +52,13 @@ export default function ProjectPanel() {
             <p className="help">Personalizzazioni nella cartella <code>custom/</code> del progetto: <code>logo.png</code> (logo in alto), <code>custom.css</code>, <code>custom.js</code> e <code>views/*.php</code> per sostituire le viste del runtime.</p>
           </Section>
           <ThemesSection />
+          <Section title="Pagina di presentazione" help="Pagina pubblica mostrata aprendo l'applicazione (index.php), con i pulsanti Accedi/Registrati o Entra. Usa il tema delle pagine di accesso.">
+            <Row label="Attiva"><Check value={st.landing?.enabled} onChange={(v) => set((x) => { x.settings.landing = { ...(x.settings.landing || {}), enabled: v }; })} /></Row>
+            {st.landing?.enabled && <>
+              <Row label="Sottotitolo"><LangText value={st.landing?.subtitle} onChange={(v) => set((x) => { x.settings.landing = { ...x.settings.landing, subtitle: v }; })} /></Row>
+              <Row label="Testo" hint="HTML semplice ammesso"><LangText multiline value={st.landing?.text} onChange={(v) => set((x) => { x.settings.landing = { ...x.settings.landing, text: v }; })} /></Row>
+            </>}
+          </Section>
           <Section title="Funzioni avanzate">
             <Row label="Registro attività (audit)"><Check value={st.audit} onChange={(v) => set((x) => { x.settings.audit = v; })} label="Registra accessi, inserimenti, modifiche ed eliminazioni" /></Row>
             <Row label="Blocco record"><Check value={st.recordLocking} onChange={(v) => set((x) => { x.settings.recordLocking = v; })} label="Impedisci modifiche contemporanee allo stesso record" /></Row>

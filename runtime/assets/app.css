@@ -55,3 +55,20 @@ table.mc-grid.dataTable > tbody > tr > td.mc-col-actions { width: 1%; }
 .mc-rights th { font-size: .75rem; }
 .mc-print { background: #fff; }
 @media print { .mc-navbar, .mc-sidebar, .mc-pagehead .btn, .mc-pager, .mc-col-actions, .mc-col-check { display: none !important; } .mc-main { padding: 0; } body { background: #fff; } }
+
+/* Scroll in both directions everywhere: content wider than the screen scrolls sideways inside the page area. */
+.mc-main, #kt_app_content_container, .mc-designreset .middle-content { overflow-x: auto; }
+.mc-scroll { overflow: auto; max-height: calc(100vh - 220px); }
+.mc-scroll > table thead th { position: sticky; top: 0; z-index: 2; background: var(--bs-tertiary-bg, #f8f9fa); }
+.mc-scroll-x { overflow-x: auto; }
+div.dt-scroll-body { border-bottom-color: var(--bs-border-color) !important; }
+table.mc-grid.dataTable td, table.mc-grid.dataTable th { white-space: nowrap; }
+table.mc-grid.dataTable td .mc-thumb { max-height: 40px; }
+.mc-view dd { overflow-wrap: anywhere; }
+.mc-form .form-control, .mc-form .form-select { min-width: 0; }
+@media print { .mc-scroll { max-height: none; overflow: visible; } }
+
+.mc-hero { background: linear-gradient(135deg, var(--mc-primary), color-mix(in srgb, var(--mc-primary) 55%, #000)); color: #fff; }
+.mc-hero .container { padding-top: 6rem !important; padding-bottom: 6rem !important; }
+.mc-hero .mc-welcome-text { max-width: 680px; opacity: .92; }
+.mc-welcome-nav a { color: #fff; margin-left: 1rem; font-weight: 600; text-decoration: none; }

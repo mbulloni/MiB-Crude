@@ -16,6 +16,8 @@ test('templates are recognised, installed and used by the generator', { skip: !f
   const { found, unsupported } = T.scan(SRC);
   assert.ok(found.some((f) => f.adapter === 'metronic8'));
   assert.ok(found.filter((f) => f.adapter === 'designreset').length >= 1);
+  assert.ok(found.some((f) => f.adapter === 'satria' && f.kind === 'auth'));
+  assert.ok(found.some((f) => f.variants.some((v) => v.id.startsWith('horizontal'))));
   assert.ok(unsupported.every((u) => u.reason));
   const lib = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lib-'));
   const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mc-thp-')), 'p');
@@ -23,10 +25,10 @@ test('templates are recognised, installed and used by the generator', { skip: !f
     const m = T.install(f, f.variants[0].id, lib);
     const proj = P.createProject(path.join(dir, m.id), 'x');
     proj.connections.push({ id: 'main', name: 'x', driver: 'sqlite', file: 'x.db' });
-    proj.project.theme.pack = m.id;
+    if (m.kind === 'auth') proj.project.theme.authPack = m.id; else proj.project.theme.pack = m.id;
     const out = G.generate(proj, { themesDir: lib, outDir: path.join(dir, m.id, 'out') }).outDir;
     for (const c of m.css) assert.ok(fs.existsSync(path.join(out, 'theme', m.id, c)), `${m.id}: ${c}`);
-    const layout = path.join(out, 'runtime', 'themes', m.id, 'layout.php');
+    const layout = path.join(out, 'runtime', 'themes', m.id, m.kind === 'auth' ? 'layout_bare.php' : 'layout.php');
     assert.ok(fs.existsSync(layout));
     execFileSync('php', ['-l', layout], { stdio: 'pipe' });
     assert.ok(!fs.existsSync(path.join(out, 'theme', m.id, 'layouts', 'layout.php')), 'PHP layouts must not be web-accessible');

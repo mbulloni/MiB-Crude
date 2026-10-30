@@ -11,7 +11,7 @@
   function applyTheme() {
     var pref = null;
     try { pref = localStorage.getItem('mc-theme'); } catch (e) {}
-    var mode = pref || root.getAttribute('data-mode') || 'auto';
+    var mode = root.getAttribute('data-mc-fixed-mode') || pref || root.getAttribute('data-mode') || 'auto';
     if (mode === 'auto') mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     root.setAttribute('data-bs-theme', mode);
     // Graphic themes have their own dark switch: an attribute on <html> or a class on <body>.
@@ -32,6 +32,13 @@
   var listForm = $('#mcListForm');
   var grid = $('#mcGrid');
   var dt = null;
+  // Height of the scrolling area: the rest of the window below the grid (min 260px), smaller inside embeds.
+  function gridHeight() {
+    if (!grid) return '400px';
+    if (document.body.classList.contains('mc-embedded')) return Math.max(220, window.innerHeight - 150) + 'px';
+    var top = grid.getBoundingClientRect().top + window.scrollY;
+    return Math.max(260, window.innerHeight - top - 150) + 'px';
+  }
   if (grid && window.DataTable) {
     var cfg = JSON.parse(grid.getAttribute('data-dt'));
     var setTotals = function (totals) {
@@ -48,10 +55,14 @@
       search: { search: cfg.search || '' },
       searching: cfg.searching,
       searchDelay: 350,
+      // Always scrollable in both directions: wide tables scroll sideways, long pages scroll inside the grid with a fixed header.
+      scrollX: true,
+      scrollY: gridHeight(),
+      scrollCollapse: true,
       stateSave: !cfg.embedded && !cfg.search,
       stateDuration: 60 * 60 * 8,
       stateSaveParams: function (s, data) { data.start = 0; },
-      responsive: true,
+      responsive: false,
       autoWidth: false,
       layout: cfg.embedded
         ? { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' }
@@ -67,6 +78,15 @@
       }
     });
     window.MC = window.MC || {}; window.MC.grid = dt;
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        var body = grid.closest('.dt-scroll') && grid.closest('.dt-scroll').querySelector('.dt-scroll-body');
+        if (body) body.style.maxHeight = gridHeight();
+        dt.columns.adjust();
+      }, 150);
+    });
   }
   var delBtn = $('.mc-delete-selected');
   var syncSel = function () { if (delBtn) delBtn.disabled = !$$('.mc-check:checked').length; };

@@ -3,7 +3,7 @@
 $ops = ['contains', 'equals', 'notequals', 'starts', 'more', 'less', 'between', 'empty', 'notempty'];
 ?>
 <h1 class="h4 mb-3"><?= h($t->caption()) ?> <small class="text-secondary fw-normal">— <?= h(t('page.search')) ?></small></h1>
-<form method="get" action="index.php" class="card"><div class="card-body">
+<form method="get" action="index.php" class="card"><div class="card-body mc-scroll-x">
 <input type="hidden" name="p" value="list"><input type="hidden" name="t" value="<?= h($t->name) ?>">
 <?php foreach ($t->fields('search') as $f): $n = $f['name']; $c = isset($s[$n]) ? $s[$n] : []; $isLookup = (bool)$t->lookupDef($f);
   $defOp = $isLookup || in_array($f['type'], ['int', 'decimal', 'bool'], true) ? 'equals' : (in_array($f['type'], ['date', 'datetime'], true) ? 'between' : 'contains'); ?>

@@ -2,7 +2,9 @@
 /** DesignReset (Cork / Equation) vertical shell. @var \MiB\App $app */
 $cfg = $app->config;
 $pack = \MiB\Theme::pack($app);
-$menuHtml = function ($items) {
+$variant = isset($pack['options']['variant']) ? $pack['options']['variant'] : '';
+$horizontal = strpos($variant, 'horizontal') === 0;
+$menuHtml = function ($items) use ($horizontal) {
     $out = '';
     foreach ($items as $it) {
         $icon = '<i class="bi bi-' . h(!empty($it['icon']) ? $it['icon'] : 'dot') . '"></i>';
@@ -15,9 +17,10 @@ $menuHtml = function ($items) {
                 $sub .= '<li' . (!empty($s['active']) ? ' class="active"' : '') . '><a href="' . h($s['url']) . '"' . (!empty($s['newWindow']) ? ' target="_blank"' : '') . '>' . h($s['label']) . '</a></li>';
             }
             $open = !empty($it['active']);
-            $out .= '<li class="menu' . ($open ? ' active' : '') . '"><a href="#' . h($it['id']) . '" data-bs-toggle="collapse" aria-expanded="' . ($open ? 'true' : 'false') . '" class="dropdown-toggle">'
-                . '<div>' . $icon . '<span>' . h($it['label']) . '</span></div><div><i class="bi bi-chevron-right mc-chevron"></i></div></a>'
-                . '<ul class="collapse submenu list-unstyled' . ($open ? ' show' : '') . '" id="' . h($it['id']) . '" data-bs-parent="#accordionExample">' . $sub . '</ul></li>';
+            // Horizontal variants open groups as dropdowns, vertical ones as accordions.
+            $out .= '<li class="menu' . ($open ? ' active' : '') . '"><a href="#' . h($it['id']) . '" data-bs-toggle="' . ($horizontal ? 'dropdown' : 'collapse') . '" aria-expanded="' . ($open && !$horizontal ? 'true' : 'false') . '" class="dropdown-toggle">'
+                . '<div>' . $icon . '<span>' . h($it['label']) . '</span></div><div><i class="bi bi-chevron-' . ($horizontal ? 'down' : 'right') . ' mc-chevron"></i></div></a>'
+                . '<ul class="' . ($horizontal ? 'dropdown-menu' : 'collapse') . ' submenu list-unstyled' . ($open && !$horizontal ? ' show' : '') . '" id="' . h($it['id']) . '" data-bs-parent="#accordionExample">' . $sub . '</ul></li>';
         } else {
             $out .= '<li class="menu' . (!empty($it['active']) ? ' active' : '') . '"><a href="' . h($it['url']) . '" aria-expanded="' . (!empty($it['active']) ? 'true' : 'false') . '" class="dropdown-toggle"'
                 . (!empty($it['newWindow']) ? ' target="_blank"' : '') . '><div>' . $icon . '<span>' . h($it['label']) . '</span></div></a></li>';
@@ -38,10 +41,16 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body class="mc-themed mc-designreset">
+<body class="mc-themed mc-designreset<?= $horizontal ? ' mc-dr-horizontal' : '' ?>">
 <div class="header-container">
- <header class="header navbar navbar-expand-sm expand-header">
+ <header class="header navbar navbar-expand-sm expand-header<?= $horizontal ? ' container-xxl' : '' ?>">
   <a href="javascript:void(0);" class="sidebarCollapse" title="Menu"><i class="bi bi-list fs-4"></i></a>
+  <?php if ($horizontal): ?>
+  <ul class="navbar-item theme-brand flex-row text-center">
+   <?php if ($logo): ?><li class="nav-item theme-logo"><a href="<?= h($app->url('home', ['menu' => 1])) ?>"><?= $logo ?></a></li><?php endif ?>
+   <li class="nav-item theme-text"><a href="<?= h($app->url('home', ['menu' => 1])) ?>" class="nav-link"><?= h($app->label($cfg['title'])) ?></a></li>
+  </ul>
+  <?php endif ?>
   <span class="mc-dr-title d-none d-md-inline"><?= h($app->title) ?></span>
   <div class="ms-auto"><?php $mcNavClass = 'nav-link'; include $app->root . '/runtime/views/partials/usermenu.php'; ?></div>
  </header>

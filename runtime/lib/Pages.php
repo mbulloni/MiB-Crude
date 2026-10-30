@@ -628,6 +628,15 @@ class Pages
         (new Reports($this->app))->chartData(isset($_GET['c']) ? (string)$_GET['c'] : '');
     }
 
+    /** Public landing page (Project settings → Landing page). */
+    public function page_welcome()
+    {
+        $l = $this->app->setting('landing', []);
+        if (empty($l['enabled'])) redirect($this->app->url('home'));
+        $this->app->title = $this->app->label($this->app->config['title']);
+        $this->app->render('welcome', ['landing' => $l, 'sec' => $this->app->security], 'layout_welcome');
+    }
+
     public function page_ping()
     {
         $this->app->json(['ok' => true, 'user' => userName()]);

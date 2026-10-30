@@ -143,10 +143,11 @@ class App
 
     public function dispatch()
     {
-        $p = isset($_GET['p']) ? (string)$_GET['p'] : 'home';
+        $landing = $this->setting('landing', []);
+        $p = isset($_GET['p']) ? (string)$_GET['p'] : (!empty($landing['enabled']) ? 'welcome' : 'home');
         if (!preg_match('/^[a-z_]+$/', $p)) throw new HttpError(t('error.notfound'), 404);
         $this->page = $p;
-        $public = ['login', 'logout', 'register', 'forgot', 'reset', 'verify', 'setup', 'asset', 'oidc', 'saml', 'api'];
+        $public = ['login', 'logout', 'register', 'forgot', 'reset', 'verify', 'setup', 'asset', 'oidc', 'saml', 'api', 'welcome'];
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $p !== 'api') $this->checkCsrf();
         if ($p !== 'setup' && $this->security->needsSetup()) redirect($this->url('setup'));
         if (!in_array($p, $public, true)) $this->security->requireLogin();
@@ -181,9 +182,14 @@ class App
             $content = $this->snippets($vars['t'], 'top') . $content . $this->snippets($vars['t'], 'bottom');
         }
         if ($layout) {
-            $pack = isset($this->config['theme']['pack']['id']) ? $this->config['theme']['pack']['id'] : '';
-            $themed = $pack !== '' ? $this->root . '/runtime/themes/' . $pack . '/' . $layout . '.php' : '';
-            include $themed !== '' && is_file($themed) ? $themed : $this->root . '/runtime/views/' . $layout . '.php';
+            // Login/landing layouts come from the access-pages theme first, then from the application theme.
+            $keys = in_array($layout, ['layout_bare', 'layout_welcome'], true) ? ['authPack', 'pack'] : ['pack'];
+            $file = $this->root . '/runtime/views/' . $layout . '.php';
+            foreach ($keys as $k) {
+                $id = isset($this->config['theme'][$k]['id']) ? $this->config['theme'][$k]['id'] : '';
+                if ($id !== '' && is_file($this->root . '/runtime/themes/' . $id . '/' . $layout . '.php')) { $file = $this->root . '/runtime/themes/' . $id . '/' . $layout . '.php'; break; }
+            }
+            include $file;
         }
         else echo $content;
     }

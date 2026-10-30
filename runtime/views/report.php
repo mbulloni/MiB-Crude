@@ -30,7 +30,7 @@ $renderNode = function ($node, $depth) use (&$renderNode, $t, $aggs, $columns, $
   <a class="btn btn-sm btn-outline-secondary ms-auto" href="<?= h($app->url('report', ['r' => $name, 'fmt' => 'xlsx'])) ?>"><i class="bi bi-file-earmark-excel"></i> XLSX</a>
   <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= h($app->url('report', ['r' => $name, 'print' => 1])) ?>"><i class="bi bi-printer"></i></a></div>
 <?php endif ?>
-<div class="card"><div class="table-responsive"><table class="table table-sm mb-0 mc-report">
+<div class="card"><div class="mc-scroll"><table class="table table-sm mb-0 mc-report">
 <thead><tr><?php if ($columns): foreach ($columns as $f): ?><th><?= h($t->fieldLabel($f)) ?></th><?php endforeach; else: ?><th></th><?php endif ?>
 <?php foreach ($aggs as $a): ?><th class="text-end"><?= h(t('agg.' . $a['fn'])) ?> <?= h($t->fieldLabel($a['field'])) ?></th><?php endforeach ?></tr></thead>
 <tbody><?php if ($tree['children']): echo $renderNode($tree, 0); else: foreach ($tree['rows'] as $r): ?><tr><?php foreach ($columns as $f): ?><td><?= \MiB\Format::html($t, $f, $r, 'list') ?></td><?php endforeach ?><?php foreach ($aggs as $a): ?><td></td><?php endforeach ?></tr><?php endforeach; endif ?></tbody>

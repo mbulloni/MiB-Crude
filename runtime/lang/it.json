@@ -173,5 +173,6 @@
  "val.number": "{0}: deve essere un numero",
  "val.required": "{0}: campo obbligatorio",
  "val.unique": "{0}: valore già presente",
+ "welcome.enter": "Entra",
  "yes": "Sì"
 }

@@ -21,7 +21,7 @@ $sections = \MiB\Layout::sections($t, 'view', $fields);
 <?php foreach ($sections as $s): ?>
 <div class="card mb-3">
   <?php if ($s['title'] !== ''): ?><div class="card-header fw-semibold"><?= h($s['title']) ?></div><?php endif ?>
-  <div class="card-body"><dl class="row mb-0 mc-view">
+  <div class="card-body mc-scroll-x"><dl class="row mb-0 mc-view">
     <?php foreach ($s['fields'] as $f): ?>
       <dt class="col-sm-4 col-lg-3 text-secondary fw-normal"><?= h($t->fieldLabel($f)) ?></dt>
       <dd class="col-sm-8 col-lg-9"><?= \MiB\Format::html($t, $f, $row, 'view') ?></dd>

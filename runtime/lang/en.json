@@ -173,5 +173,6 @@
  "val.number": "{0} must be a number",
  "val.required": "{0} is required",
  "val.unique": "{0}: value already exists",
+ "welcome.enter": "Enter",
  "yes": "Yes"
 }

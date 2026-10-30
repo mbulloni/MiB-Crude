@@ -17,7 +17,7 @@
   </div><div class="card-footer"><button class="btn btn-primary"><?= h(t('btn.save')) ?></button> <a class="btn btn-link" href="<?= h($app->url('admin', ['s' => 'users'])) ?>"><?= h(t('btn.cancel')) ?></a></div></form>
   <?php endif ?>
   <a class="btn btn-primary btn-sm mb-2" href="<?= h($app->url('admin', ['s' => 'users', 'id' => 'new'])) ?>"><i class="bi bi-person-plus"></i> <?= h(t('admin.newuser')) ?></a>
-  <div class="card"><table class="table table-sm table-hover mb-0 align-middle"><thead><tr><th><?= h(t('login.username')) ?></th><th>Email</th><th><?= h(t('register.fullname')) ?></th><th><?= h(t('admin.groups')) ?></th><th><?= h(t('admin.active')) ?></th><th><?= h(t('admin.lastlogin')) ?></th><th></th></tr></thead><tbody>
+  <div class="card mc-scroll"><table class="table table-sm table-hover mb-0 align-middle"><thead><tr><th><?= h(t('login.username')) ?></th><th>Email</th><th><?= h(t('register.fullname')) ?></th><th><?= h(t('admin.groups')) ?></th><th><?= h(t('admin.active')) ?></th><th><?= h(t('admin.lastlogin')) ?></th><th></th></tr></thead><tbody>
   <?php foreach ($users as $u): ?><tr>
     <td><?= h($u['username']) ?> <?php if ($u['provider'] && $u['provider'] !== 'local'): ?><span class="badge text-bg-secondary"><?= h($u['provider']) ?></span><?php endif ?></td>
     <td><?= h($u['email']) ?></td><td><?= h($u['fullname']) ?></td>
@@ -38,7 +38,7 @@
     <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_admin" value="1" id="gadm"><label class="form-check-label" for="gadm">Admin</label></div></div>
     <div class="col-md-2"><button class="btn btn-primary w-100"><?= h(t('btn.save')) ?></button></div>
   </div></form>
-  <div class="card"><table class="table table-sm mb-0"><thead><tr><th>ID</th><th><?= h(t('admin.label')) ?></th><th>Admin</th><th></th></tr></thead><tbody>
+  <div class="card mc-scroll"><table class="table table-sm mb-0"><thead><tr><th>ID</th><th><?= h(t('admin.label')) ?></th><th>Admin</th><th></th></tr></thead><tbody>
   <?php foreach ($groups as $g): ?><tr><td><?= h($g['id']) ?></td><td><?= h($g['label']) ?></td><td><?= $g['is_admin'] ? '<i class="bi bi-check-lg"></i>' : '' ?></td>
     <td class="text-end"><a class="btn btn-sm btn-link" href="<?= h($app->url('admin', ['s' => 'rights', 'g' => $g['id']])) ?>"><i class="bi bi-ui-checks-grid"></i></a>
     <form method="post" class="d-inline mc-confirm-delete"><?= $app->csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= h($g['id']) ?>"><button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button></form></td></tr><?php endforeach ?>
@@ -48,17 +48,17 @@
   <form method="get" class="mb-2"><input type="hidden" name="p" value="admin"><input type="hidden" name="s" value="rights">
     <select class="form-select w-auto" name="g" onchange="this.form.submit()"><?php foreach ($groups as $g): ?><option value="<?= h($g['id']) ?>"<?= $g['id'] === $cur ? ' selected' : '' ?>><?= h($g['label'] ?: $g['id']) ?></option><?php endforeach ?></select></form>
   <form method="post" class="card"><?= $app->csrfField() ?><input type="hidden" name="group" value="<?= h($cur) ?>">
-  <table class="table table-sm mb-0 mc-rights"><thead><tr><th></th><?php foreach ($letters as $l): ?><th class="text-center" title="<?= h(t('right.' . $l)) ?>"><?= h(t('right.' . $l)) ?></th><?php endforeach ?><th></th></tr></thead><tbody>
+  <div class="mc-scroll"><table class="table table-sm mb-0 mc-rights"><thead><tr><th></th><?php foreach ($letters as $l): ?><th class="text-center" title="<?= h(t('right.' . $l)) ?>"><?= h(t('right.' . $l)) ?></th><?php endforeach ?><th></th></tr></thead><tbody>
   <?php foreach ($tables as $tn): $has = isset($rights[$tn]) ? $rights[$tn] : ''; $isT = strpos($tn, ':') === false;
     $label = $isT ? $app->table($tn)->caption() : $tn; ?>
     <tr><td><?= h($label) ?></td>
     <?php foreach ($letters as $l): ?><td class="text-center"><?php if ($isT || $l === 'S'): ?><input class="form-check-input" type="checkbox" name="r[<?= h($tn) ?>][<?= $l ?>]" value="1"<?= strpos($has, $l) !== false ? ' checked' : '' ?>><?php endif ?></td><?php endforeach ?>
     <td><button type="button" class="btn btn-sm btn-link mc-row-all"><?= h(t('admin.all')) ?></button></td></tr>
-  <?php endforeach ?></tbody></table>
+  <?php endforeach ?></tbody></table></div>
   <div class="card-footer"><button class="btn btn-primary"><?= h(t('btn.save')) ?></button></div></form>
 
 <?php elseif ($section === 'audit'): ?>
-  <div class="card"><div class="table-responsive"><table class="table table-sm mb-0 small"><thead><tr><th><?= h(t('audit.when')) ?></th><th><?= h(t('login.username')) ?></th><th>IP</th><th><?= h(t('audit.table')) ?></th><th><?= h(t('audit.action')) ?></th><th><?= h(t('audit.keys')) ?></th><th><?= h(t('audit.changes')) ?></th></tr></thead><tbody>
+  <div class="card"><div class="mc-scroll"><table class="table table-sm mb-0 small"><thead><tr><th><?= h(t('audit.when')) ?></th><th><?= h(t('login.username')) ?></th><th>IP</th><th><?= h(t('audit.table')) ?></th><th><?= h(t('audit.action')) ?></th><th><?= h(t('audit.keys')) ?></th><th><?= h(t('audit.changes')) ?></th></tr></thead><tbody>
   <?php foreach ($rows as $r):
       $old = json_decode((string)$r['old_json'], true) ?: []; $new = json_decode((string)$r['new_json'], true) ?: []; $diff = [];
       foreach ($new as $k => $v) if (!array_key_exists($k, $old) || (string)$old[$k] !== (string)$v) $diff[] = $k . ': ' . (array_key_exists($k, $old) ? $old[$k] . ' → ' : '') . $v; ?>

@@ -1,0 +1,19 @@
+/* MiB-Crude auth/landing pages in the Satria template (UIkit + Bootstrap 5 forms) */
+.mc-satria { background: #fff; }
+.mc-satria header { background: #fff !important; border-bottom: 1px solid #eceff3; }
+.mc-satria-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 25px; }
+.mc-satria #logo img { max-height: 42px; }
+.mc-satria-brand { font-size: 26px; font-weight: 700; color: #2b2f3a; }
+.mc-satria-lang a, .mc-satria-nav a { margin-left: 14px; font-weight: 600; }
+.mc-satria-lang a.on { text-decoration: underline; }
+.mc-satria-box { max-width: 460px; margin: 30px auto 60px; background: #fff; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.08); padding: 28px; }
+.mc-satria-box .btn-primary { background: #1e88e5; border-color: #1e88e5; }
+.mc-satria-hero { background-size: auto, cover; background-position: center; color: #fff; padding: 110px 0 120px; }
+.mc-satria-hero .slide-content1 { background: rgba(0, 0, 0, .18); padding: 36px; border-radius: 6px; max-width: 760px; }
+.mc-satria-hero h1 { color: #fff; font-size: 44px; }
+.mc-satria-hero .mc-welcome-text { max-width: 640px; font-size: 18px; color: rgba(255,255,255,.92); }
+.mc-satria-hero .btn { margin-right: 10px; }
+.mc-satria footer { margin-top: 0; }
+.mc-satria .form-label { font-weight: 600; }
+.mc-satria #logo { width: auto; float: none; margin: 0; }
+.mc-satria-brand { white-space: nowrap; }

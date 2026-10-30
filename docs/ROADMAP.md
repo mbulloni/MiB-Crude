@@ -24,4 +24,4 @@ Stato v0.1.0 (2026-10-30): nucleo completo e testato end-to-end su MariaDB.
 17. Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto.
 18. Pulsanti personalizzati phpr (OnBefore/OnServer/OnAfter in subversion/EVENTS.sqlite) non ancora convertiti.
 19. Tabelle e query: import/export tabelle in formato JSON (.mibtables.json), non ZIP come phpr; connessioni REST non supportate.
-20. Temi grafici: adattatori per Metronic 8 e DesignReset (Cork/Equation). Non compatibili: Slim (Bootstrap 4), Webarch (Bootstrap 3), Material Admin (AngularJS), Satria (sito vetrina: utilizzabile in futuro per login/landing). Varianti orizzontali di Equation non ancora supportate. Il tema va importato su ogni computer del team (la libreria è locale).
+20. Temi grafici: adattatori per Metronic 8, DesignReset (Cork/Equation, anche menu orizzontali) e Satria (pagine di accesso e presentazione). Non compatibili: Slim (Bootstrap 4), Webarch (Bootstrap 3), Material Admin (AngularJS). Il tema va importato su ogni computer del team (la libreria è locale).

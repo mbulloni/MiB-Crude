@@ -318,9 +318,10 @@ class Menu
 /** CSS/JS of the page: default Bootstrap or the graphic theme imported from a purchased template. */
 class Theme
 {
-    public static function pack(App $app)
+    /** $key: 'pack' (application theme) or 'authPack' (login/landing pages theme). */
+    public static function pack(App $app, $key = 'pack')
     {
-        return isset($app->config['theme']['pack']['id']) ? $app->config['theme']['pack'] : null;
+        return isset($app->config['theme'][$key]['id']) ? $app->config['theme'][$key] : null;
     }
 
     private static function url(App $app, $path)
@@ -330,9 +331,9 @@ class Theme
     }
 
     /** <link> tags for <head>. */
-    public static function css(App $app)
+    public static function css(App $app, $key = 'pack')
     {
-        $pack = self::pack($app);
+        $pack = self::pack($app, $key);
         $h = '';
         if ($pack && !empty($pack['fonts'])) $h .= '<link rel="stylesheet" href="' . h($pack['fonts']) . '">' . "\n";
         if (!$pack || empty($pack['providesBootstrap'])) $h .= '<link rel="stylesheet" href="' . h($app->asset('vendor/bootstrap.min.css')) . '">' . "\n";
@@ -347,9 +348,9 @@ class Theme
     }
 
     /** Attributes for <html>: dark mode handling of the theme. */
-    public static function htmlAttrs(App $app)
+    public static function htmlAttrs(App $app, $key = 'pack')
     {
-        $pack = self::pack($app);
+        $pack = self::pack($app, $key);
         $theme = $app->config['theme'];
         $a = ' data-bs-theme="' . h($theme['mode'] === 'dark' ? 'dark' : 'light') . '" data-mode="' . h($theme['mode']) . '"';
         if ($pack && !empty($pack['dark']['attr'])) $a .= ' data-mc-dark-attr="' . h($pack['dark']['attr']) . '"';

@@ -6,6 +6,7 @@ const path = require('node:path');
 const LABELS = {
   'vertical-light-menu': 'Menu verticale chiaro', 'vertical-dark-menu': 'Menu verticale scuro',
   'collapsible-menu': 'Menu verticale compatto', 'semi-dark-menu': 'Menu semi-scuro',
+  'horizontal-light-menu': 'Menu orizzontale chiaro', 'horizontal-dark-menu': 'Menu orizzontale scuro',
 };
 
 module.exports = {

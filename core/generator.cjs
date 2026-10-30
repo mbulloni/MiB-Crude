@@ -174,9 +174,8 @@ function generate(proj, opts = {}) {
   copied += copyDir(path.join(RUNTIME, 'assets'), path.join(out, 'assets'));
   copied += copyDir(path.join(proj.dir, 'custom'), path.join(out, 'custom'));
   // Graphic theme from the local library: assets under theme/<id>/, PHP layouts under runtime/themes/<id>/.
-  let themePack = null;
-  const packId = proj.project.theme && proj.project.theme.pack;
-  if (packId) {
+  const installTheme = (packId) => {
+    if (!packId) return null;
     const Themes = require('./themes/index.cjs');
     const th = Themes.load(opts.themesDir, packId);
     if (!th) throw new Error(`Il tema grafico "${packId}" non è installato su questo computer: importalo da Impostazioni e stile → Temi grafici`);
@@ -184,8 +183,10 @@ function generate(proj, opts = {}) {
     copied += copyDir(path.join(th.dir, 'layouts'), path.join(out, 'theme', packId, 'layouts'), (s) => !s.endsWith('.php'));
     copied += copyDir(path.join(th.dir, 'layouts'), path.join(out, 'runtime', 'themes', packId), (s) => s.endsWith('.php'));
     const m = th.manifest;
-    themePack = { id: packId, css: m.css, js: m.js, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {} };
-  }
+    return { id: packId, kind: m.kind || 'app', css: m.css, js: m.js, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {} };
+  };
+  const themePack = installTheme(proj.project.theme && proj.project.theme.pack);
+  const authPack = installTheme(proj.project.theme && proj.project.theme.authPack);
   // public/: files served from the application root (phpr "source" folder).
   copied += copyDir(path.join(proj.dir, 'public'), out);
   const logo = path.join(proj.dir, 'custom', 'logo.png');
@@ -268,7 +269,7 @@ function generate(proj, opts = {}) {
     defaultConnection: proj.project.defaultConnection,
     connections,
     settings,
-    theme: { ...proj.project.theme, pack: themePack },
+    theme: { ...proj.project.theme, pack: themePack, authPack },
     security: sec,
     menu: proj.menu.items && proj.menu.items.length ? proj.menu.items : autoMenu(proj),
     tables: tablesIndex,

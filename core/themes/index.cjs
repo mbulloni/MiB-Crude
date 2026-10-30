@@ -11,7 +11,7 @@ const path = require('node:path');
 // Local theme library (per developer machine, never inside the MiB-Crude sources).
 const DEFAULT_LIB = process.env.MIBCRUDE_THEMES || path.join(os.homedir(), '.config', 'MiB-Crude', 'themes');
 
-const ADAPTERS = [require('./metronic8/adapter.cjs'), require('./designreset/adapter.cjs')];
+const ADAPTERS = [require('./metronic8/adapter.cjs'), require('./designreset/adapter.cjs'), require('./satria/adapter.cjs')];
 
 // Directories up to `depth` levels below root.
 function dirs(root, depth, out = []) {
@@ -62,7 +62,6 @@ function whyNot(dir) {
   const v = (text.match(/Bootstrap v(\d+)/) || [])[1];
   if (has(/angular/i)) return 'Applicazione AngularJS: il layout dipende dal framework JavaScript';
   if (v && Number(v) < 5) return `Basato su Bootstrap ${v}: le pagine generate usano Bootstrap 5 (classi diverse)`;
-  if (has(/hosting|landing/i)) return 'Sito vetrina, non un pannello di amministrazione';
   return 'Struttura non riconosciuta';
 }
 
@@ -83,7 +82,7 @@ function install(found, variant, libDir) {
   // Layout files of the adapter (our code), parametrised by the manifest.
   fs.mkdirSync(path.join(dest, 'layouts'), { recursive: true });
   for (const f of fs.readdirSync(path.join(__dirname, a.dir)).filter((x) => /\.(php|css|js)$/.test(x))) fs.copyFileSync(path.join(__dirname, a.dir, f), path.join(dest, 'layouts', f));
-  const full = { id, name: `${found.name} — ${(found.variants.find((v) => v.id === variant) || {}).label || variant}`, adapter: a.id, variant, source: found.root, installedAt: new Date().toISOString(), ...manifest };
+  const full = { kind: found.kind || 'app', id, name: `${found.name} — ${(found.variants.find((v) => v.id === variant) || {}).label || variant}`, adapter: a.id, variant, source: found.root, installedAt: new Date().toISOString(), ...manifest };
   fs.writeFileSync(path.join(dest, 'theme.json'), JSON.stringify(full, null, 2));
   return full;
 }

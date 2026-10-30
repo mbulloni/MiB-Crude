@@ -12,3 +12,7 @@
 .mc-designreset #mcTheme { background: transparent; border: 0; box-shadow: none; color: inherit; }
 .mc-designreset .mc-col-actions .btn-link { background: transparent; box-shadow: none; border: 0; }
 .mc-designreset table.mc-grid a { color: var(--bs-primary, #4361ee); }
+
+.mc-dr-horizontal .mc-dr-title { display: none !important; }
+.mc-dr-horizontal #sidebar ul.menu-categories li.menu > .dropdown-toggle i.bi { margin-right: 8px; font-size: 16px; }
+.mc-dr-horizontal #sidebar ul.menu-categories ul.submenu.dropdown-menu { min-width: 200px; }
