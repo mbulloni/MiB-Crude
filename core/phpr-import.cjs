@@ -18,6 +18,8 @@ const php8 = require('./php8-compat.cjs');
 
 // PHP 7.4 code from phpr -> PHP 8: safe rewrites, the rest goes to the report.
 function up8(code, where, ctx) {
+  // "--rbegin--...--rend--" mark the editable parts of phpr actions: removed at build time.
+  code = String(code).replace(/--rbegin--|--rend--/g, '');
   const r = php8.upgrade(code);
   if (r.fixes.length || r.problems.length) ctx.php8.push({ where, fixes: r.fixes, problems: r.problems });
   return r.code;
@@ -112,6 +114,49 @@ function pageSnippets(info) {
   return out;
 }
 
+// Items of a form in visual order (grid rows -> cells -> items).
+function formItems(info, formName) {
+  const form = (info.forms || {})[formName];
+  if (!form) return [];
+  const ids = [];
+  const rows = form.grid || [];
+  const seen = new Set();
+  for (const row of rows) for (const c of row.cells || []) { const cell = (form.cells || {})[c.cell]; if (cell) { seen.add(c.cell); ids.push(...(cell.items || [])); } }
+  for (const [cid, cell] of Object.entries(form.cells || {})) if (!seen.has(cid)) ids.push(...(cell.items || []));
+  return ids;
+}
+
+const FIELD_ITEMS = /^(integrated_edit_field|edit_field|grid_field|simple_grid_field|integrated_search_field)$/;
+
+/** Sections of an add/edit/view page: [{title, fields:[...]}] or null when the page has none. */
+function pageSections(info, labelText) {
+  const items = info.items || {};
+  const main = formItems(info, 'grid');
+  if (!main.some((id) => items[id] && items[id].type === 'section')) return null;
+  const out = [];
+  let loose = null;
+  for (const id of main) {
+    const it = items[id];
+    if (!it) continue;
+    if (it.type === 'section') {
+      const fields = formItems(info, it.location || id).map((x) => items[x]).filter((x) => x && FIELD_ITEMS.test(x.type) && x.field).map((x) => x.field);
+      out.push({ title: labelText(it.title), fields: [...new Set(fields)] });
+    } else if (FIELD_ITEMS.test(it.type) && it.field) {
+      if (!loose) { loose = { title: '', fields: [] }; out.push(loose); }
+      if (!loose.fields.includes(it.field)) loose.fields.push(it.field);
+    }
+  }
+  return out.filter((x) => x.fields.length);
+}
+
+function cleanLabel(t) {
+  return String(t || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, '&')
+    .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+const FA_TO_BI = { download: 'download', upload: 'upload', plus: 'plus-lg', trash: 'trash', edit: 'pencil', pencil: 'pencil', check: 'check-lg', times: 'x-lg', envelope: 'envelope', print: 'printer', refresh: 'arrow-repeat', search: 'search',
+  user: 'person', users: 'people', cog: 'gear', file: 'file-earmark', 'file-excel-o': 'file-earmark-excel', 'file-pdf-o': 'file-earmark-pdf', calendar: 'calendar', send: 'send', 'paper-plane': 'send', save: 'save', copy: 'copy', link: 'link-45deg', eye: 'eye', lock: 'lock', unlock: 'unlock' };
+
 // Fields placed on a page: walk the cells of every form, then nested item lists.
 function pageFields(info) {
   const items = info.items || {};
@@ -168,6 +213,18 @@ function mapEvent(name, table) {
   if ((m = name.match(/^EVENT_BEFORESHOW_(LIST|EDIT|ADD|VIEW|SEARCH|PRINT|EXPORT|IMPORT)$/))) return { to: 'BeforeShow', use: '$page', setup: `$xt = \\MiB\\Compat::xt(); $templatefile = ''; ${PO(table)}`, pages: [pageOf[m[1]]] };
   if ((m = name.match(/^EVENT_BEFOREPROCESS_(LIST|EDIT|ADD|VIEW|SEARCH|PRINT|EXPORT|IMPORT)$/))) return { to: 'BeforeProcess', use: '$page', setup: PO(table), pages: [pageOf[m[1]]] };
   return null;
+}
+
+// Syntax check of one event body with the local PHP (skipped when PHP is missing).
+const { execFileSync } = require('node:child_process');
+const os = require('node:os');
+function phpSyntaxError(body) {
+  const f = path.join(os.tmpdir(), `mc-ev-${process.pid}.php`);
+  fs.writeFileSync(f, `<?php\nfunction __mc_check() {\n${String(body).replace(/^\s*<\?php\s*/, '')}\n}\n`);
+  try { execFileSync(process.env.MIBCRUDE_PHP || 'php', ['-l', f], { stdio: 'pipe' }); return null; } catch (e) {
+    if (e.code === 'ENOENT') return null;
+    return String(e.stdout || e.stderr || '').split('\n').find((l) => /Parse error/i.test(l)) || 'errore di sintassi';
+  } finally { fs.rmSync(f, { force: true }); }
 }
 
 function indent(code, pad) {
@@ -299,7 +356,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   const x = parseXml(phprFile);
   const pagesStore = await readPages(phprFile).catch(() => null);
   const eventStore = await readEventStore(phprFile).catch(() => ({}));
-  const report = { php8: [], snippets: 0, jsEvents: 0, tables: 0, sqlViews: 0, charts: 0, events: 0, eventsSkipped: [], warnings: [], pagesFile: pagesStore ? pagesStore.file : null, connections: [] };
+  const report = { php8: [], snippets: 0, jsEvents: 0, buttons: 0, variants: 0, dashboards: 0, tables: 0, sqlViews: 0, charts: 0, events: 0, eventsSkipped: [], warnings: [], pagesFile: pagesStore ? pagesStore.file : null, connections: [] };
   const name = opts.name || path.basename(phprFile, '.phpr').replace(/[^A-Za-z0-9_.-]/g, '_');
   const proj = P.createProject(targetDir, name);
   const languages = [...new Set(arr(x.m_arrLanguages && x.m_arrLanguages.v).map((l) => LANGS[str(l)] || 'en'))];
@@ -343,6 +400,18 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   proj.project.defaultConnection = connMap[str(x.m_strDefaultConnID)] || (proj.connections[0] && proj.connections[0].id) || 'main';
   P.writeSecrets(targetDir, secrets);
 
+  // Custom labels (section titles...): HTML and &nbsp; stripped.
+  const customLabels = {};
+  for (const v of arr(x.CustomLabels && x.CustomLabels.v)) {
+    if (LANGS[str(v.Lang)] && LANGS[str(v.Lang)] !== defLang && customLabels[str(v.Id)]) continue;
+    customLabels[str(v.Id)] = cleanLabel(str(v.Text));
+  }
+  const labelText = (l) => {
+    if (!l) return {};
+    const text = cleanLabel(l.type === 1 ? (customLabels[l.label] || String(l.label || '').replace(/^.*_NBSP_/, '').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())) : (l.text || ''));
+    return text ? { [defLang]: text } : {};
+  };
+
   // Labels.
   const labels = {};
   for (const lang of arr(x.m_ProjectLabels && x.m_ProjectLabels.m_arrLanguageLabels && x.m_ProjectLabels.m_arrLanguageLabels.v)) {
@@ -354,6 +423,8 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   }
 
   // Tables.
+  const pendingDash = [];
+  const dashboards = [];
   const pXml = arr(x.tables && x.tables.v);
   const masters = [];
   const chartTables = [];
@@ -363,7 +434,20 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
     const original = str(t.m_strOriginalTable);
     const keys = arr(t.m_arrKeyFields && t.m_arrKeyFields.v).map(str);
     const conn = connMap[str(t.m_strConnectionID)] || proj.project.defaultConnection;
-    if (ttype === '4') { report.warnings.push(`${tname}: dashboard phpr non convertita (ricreala in Dashboard)`); continue; }
+    if (ttype === '4') {
+      const items = [];
+      for (const el of arr(t.m_pDashboard && t.m_pDashboard.m_arrElements && t.m_pDashboard.m_arrElements.v)) {
+        const et = str(el.m_strTableName);
+        const w = Number(str(el.m_nWidth)) || 600;
+        const width = w >= 1000 ? 12 : w >= 750 ? 8 : w >= 550 ? 6 : w >= 380 ? 4 : 3;
+        const height = Number(str(el.m_nHeight)) || 360;
+        pendingDash.push({ dash: tname, et, width, height, snippet: str(el.m_strSnippetID) });
+        items.push(null);
+      }
+      dashboards.push({ name: tname.replace(/[^A-Za-z0-9_]/g, '_').toLowerCase(), title: { [defLang]: (labels[tname] && labels[tname].caption) || tname }, source: tname, items: [] });
+      report.dashboards++;
+      continue;
+    }
     const pagesOf = (pagesStore && pagesStore.tables[tname]) || [];
     const filterFields = new Set();
     for (const pg of pagesOf) for (const it of Object.values(pg.info.items || {})) if (it.type === 'filter_panel_field' && it.field) filterFields.add(it.field);
@@ -403,7 +487,14 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
         const onPage = new Set(pageFields(pg.info));
         const showKey = { list: 'list', add: 'add', edit: 'edit', view: 'view', search: 'search', export: 'export', import: 'import', print: 'print' }[pt];
         if (onPage.size) for (const f of fields) f.show[showKey] = onPage.has(f.name);
-        if (variants.length > 1) report.warnings.push(`${tname}: ${variants.length} varianti della pagina ${pt}, importata solo la principale`);
+        if (variants.length > 1 && pt === 'list') {
+          // Other list variants (list1, list2...) become custom views with their own columns.
+          for (const v of variants) {
+            if (v === pg || v.disabled) continue;
+            ds.__variants = ds.__variants || [];
+            ds.__variants.push({ id: v.id, fields: new Set(pageFields(v.info)) });
+          }
+        } else if (variants.length > 1) report.warnings.push(`${tname}: ${variants.length} varianti della pagina ${pt}, importata solo la principale`);
       }
       ds.pages.delete.enabled = ds.pages.list.enabled && ds.pages.edit.enabled;
       const list = pagesOf.find((pg) => pg.type === 'list' && !pg.disabled);
@@ -444,7 +535,16 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
         report.eventsSkipped.push(`${tname}: ${en}`);
         continue;
       }
-      const w = wrapEvent(en, up8(code, `${tname}: ${en}`, report), tname);
+      const body = up8(code, `${tname}: ${en}`, report);
+      const bad = phpSyntaxError(body);
+      if (bad) {
+        // Broken in the original project too: keep it for reference, do not generate it.
+        keep(`events/${tname.replace(/[^\w.-]/g, '_')}/${en}.php`, code);
+        report.warnings.push(`${tname}: ${en} non valido (${bad.replace(/ in \/.*$/, '')}): disattivato, codice originale in import-phpr/events/`);
+        report.eventsSkipped.push(`${tname}: ${en} (sintassi PHP)`);
+        continue;
+      }
+      const w = wrapEvent(en, body, tname);
       (evGroup[w.to] ||= []).push(w.text);
       report.events++;
     }
@@ -467,6 +567,38 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
       }
     }
     if (Object.keys(snips).length) ds.snippets = Object.values(snips);
+
+    // Sections of add/edit/view forms.
+    for (const pt of ['add', 'edit', 'view']) {
+      const pg = pagesOf.find((v) => v.type === pt && !v.disabled && v.isDefault) || pagesOf.find((v) => v.type === pt && !v.disabled);
+      const secs = pg && pageSections(pg.info, labelText);
+      if (secs && secs.length) (ds.layout ||= {})[pt] = { sections: secs };
+    }
+
+    // Custom buttons: OnBefore/OnAfter (JavaScript) and OnServer (PHP) from EVENTS.sqlite.
+    const buttons = {};
+    for (const pg of pagesOf) {
+      if (pg.disabled) continue;
+      const ours = { list: 'list', add: 'add', edit: 'edit', view: 'view' }[pg.type];
+      if (!ours) continue;
+      const inGrid = new Set(formItems(pg.info, 'grid'));
+      for (const [itemId, it] of Object.entries(pg.info.items || {})) {
+        if (it.type !== 'custom_button' || !it.eventId) continue;
+        const bid = it.eventId.replace(/[^A-Za-z0-9_]/g, '_');
+        const b = (buttons[bid] ||= { id: bid, label: labelText(it.label), icon: FA_TO_BI[(it.icon && it.icon.fa) || ''] || ((it.icon && it.icon.fa) ? 'gear' : ''), pages: [], row: ours === 'list' && inGrid.has(itemId) });
+        if (!b.label[defLang]) b.label = { [defLang]: it.eventId.replace(/_/g, ' ') };
+        if (!b.pages.includes(ours)) b.pages.push(ours);
+        const before = eventStore[`${it.eventId}~OnBefore`];
+        const server = eventStore[`${it.eventId}~OnServer`];
+        const after = eventStore[`${it.eventId}~OnAfter`];
+        const evs = (proj.events[tname] ||= {});
+        if (before && before.trim()) evs[`JS_ButtonBefore_${bid}`] = `// phpr: pulsante ${it.eventId}, Client Before (params, ctrl, pageObj, proxy, pageid, rowData)\n${before.replace(/\r\n/g, '\n')}\n`;
+        if (after && after.trim()) evs[`JS_ButtonAfter_${bid}`] = `// phpr: pulsante ${it.eventId}, Client After (result, ctrl, pageObj, proxy, pageid, rowData, params)\n${after.replace(/\r\n/g, '\n')}\n`;
+        if (server && server.trim()) evs[`Button_${bid}`] = `<?php\n// phpr: pulsante ${it.eventId}, Server ($params, $result, $button)\n${up8(server.replace(/\r\n/g, '\n'), `${tname}: pulsante ${it.eventId}`, report)}\nreturn true;\n`;
+        report.buttons++;
+      }
+    }
+    if (Object.keys(buttons).length) ds.buttons = Object.values(buttons);
     ds.phprShort = str(t.m_strShortTableName) || tname;
     const dc = t.DiagramCoordinates;
     if (dc && str(dc.x1) !== '') ds.diagram = { x: Number(str(dc.x1)) || 0, y: Number(str(dc.y1)) || 0 };
@@ -474,13 +606,37 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
       (proj.events[tname] ||= {})[to] = `<?php\n// Importato da phpr: le variabili phpr sono ricreate dal runtime MiB-Crude (Compat).\n\n${blocks.join('\n')}\nreturn true;\n`;
     }
     for (const m of arr(t.m_arrMasterTables && t.m_arrMasterTables.v)) masters.push({ master: str(m.m_strMasterTable), detail: tname, masterKeys: arr(m.m_arrMasterKeys && m.m_arrMasterKeys.v).map(str), detailKeys: arr(m.m_arrDetailKeys && m.m_arrDetailKeys.v).map(str) });
+    const variants = ds.__variants || [];
+    delete ds.__variants;
     proj.tables.push(ds);
+    for (const v of variants) {
+      const copy = JSON.parse(JSON.stringify(ds));
+      copy.name = `${tname} (${v.id})`;
+      copy.caption = Object.fromEntries(Object.entries(ds.caption).map(([k, c]) => [k, `${c} (${v.id})`]));
+      if (v.fields.size) for (const f of copy.fields) f.show.list = v.fields.has(f.name);
+      copy.hideFromMenu = true;
+      copy.phprVariantOf = { table: tname, page: v.id };
+      delete copy.diagram;
+      proj.tables.push(copy);
+      report.variants++;
+    }
   }
   for (const m of masters) {
     const mt = proj.tables.find((t) => t.name === m.master);
     if (mt && proj.tables.some((t) => t.name === m.detail)) mt.details.push({ table: m.detail, masterKeys: m.masterKeys, detailKeys: m.detailKeys, showIn: ['list', 'view', 'edit'] });
   }
   for (const c of chartTables) { if (!proj.charts.some((x) => x.name === c.name)) proj.charts.push(c); }
+  // Dashboards: elements become charts or lists of the converted tables.
+  for (const d of dashboards) {
+    for (const p of pendingDash.filter((x) => x.dash === d.source)) {
+      const ct = chartTables.find((c) => c.table === p.et);
+      if (ct) d.items.push({ type: 'chart', ref: ct.name, width: p.width, height: Math.min(600, p.height) });
+      else if (proj.tables.some((t) => t.name === p.et)) d.items.push({ type: 'list', table: p.et, width: p.width, height: Math.min(700, p.height), rows: 10 });
+      else if (p.snippet) d.items.push({ type: 'html', html: { [defLang]: `<p>Snippet phpr ${p.snippet}</p>` }, width: p.width });
+    }
+    delete d.source;
+    if (!proj.dashboards.some((x) => x.name === d.name)) proj.dashboards.push(d);
+  }
 
   // Global events.
   const gGroup = {};
@@ -507,9 +663,14 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
     let item;
     if (type === 'Group') item = { type: 'group', label: { [defLang]: text || 'Gruppo' }, items: [] };
     else if (str(n.linkType) === 'External' || (!tname && str(n.href))) item = { type: 'link', url: str(n.href), label: { [defLang]: text || str(n.href) }, newWindow: str(n.openType) === 'NewWindow' };
+    else if (tname && dashboards.some((d) => (d.name === tname.replace(/[^A-Za-z0-9_]/g, '_').toLowerCase()))) {
+      item = { type: 'dashboard', ref: tname.replace(/[^A-Za-z0-9_]/g, '_').toLowerCase() };
+      if (text) item.label = { [defLang]: text };
+    }
     else if (tname && proj.tables.some((t) => t.name === tname)) {
       const ct = chartTables.find((c) => c.table === tname);
-      item = ct ? { type: 'chart', ref: ct.name } : { type: 'table', table: tname, page: { Add: 'add', Search: 'search' }[str(n.pageType)] || 'list' };
+      const variant = str(n.pageId) && proj.tables.find((t) => t.phprVariantOf && t.phprVariantOf.table === tname && t.phprVariantOf.page === str(n.pageId));
+      item = ct ? { type: 'chart', ref: ct.name } : { type: 'table', table: variant ? variant.name : tname, page: { Add: 'add', Search: 'search' }[str(n.pageType)] || 'list' };
       if (text) item.label = { [defLang]: text };
     } else continue;
     const icon = str(n.iconName).replace(/^(glyphicon|fa|bi)-/, '');
@@ -594,7 +755,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   P.saveProject(proj);
   const lines = [
     `# Importazione di progetti .phpr`, '', `File: ${phprFile}`, `Archivio pagine: ${report.pagesFile || 'assente'}`, '',
-    `- Tabelle: ${report.tables} (di cui query SQL: ${report.sqlViews})`, `- Grafici: ${report.charts}`, `- Eventi convertiti: ${report.events}`, `- Eventi JavaScript (onload) convertiti: ${report.jsEvents}`, `- Snippet PHP nelle pagine: ${report.snippets}`,
+    `- Tabelle: ${report.tables} (di cui query SQL: ${report.sqlViews})`, `- Grafici: ${report.charts}`, `- Eventi convertiti: ${report.events}`, `- Eventi JavaScript (onload) convertiti: ${report.jsEvents}`, `- Snippet PHP nelle pagine: ${report.snippets}`, `- Pulsanti personalizzati: ${report.buttons}`, `- Varianti di lista (viste personalizzate): ${report.variants}`, `- Dashboard: ${report.dashboards}`,
     `- Eventi non convertiti (salvati in import-phpr/events/): ${report.eventsSkipped.length}`, '',
     '## Avvisi', ...report.warnings.map((w) => `- ${w}`), '',
     '## Compatibilità PHP 8', `Correzioni automatiche in ${report.php8.filter((x) => x.fixes.length).length} blocchi di codice, problemi da rivedere in ${report.php8.filter((x) => x.problems.length).length}.`, '',

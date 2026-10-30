@@ -76,6 +76,41 @@
   window.pageObj = pageObj;
   window.pageid = 1;
 
+  // Custom buttons (phpr): Client Before -> Server (index.php?p=button) -> Client After.
+  var btnCode = (window.MCJS && window.MCJS[page.table] && window.MCJS[page.table].__buttons) || {};
+  var compile = function (src, args) { try { return src ? new Function(args, src) : null; } catch (e) { console.warn('[MiB-Crude] pulsante:', e); return null; } };
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.mc-cbtn');
+    if (!b) return;
+    e.preventDefault();
+    var id = b.getAttribute('data-btn'), table = b.getAttribute('data-table') || page.table;
+    var code = btnCode[id] || {};
+    var params = {};
+    var keys = b.getAttribute('data-keys') ? JSON.parse(b.getAttribute('data-keys')) : null;
+    var rowData = keys ? { keys: keys } : {};
+    var ctrl = {
+      setMessage: function (m) { b.setAttribute('title', m); b.dataset.msg = m; },
+      setDisabled: function () { b.disabled = true; }, setEnabled: function () { b.disabled = false; },
+      hide: function () { b.style.display = 'none'; }, show: function () { b.style.display = ''; },
+      getDispElem: function () { return window.jQuery ? jQuery(b) : b; }
+    };
+    var before = compile(code.before, 'params, ctrl, pageObj, proxy, pageid, rowData, row, submit');
+    if (before) { try { if (before.call(pageObj, params, ctrl, pageObj, page.proxy || {}, 1, rowData, null, function () {}) === false) return; } catch (err) { console.warn(err); return; } }
+    var selected = Array.prototype.map.call(document.querySelectorAll('.mc-check:checked'), function (c) { return JSON.parse(c.value); });
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    b.disabled = true;
+    fetch('index.php?p=button&t=' + encodeURIComponent(table) + '&b=' + encodeURIComponent(id), {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({ params: params, keys: keys, selected: selected })
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      b.disabled = false;
+      var after = compile(code.after, 'result, ctrl, pageObj, proxy, pageid, rowData, params');
+      if (after) after.call(pageObj, res.result || {}, ctrl, pageObj, page.proxy || {}, 1, rowData, params);
+      else if (res.error) alert(res.error);
+      if (window.MC && window.MC.grid) window.MC.grid.ajax.reload(null, false);
+    }).catch(function (err) { b.disabled = false; console.warn(err); });
+  });
+
   var code = window.MCJS && window.MCJS[page.table] && window.MCJS[page.table][page.type];
   if (!code) return;
   var run = function () {
