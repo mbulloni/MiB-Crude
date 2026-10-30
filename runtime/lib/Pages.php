@@ -85,17 +85,7 @@ class Pages
         $master = $this->master($t);
         $req = $this->listRequest($t, $master);
         $page = $t->page('list');
-        $ps = isset($_GET['ps']) ? max(1, min(1000, (int)$_GET['ps'])) : (int)$page['pageSize'];
-        if (isset($_GET['ps']) && $_GET['ps'] === 'all') $ps = 0;
-        $pg = max(1, isset($_GET['pg']) ? (int)$_GET['pg'] : 1);
-        $sort = isset($_GET['o']) ? (string)$_GET['o'] : '';
-        $dir = isset($_GET['d']) && $_GET['d'] === 'desc' ? 'desc' : 'asc';
-        $total = $t->count($req);
-        if ($ps > 0 && ($pg - 1) * $ps >= $total && $pg > 1) $pg = (int)ceil($total / $ps);
-        $rows = $t->fetch($req, $ps, $ps > 0 ? ($pg - 1) * $ps : 0, $sort, $dir);
-        $fields = $t->fields('list');
-        $t->resolveLookups($rows, $fields);
-        $this->app->event($t->name, 'BeforeShowList', [&$rows, 'list']);
+        $ps = isset($_GET['ps']) ? (int)$_GET['ps'] : (int)$page['pageSize'];
         $this->app->event($t->name, 'BeforeShow', ['list']);
         $filters = [];
         if (!empty($page['filterPanel'])) {
@@ -103,10 +93,18 @@ class Pages
         }
         $this->app->title = $t->caption();
         $this->app->render('list', [
-            't' => $t, 'rows' => $rows, 'fields' => $fields, 'total' => $total, 'pg' => $pg, 'ps' => $ps, 'sort' => $sort, 'dir' => $dir,
-            'req' => $req, 'master' => $master, 'filters' => $filters, 'totals' => !empty($page['totals']) ? $t->totals($req) : [],
-            'embedded' => !empty($_GET['embed']),
+            't' => $t, 'ps' => $ps, 'req' => $req, 'master' => $master, 'filters' => $filters, 'embedded' => !empty($_GET['embed']),
         ], !empty($_GET['embed']) ? 'layout_popup' : $this->layout());
+    }
+
+    /** DataTables server-side data for the list page. */
+    public function page_dt()
+    {
+        $t = $this->table();
+        if (!$t->enabled('list')) throw new HttpError(t('error.notfound'), 404);
+        $this->app->security->check($t->name, 'S');
+        $master = $this->master($t);
+        Grid::serve($this->app, $t, $master, $this->listRequest($t, $master));
     }
 
     // --- add / edit -----------------------------------------------------------

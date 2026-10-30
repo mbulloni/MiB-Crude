@@ -85,7 +85,7 @@ function ChartEditor({ c, set }: { c: Chart; set: (fn: (x: Chart) => void) => vo
   return <>
     <Section title="Grafico">
       <Row label="Tabella / query"><Select value={c.table} options={p.tables.map((t) => [t.name, lbl(t.caption, t.name)] as [string, string])} onChange={(v) => set((x) => { x.table = v; x.series = []; })} /></Row>
-      <Row label="Tipo"><Select value={c.type} options={[['bar', 'Colonne'], ['hbar', 'Barre orizzontali'], ['line', 'Linee'], ['area', 'Area'], ['pie', 'Torta'], ['doughnut', 'Ciambella'], ['polarArea', 'Polare'], ['radar', 'Radar']]} onChange={(v) => set((x) => { x.type = v; })} /></Row>
+      <Row label="Tipo"><Select value={c.type} options={[['bar', 'Colonne'], ['hbar', 'Barre orizzontali'], ['line', 'Linee'], ['area', 'Area'], ['scatter', 'Dispersione'], ['pie', 'Torta'], ['doughnut', 'Ciambella'], ['rose', 'Rosa (Nightingale)'], ['funnel', 'Imbuto'], ['treemap', 'Treemap'], ['gauge', 'Indicatore (gauge)'], ['radar', 'Radar']]} onChange={(v) => set((x) => { x.type = v; })} /></Row>
       <Row label="Categorie (asse X)"><span className="inline"><Select value={c.labelField} options={fields} onChange={(v) => set((x) => { x.labelField = v; })} /><Select value={c.labelInterval || ''} options={INTERVALS} onChange={(v) => set((x) => { x.labelInterval = v; })} /></span></Row>
       <Row label="Opzioni"><span className="chips"><Check label="Ordina per valore" value={c.sortByValue} onChange={(v) => set((x) => { x.sortByValue = v; })} /><Check label="Serie impilate" value={c.stacked} onChange={(v) => set((x) => { x.stacked = v; })} /></span></Row>
       <Row label="Mostra solo i primi"><Num value={c.limit} onChange={(v) => set((x) => { x.limit = v || undefined; })} /></Row>

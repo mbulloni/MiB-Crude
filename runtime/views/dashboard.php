@@ -9,7 +9,7 @@
       <div class="display-6 fw-semibold mc-accent"><?= h($it['display']) ?></div></div></a>
   <?php elseif ($it['type'] === 'chart'): ?>
     <div class="card h-100"><div class="card-header small fw-semibold"><?= h($title ?: $app->label($app->config['charts'][$it['ref']]['title'], $it['ref'])) ?></div>
-      <div class="card-body"><div class="mc-chart-box" style="height:<?= isset($it['height']) ? (int)$it['height'] : 280 ?>px"><canvas class="mc-chart" data-src="<?= h($app->url('chartdata', ['c' => $it['ref']])) ?>"></canvas></div></div></div>
+      <div class="card-body"><div class="mc-chart-box" style="height:<?= isset($it['height']) ? (int)$it['height'] : 280 ?>px"><div class="mc-chart" data-src="<?= h($app->url('chartdata', ['c' => $it['ref']])) ?>"></div></div></div></div>
   <?php elseif ($it['type'] === 'html'): ?>
     <div class="card h-100"><?php if ($title !== ''): ?><div class="card-header small fw-semibold"><?= h($title) ?></div><?php endif ?><div class="card-body"><?= \MiB\Sanitizer::clean($app->label(isset($it['html']) ? $it['html'] : '')) ?></div></div>
   <?php else: ?>

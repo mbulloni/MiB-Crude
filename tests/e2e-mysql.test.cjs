@@ -115,21 +115,26 @@ test('setup, login, CRUD, events, export, report, api', async () => {
 
   r = await c.req('?p=list&t=orders');
   assert.strictEqual(r.status, 200, r.text.slice(0, 800));
-  assert.match(r.text, /Mario Rossi/); // lookup display
-  assert.match(r.text, /Spedito/); // static list label
-  assert.match(r.text, /139,39/); // sum total 24.50+59.90+35+19.99
-
-  r = await c.req('?p=list&t=orders&q=Anna');
-  assert.match(r.text, /1 record/);
-  r = await c.req('?p=list&t=orders&f[status][]=new');
-  assert.match(r.text, /2 record/);
+  assert.match(r.text, /id="mcGrid"/); // DataTables shell
+  const dt = async (qs) => { const x = await c.req(`?p=dt&draw=1&start=0&length=20&${qs}`); assert.strictEqual(x.status, 200, x.text.slice(0, 500)); return JSON.parse(x.text); };
+  let d = await dt('t=orders');
+  const cells = JSON.stringify(d.data);
+  assert.strictEqual(d.recordsTotal, 4);
+  assert.match(cells, /Mario Rossi/); // lookup display
+  assert.match(cells, /Spedito/); // static list label
+  assert.match(d.totals.total, /139,39/); // sum 24.50+59.90+35+19.99
+  d = await dt('t=orders&search[value]=Anna');
+  assert.strictEqual(d.recordsFiltered, 1);
+  d = await dt('t=orders&f[status][]=new');
+  assert.strictEqual(d.recordsFiltered, 2);
+  d = await dt('t=orders&order[0][column]=6&order[0][dir]=desc&length=1'); // column 6 = total (check, actions, id, customer, date, status, total)
+  assert.match(JSON.stringify(d.data), /59,90/);
 
   // Add a category: BeforeAdd uppercases.
   r = await c.req('?p=add&t=categories');
   r = await c.post('?p=add&t=categories', { _csrf: c.csrf(r.text), name: 'giardino', description: 'x', _next: 'list' });
   assert.strictEqual(r.status, 302, r.text.slice(0, 800));
-  r = await c.req('?p=list&t=categories');
-  assert.match(r.text, /GIARDINO/);
+  assert.match(JSON.stringify((await dt('t=categories')).data), /GIARDINO/);
   // Required field validation.
   r = await c.req('?p=add&t=categories');
   r = await c.post('?p=add&t=categories', { _csrf: c.csrf(r.text), name: '', _next: 'list' });
@@ -153,8 +158,8 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   // Master-detail: order lines inside the order view.
   r = await c.req('?p=view&t=orders&k[id]=1');
   assert.match(r.text, /mt=orders/);
-  r = await c.req('?p=list&t=order_items&mt=orders&mk[id]=1&embed=1');
-  assert.match(r.text, /2 record/);
+  d = await dt('t=order_items&mt=orders&mk[id]=1&embed=1');
+  assert.strictEqual(d.recordsTotal, 2);
 
   // Dependent lookup.
   r = await c.req('?p=lookup&t=customers&f=city_id&parent=2');
@@ -214,7 +219,9 @@ test('permissions for a non-admin group', async () => {
   assert.strictEqual(r.status, 302);
   r = await u.req('?p=list&t=orders');
   assert.strictEqual(r.status, 200);
-  assert.doesNotMatch(r.text, /p=edit&amp;t=orders/);
+  r = await u.req('?p=dt&t=orders&draw=1&start=0&length=10');
+  assert.match(r.text, /p=view/);
+  assert.doesNotMatch(r.text, /p=edit/);
   r = await u.req('?p=edit&t=orders&k[id]=1');
   assert.strictEqual(r.status, 403);
   r = await u.req('?p=list&t=products');

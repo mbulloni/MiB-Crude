@@ -59,7 +59,7 @@ $sidebar = $theme['layout'] !== 'topbar';
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <link rel="stylesheet" href="<?= h($app->asset('vendor/bootstrap.min.css')) ?>">
 <link rel="stylesheet" href="<?= h($app->asset('vendor/bootstrap-icons.min.css')) ?>">
-<link rel="stylesheet" href="<?= h($app->asset('app.css')) ?>">
+<link rel="stylesheet" href="<?= h($app->asset('vendor/dataTables.bootstrap5.min.css')) ?>"><link rel="stylesheet" href="<?= h($app->asset('vendor/responsive.bootstrap5.min.css')) ?>"><link rel="stylesheet" href="<?= h($app->asset('vendor/buttons.bootstrap5.min.css')) ?>"><link rel="stylesheet" href="<?= h($app->asset('app.css')) ?>">
 <style>:root{--mc-primary:<?= h($theme['primary']) ?>;}</style>
 <?php if (is_file($app->root . '/custom/custom.css')): ?><link rel="stylesheet" href="custom/custom.css?v=<?= filemtime($app->root . '/custom/custom.css') ?>"><?php endif ?>
 </head>
@@ -115,8 +115,14 @@ $sidebar = $theme['layout'] !== 'topbar';
 </div>
 <div class="modal fade" id="mcModal" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><iframe class="mc-modal-frame"></iframe></div></div></div></div>
 <script src="<?= h($app->asset('vendor/bootstrap.bundle.min.js')) ?>"></script>
-<script>window.MC = <?= json_encode(['lang' => $app->lang, 'i18n' => ['confirmDelete' => t('confirm.delete'), 'confirmDeleteSel' => t('confirm.delete_sel'), 'noResults' => t('list.empty')]], JSON_UNESCAPED_UNICODE) ?>;</script>
-<?php if (!empty($needCharts)): ?><script src="<?= h($app->asset('vendor/chart.umd.min.js')) ?>"></script><?php endif ?>
+<script src="<?= h($app->asset('vendor/jquery.min.js')) ?>"></script>
+<script src="<?= h($app->asset('vendor/dataTables.min.js')) ?>"></script><script src="<?= h($app->asset('vendor/dataTables.bootstrap5.min.js')) ?>"></script>
+<script src="<?= h($app->asset('vendor/dataTables.responsive.min.js')) ?>"></script><script src="<?= h($app->asset('vendor/responsive.bootstrap5.min.js')) ?>"></script>
+<script src="<?= h($app->asset('vendor/dataTables.buttons.min.js')) ?>"></script><script src="<?= h($app->asset('vendor/buttons.bootstrap5.min.js')) ?>"></script><script src="<?= h($app->asset('vendor/buttons.colVis.min.js')) ?>"></script>
+<script>window.MC = <?= json_encode(['lang' => $app->lang, 'i18n' => ['confirmDelete' => t('confirm.delete'), 'confirmDeleteSel' => t('confirm.delete_sel'), 'noResults' => t('list.empty'), 'colvis' => t('dt.colvis'), 'all' => t('list.all'),
+  'dt' => ['search' => t('dt.search'), 'lengthMenu' => t('dt.lengthMenu'), 'info' => t('dt.info'), 'infoEmpty' => t('dt.infoEmpty'), 'infoFiltered' => t('dt.infoFiltered'), 'zeroRecords' => t('list.empty'), 'emptyTable' => t('list.empty'), 'loadingRecords' => t('dt.loading'), 'processing' => t('dt.loading'),
+  'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']]]], JSON_UNESCAPED_UNICODE) ?>;</script>
+<?php if (!empty($needCharts)): ?><script src="<?= h($app->asset('vendor/echarts.min.js')) ?>"></script><?php endif ?>
 <script src="<?= h($app->asset('app.js')) ?>"></script>
 <?php if (is_file($app->root . '/custom/custom.js')): ?><script src="custom/custom.js?v=<?= filemtime($app->root . '/custom/custom.js') ?>"></script><?php endif ?>
 </body>

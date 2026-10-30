@@ -14,12 +14,20 @@ Parti da un database esistente (MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, S
 - **Eventi PHP** (BeforeAdd, AfterEdit, BeforeSelect, CustomValidate…) con editor Monaco, controllo sintassi e azioni predefinite
 - **Sicurezza**: utenti gestiti o tabella esistente o utente fisso, gruppi, permessi per tabella (A/E/D/S/V/P/I), **permessi dinamici** gestibili dall'app, record per utente, registrazione con conferma email, recupero password, CAPTCHA, regole password, blocco dopo tentativi falliti, **LDAP/Active Directory**, **OpenID Connect** (Okta, Entra ID, Google, Keycloak)
 - **Registro attività** (audit) e **blocco record** durante la modifica
-- **Report** con raggruppamenti e totali, **grafici** (Chart.js), **dashboard**
+- **Report** con raggruppamenti e totali, **grafici** (Apache ECharts), **dashboard**
 - **API REST** per tabella con chiave API e descrizione **OpenAPI**
 - Menu ad albero, temi (colore, barra laterale/alta, chiaro/scuro), **multilingua** con traduzioni
 - **Anteprima** integrata (PHP locale o Docker) e **pubblicazione** incrementale via SFTP, FTP/FTPS o cartella
 
 ![App generata](docs/screenshots/app-list.png)
+
+## Importazione di progetti .phpr
+
+Pulsante **Importa progetto .phpr** nella schermata iniziale: legge il file `.phpr` (phpr 10.x) e l'archivio pagine `PAGES*.sqlite` accanto, e converte connessioni (password solo in locale), tabelle, query SQL, campi, lookup (anche a cascata), pagine e campi per pagina, master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi funzionano senza riscriverli grazie allo strato di compatibilità del runtime (`DB::Query`, `DB::Lookup`, `Security::getUserName()`, `$pageObject`, `$xt`, `$record` in BeforeMoveNext, `runner_mail`…). Il codice PHP 7.4 viene adeguato a PHP 8 (correzioni automatiche sicure, il resto segnalato in `import-phpr/REPORT.md`). Eventi JavaScript e pulsanti personalizzati restano da riscrivere (salvati in `import-phpr/`).
+
+## Liste e grafici
+
+Le liste usano **DataTables 2 in modalità server-side** (ordinamento, ricerca e paginazione in SQL, colonne visibili, responsive, stato ricordato, totali). I grafici usano **Apache ECharts** (colonne, barre, linee, aree, dispersione, torta, ciambella, rosa, imbuto, treemap, gauge, radar; esportazione immagine, vista dati, cambio tipo).
 
 ## Multisviluppatore
 
@@ -52,7 +60,7 @@ I test end-to-end richiedono MariaDB con l'utente `mibcrude`/`mibcrude` sul data
 | Cartella | Contenuto |
 |---|---|
 | `core/` | modello di progetto su file, introspezione dei 5 database, default del wizard, generatore, protocollo team |
-| `runtime/` | runtime PHP dell'app generata (PHP 7.4 – 8.5, nessuna dipendenza): PDO multi-dialetto, pagine, sicurezza, API, report |
+| `runtime/` | runtime PHP dell'app generata (PHP 7.4 – 8.5, testato su 7.4, 8.4, 8.5): PDO multi-dialetto, pagine, sicurezza, API, report, compatibilità phpr |
 | `electron/` | processo principale del designer: IPC, anteprima, pubblicazione, Git, client del server del team |
 | `src/` | interfaccia del designer (React + Monaco) |
 | `server/` | server del team (WebSocket) |
