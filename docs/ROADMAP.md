@@ -14,3 +14,11 @@ Stato v0.1.0 (2026-10-30): nucleo completo e testato end-to-end su MariaDB.
 9. Viste aggiuntive: calendario, mappa, galleria, kanban; campi QR code e firma.
 10. Pacchetti `.deb`/AppImage, icona installata, aggiornamenti integrati.
 11. Mappatura gruppi OIDC nel designer (il runtime la supporta già: `groupMap`).
+
+## Import phpr — limiti noti (2026-10-30)
+12. Eventi JavaScript (`EVENT_JS_*`, 641 solo nel progetto reale di prova) e pulsanti/campi personalizzati: salvati in `import-phpr/`, da riscrivere; serve un'API client compatibile (`pageObj`, `ctrl`, `Runner.*`).
+13. Pagine phpr con più varianti (es. `list`, `list1`): importata solo la principale.
+14. Dashboard phpr (tipo 4) non convertite; grafici convertiti con aggregazione "somma".
+15. Layout grafici delle pagine (celle, tab, stili per pagina) non importati: si usa il layout standard.
+16. `$xt->assign`, `$pageObject->hideItem` e simili sono accettati ma senza effetto.
+17. Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto.
