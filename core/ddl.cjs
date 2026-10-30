@@ -61,6 +61,8 @@ function createTable(dialect, table, cols) {
   const sqliteAuto = dialect === 'sqlite' && pk.length === 1 && pk[0].autoInc;
   const lines = cols.map((c) => (sqliteAuto && c.pk ? `${quote(dialect, c.name)} INTEGER PRIMARY KEY AUTOINCREMENT` : columnSql(dialect, c, { inCreate: true })));
   if (pk.length && !sqliteAuto) lines.push(`PRIMARY KEY (${pk.map((c) => quote(dialect, c.name)).join(', ')})`);
+  // Foreign keys: col.ref = { table, column }
+  for (const c of cols) if (c.ref && c.ref.table) lines.push(`FOREIGN KEY (${quote(dialect, c.name)}) REFERENCES ${quote(dialect, c.ref.table)} (${quote(dialect, c.ref.column || 'id')})`);
   return `CREATE TABLE ${quote(dialect, table)} (\n  ${lines.join(',\n  ')}\n)${dialect === 'mysql' ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4' : ''}`;
 }
 

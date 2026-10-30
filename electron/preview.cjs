@@ -9,7 +9,7 @@ const path = require('node:path');
 const net = require('node:net');
 
 const PDO_EXT = { mysql: 'pdo_mysql', pgsql: 'pdo_pgsql', sqlsrv: 'pdo_sqlsrv', oracle: 'pdo_oci', sqlite: 'pdo_sqlite' };
-const IMAGE = 'mibcrude-php:8.3';
+const IMAGES = { default: ['mibcrude-php:8.3', 'docker'], oracle: ['mibcrude-php-oci:8.3', 'docker-oci'] };
 let proc = null;
 let info = null;
 let state = { running: false, url: '', mode: '', log: '' };
@@ -55,9 +55,12 @@ function freePort(start) {
   });
 }
 
-function dockerImage() {
-  try { execFileSync('docker', ['image', 'inspect', IMAGE], { stdio: 'pipe' }); return; } catch { /* build */ }
-  execFileSync('docker', ['build', '-t', IMAGE, path.join(__dirname, 'docker').replace('app.asar', 'app.asar.unpacked')], { stdio: 'pipe', timeout: 15 * 60 * 1000 });
+// Oracle needs Instant Client: separate image. Built on first use.
+function dockerImage(drivers) {
+  const [image, dir] = drivers.includes('oracle') ? IMAGES.oracle : IMAGES.default;
+  try { execFileSync('docker', ['image', 'inspect', image], { stdio: 'pipe' }); return image; } catch { /* build */ }
+  execFileSync('docker', ['build', '-t', image, path.join(__dirname, dir).replace('app.asar', 'app.asar.unpacked')], { stdio: 'pipe', timeout: 20 * 60 * 1000 });
+  return image;
 }
 
 async function start(proj, outDir) {
@@ -73,8 +76,8 @@ async function start(proj, outDir) {
     proc = spawn(i.bin, ['-S', `127.0.0.1:${port}`, '-t', outDir], { cwd: outDir });
   } else if (i.docker) {
     mode = 'docker';
-    dockerImage();
-    proc = spawn('docker', ['run', '--rm', '--network', 'host', '-v', `${outDir}:/app`, '-w', '/app', IMAGE, 'php', '-S', `127.0.0.1:${port}`, '-t', '/app']);
+    const image = dockerImage(missing);
+    proc = spawn('docker', ['run', '--rm', '--network', 'host', '-v', `${outDir}:/app`, '-w', '/app', image, 'php', '-S', `127.0.0.1:${port}`, '-t', '/app']);
   } else {
     throw new Error(i.ok ? `Il PHP locale (${i.version}) non ha i driver ${missing.map((d) => PDO_EXT[d]).join(', ')} e Docker non è disponibile` : i.error);
   }

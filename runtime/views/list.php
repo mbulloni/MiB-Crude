@@ -39,13 +39,13 @@ $curUrl = $_SERVER['REQUEST_URI'];
 <?php endif ?>
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3 mc-pagehead">
   <h1 class="h4 m-0 me-3"><?= h($t->caption()) ?></h1>
-  <?php if ($t->enabled('add') && $sec->can($t->name, 'A')): ?>
-    <a class="btn btn-primary btn-sm" href="<?= h($app->url('add', $base)) ?>"><i class="bi bi-plus-lg"></i> <?= h(t('btn.add')) ?></a>
+  <?php if (!\MiB\Compat::hidden('add') && $t->enabled('add') && $sec->can($t->name, 'A')): ?>
+    <a class="btn btn-primary btn-sm<?= ($t->page('add')['mode'] ?? 'page') === 'popup' ? ' mc-popup-link' : '' ?>" href="<?= h($app->url('add', $base)) ?>"><i class="bi bi-plus-lg"></i> <?= h(t('btn.add')) ?></a>
   <?php endif ?>
-  <?php if ($canDel): ?>
+  <?php if ($canDel && !\MiB\Compat::hidden('delete')): ?>
     <button class="btn btn-outline-danger btn-sm mc-delete-selected" form="mcListForm" disabled><i class="bi bi-trash"></i> <?= h(t('btn.delete_sel')) ?></button>
   <?php endif ?>
-  <?php if ($t->enabled('export') && $sec->can($t->name, 'P')): ?>
+  <?php if (!\MiB\Compat::hidden('export') && $t->enabled('export') && $sec->can($t->name, 'P')): ?>
     <div class="dropdown">
       <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-download"></i> <?= h(t('btn.export')) ?></button>
       <ul class="dropdown-menu"><?php foreach ($t->def['pages']['export']['formats'] as $fmt): ?>
@@ -53,13 +53,14 @@ $curUrl = $_SERVER['REQUEST_URI'];
       <?php endforeach ?></ul>
     </div>
   <?php endif ?>
-  <?php if ($t->enabled('print') && $sec->can($t->name, 'P')): ?>
+  <?php if (!\MiB\Compat::hidden('print') && $t->enabled('print') && $sec->can($t->name, 'P')): ?>
     <a class="btn btn-outline-secondary btn-sm mc-export" target="_blank" href="<?= h($app->url('print', $keep)) ?>"><i class="bi bi-printer"></i> <?= h(t('btn.print')) ?></a>
   <?php endif ?>
-  <?php if ($t->enabled('import') && $sec->can($t->name, 'I')): ?>
+  <?= \MiB\Buttons::html($t, 'list', false) ?>
+  <?php if (!\MiB\Compat::hidden('import') && $t->enabled('import') && $sec->can($t->name, 'I')): ?>
     <a class="btn btn-outline-secondary btn-sm" href="<?= h($app->url('import', ['t' => $t->name])) ?>"><i class="bi bi-upload"></i> <?= h(t('btn.import')) ?></a>
   <?php endif ?>
-  <?php if ($t->enabled('search')): ?><a class="btn btn-sm btn-outline-secondary ms-auto" href="<?= h($app->url('search', ['t' => $t->name, 's' => $req['s']])) ?>"><i class="bi bi-funnel"></i> <?= h(t('list.advanced')) ?></a><?php endif ?>
+  <?php if (!\MiB\Compat::hidden('advsearch_link') && $t->enabled('search')): ?><a class="btn btn-sm btn-outline-secondary ms-auto" href="<?= h($app->url('search', ['t' => $t->name, 's' => $req['s']])) ?>"><i class="bi bi-funnel"></i> <?= h(t('list.advanced')) ?></a><?php endif ?>
 </div>
 <?php if ($req['s'] || $req['f']): ?>
 <div class="mb-2 small"><span class="badge text-bg-info"><i class="bi bi-funnel-fill"></i> <?= h(t('list.filtered')) ?></span>

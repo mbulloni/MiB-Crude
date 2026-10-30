@@ -41,6 +41,7 @@ class Grid
         if (in_array('edit', $actions, true) && $t->enabled('edit') && $sec->can($t->name, 'E')) $h .= '<a class="btn btn-sm btn-link px-1" title="' . h(t('btn.edit')) . '" href="' . h($app->url('edit', $kq)) . '"' . $top . '><i class="bi bi-pencil"></i></a>';
         if (in_array('copy', $actions, true) && $t->enabled('add') && $sec->can($t->name, 'A')) $h .= '<a class="btn btn-sm btn-link px-1" title="' . h(t('btn.copy')) . '" href="' . h($app->url('add', array_merge($kq, ['copy' => 1]))) . '"' . $top . '><i class="bi bi-copy"></i></a>';
         if (in_array('delete', $actions, true) && $t->enabled('delete') && $sec->can($t->name, 'D') && !$embedded) $h .= '<button class="btn btn-sm btn-link px-1 text-danger mc-delete-one" title="' . h(t('btn.delete')) . '" type="button" data-keys="' . h(json_encode($keys)) . '"><i class="bi bi-trash"></i></button>';
+        $h .= Buttons::html($t, 'list', true, $keys);
         foreach (self::details($t) as $d) {
             $h .= '<a class="btn btn-sm btn-link px-1" title="' . h($app->table($d['table'])->caption()) . '" href="' . h($app->url('list', ['t' => $d['table'], 'mt' => $t->name, 'mk' => $keys])) . '"' . $top . '><i class="bi bi-diagram-3"></i></a>';
         }

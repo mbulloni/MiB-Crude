@@ -10,6 +10,14 @@ namespace MiB {
     {
         /** Values passed to JavaScript as "proxy" ($pageObject->setProxyValue). */
         public static $proxy = [];
+        /** Fields and page items hidden by event code ($pageObject->hideField/hideItem, $xt->assign(...,false)). */
+        public static $hiddenFields = [];
+        public static $hiddenItems = [];
+
+        public static function hidden($item)
+        {
+            return isset(self::$hiddenItems[$item]);
+        }
 
         public static function page($type, $table)
         {
@@ -235,15 +243,45 @@ namespace {
         public function getCurrentRecord() { return null; }
         public function setMessage($msg) { \MiB\App::$i->flash('info', strip_tags((string)$msg)); }
         public function setProxyValue($name, $value) { \MiB\Compat::$proxy[$name] = $value; }
+        public function hideField($f) { \MiB\Compat::$hiddenFields[$f] = true; }
+        public function showField($f) { unset(\MiB\Compat::$hiddenFields[$f]); }
+        public function hideItem($id) { \MiB\Compat::$hiddenItems[preg_replace('/\d+$/', '', (string)$id)] = true; }
+        public function showItem($id) { unset(\MiB\Compat::$hiddenItems[preg_replace('/\d+$/', '', (string)$id)]); }
         public function __call($name, $args) { return null; }
         public function __get($name) { return null; }
+    }
+
+    /** $button of phpr custom buttons (server event). */
+    class CompatButton
+    {
+        private $table;
+        private $keys;
+        private $selected;
+        private $pos = 0;
+        public function __construct($table, $keys, $selected) { $this->table = $table; $this->keys = $keys; $this->selected = $selected; }
+        private function row($keys)
+        {
+            if (!$keys || !\MiB\App::$i->hasTable($this->table)) return null;
+            $t = \MiB\App::$i->table($this->table);
+            try { return $t->fetchOne($t->keysFromRequest(['k' => $keys])); } catch (\Throwable $e) { return null; }
+        }
+        public function getCurrentRecord() { return $this->row($this->keys ?: (isset($this->selected[0]) ? $this->selected[0] : null)); }
+        public function getNextSelectedRecord() { return isset($this->selected[$this->pos]) ? $this->row($this->selected[$this->pos++]) : false; }
+        public function getKeys() { return $this->keys; }
+        public function getMasterRecord() { return null; }
+        public function __call($n, $a) { return null; }
     }
 
     /** $xt (template engine) stand-in. */
     class CompatXt
     {
         public $vars = [];
-        public function assign($name, $value) { $this->vars[$name] = $value; }
+        public function assign($name, $value)
+        {
+            $this->vars[$name] = $value;
+            // phpr: $xt->assign("field_fieldblock", false) hides a field
+            if (!$value && preg_match('/^(.+)_fieldblock$/', (string)$name, $m)) \MiB\Compat::$hiddenFields[$m[1]] = true;
+        }
         public function __call($name, $args) { return null; }
     }
 

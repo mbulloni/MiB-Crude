@@ -13,19 +13,32 @@ const P = require('../core/project.cjs');
 const W = require('../core/wizard.cjs');
 const G = require('../core/generator.cjs');
 
-const CONN = { id: 'main', name: 'Demo', driver: 'mysql', host: '127.0.0.1', port: 3306, database: 'mibcrude_demo', user: 'mibcrude' };
-const PW = 'mibcrude';
+// MIBCRUDE_TEST_DB selects the database (Docker containers for pgsql/sqlsrv/oracle, see docs/TESTING.md).
+const DBS = {
+  mysql: [{ driver: 'mysql', host: '127.0.0.1', port: 3306, database: 'mibcrude_demo', user: 'mibcrude' }, 'mibcrude'],
+  pgsql: [{ driver: 'pgsql', host: '127.0.0.1', port: 15432, database: 'mibcrude_demo', user: 'mibcrude' }, 'mibcrude'],
+  sqlsrv: [{ driver: 'sqlsrv', host: '127.0.0.1', port: 11433, database: 'mibcrude_demo', user: 'sa' }, 'MiBcrude!2026'],
+  oracle: [{ driver: 'oracle', host: '127.0.0.1', port: 11521, database: 'FREEPDB1', user: 'mibcrude' }, 'mibcrude'],
+  sqlite: [{ driver: 'sqlite', file: path.join(os.tmpdir(), `mibcrude-e2e-${process.pid}.sqlite`) }, ''],
+};
+const DBKIND = process.env.MIBCRUDE_TEST_DB || 'mysql';
+const CONN = { id: 'main', name: 'Demo', ...DBS[DBKIND][0] };
+const PW = DBS[DBKIND][1];
+const S = require('./fixtures/demo-schema.cjs');
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 const BASE = `http://127.0.0.1:${PORT}/index.php`;
 // MIBCRUDE_TEST_PHP=8.4 runs the generated app on PHP 8.4 in Docker (image tests/docker).
 const PHP8 = process.env.MIBCRUDE_TEST_PHP === '8.4';
+// Drivers missing in the local PHP run in Docker images that have them.
+const IMAGE = { sqlsrv: 'mibcrude-php:8.3', oracle: 'mibcrude-php-oci:8.3' }[DBKIND];
 function phpServer(outDir) {
+  if (IMAGE) return spawn('docker', ['run', '--rm', '--network', 'host', '--name', `mibcrude-e2e-${PORT}`, '-v', `${outDir}:${outDir}`, '-v', `${os.tmpdir()}:${os.tmpdir()}`, IMAGE, 'php', '-d', 'display_errors=1', '-d', 'error_reporting=-1', '-S', `127.0.0.1:${PORT}`, '-t', outDir], { stdio: 'ignore' });
   if (!PHP8) return spawn(process.env.MIBCRUDE_PHP_BIN || 'php', ['-d', 'display_errors=1', '-d', 'error_reporting=-1', '-S', `127.0.0.1:${PORT}`, '-t', outDir], { stdio: 'ignore' });
   return spawn('docker', ['run', '--rm', '--network', 'host', '--name', `mibcrude-e2e-${PORT}`, '-v', `${outDir}:${outDir}`, 'mibcrude-php-test:8.4', 'php', '-S', `127.0.0.1:${PORT}`, '-t', outDir], { stdio: 'ignore' });
 }
 
 function resetDb() {
-  execFileSync('sh', ['-c', `mysql -h 127.0.0.1 -u mibcrude -pmibcrude mibcrude_demo < ${path.join(__dirname, 'fixtures', 'demo-mysql.sql')}`]);
+  return S.reset(CONN, PW);
 }
 
 // Tiny cookie-keeping HTTP client.
@@ -50,7 +63,7 @@ let dir;
 let server;
 
 test.before(async () => {
-  resetDb();
+  await resetDb();
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mibcrude-e2e-'));
   const proj = P.createProject(dir, 'shop');
   proj.connections.push(CONN);
@@ -88,7 +101,7 @@ test.before(async () => {
 
 test.after(() => {
   if (server) server.kill();
-  if (PHP8) try { execFileSync('docker', ['rm', '-f', `mibcrude-e2e-${PORT}`], { stdio: 'ignore' }); } catch { /* gone */ }
+  if (PHP8 || IMAGE) try { execFileSync('docker', ['rm', '-f', `mibcrude-e2e-${PORT}`], { stdio: 'ignore' }); } catch { /* gone */ }
 });
 
 test('project round-trips through files deterministically', () => {

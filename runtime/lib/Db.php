@@ -125,7 +125,14 @@ class Db
 
     public function all($sql, array $params = [])
     {
-        return $this->normalize($this->query($sql, $params)->fetchAll());
+        // LOB columns come back as streams; PDO_OCI reuses them between rows, so read each row as it is fetched.
+        $st = $this->query($sql, $params);
+        $rows = [];
+        while (($r = $st->fetch()) !== false) {
+            foreach ($r as $k => $v) if (is_resource($v)) $r[$k] = stream_get_contents($v);
+            $rows[] = $r;
+        }
+        return $rows;
     }
 
     public function row($sql, array $params = [])
@@ -176,8 +183,8 @@ class Db
             $st = $this->pdo->prepare($sql);
             $i = 1;
             foreach ($values as $v) $st->bindValue($i++, $v);
-            $id = null;
-            $st->bindParam($i, $id, PDO::PARAM_INT | PDO::PARAM_INPUT_OUTPUT, 32);
+            $id = ''; // PDO_OCI fills an OUT parameter only when it starts as a string
+            $st->bindParam($i, $id, PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT, 40);
             $st->execute();
             return $id;
         }

@@ -247,20 +247,33 @@ class Layout
     public static function sections(Table $t, $page, array $fields)
     {
         $def = isset($t->def['layout'][$page]) ? $t->def['layout'][$page] : null;
-        if (!$def || empty($def['sections'])) return [['title' => '', 'fields' => $fields]];
+        if (!$def || empty($def['sections'])) return [['title' => '', 'fields' => $fields, 'blocks' => [], 'style' => 'card', 'columns' => 0]];
         $byName = [];
         foreach ($fields as $f) $byName[$f['name']] = $f;
         $out = [];
         foreach ($def['sections'] as $s) {
-            // Field order follows the designer's field list, not the order of assignment.
-            $want = array_flip(isset($s['fields']) ? $s['fields'] : []);
+            // Field order of the section as placed in the page designer; blocks are HTML or PHP snippets.
             $list = [];
-            foreach ($fields as $f) if (isset($want[$f['name']], $byName[$f['name']])) { $list[] = $f; unset($byName[$f['name']]); }
-            if ($list) $out[] = ['title' => $t->app->label(isset($s['title']) ? $s['title'] : '', ''), 'fields' => $list];
+            foreach (isset($s['fields']) ? $s['fields'] : [] as $n) if (isset($byName[$n])) { $list[] = $byName[$n]; unset($byName[$n]); }
+            $blocks = isset($s['blocks']) ? $s['blocks'] : [];
+            if ($list || $blocks) $out[] = ['title' => $t->app->label(isset($s['title']) ? $s['title'] : '', ''), 'fields' => $list, 'blocks' => $blocks,
+                'style' => isset($s['style']) ? $s['style'] : 'card', 'columns' => isset($s['columns']) ? (int)$s['columns'] : 0];
         }
         // Fields not placed by the designer go to the end.
-        if ($byName) $out[] = ['title' => '', 'fields' => array_values($byName)];
+        if ($byName) $out[] = ['title' => '', 'fields' => array_values($byName), 'blocks' => [], 'style' => 'card', 'columns' => 0];
         return $out;
+    }
+
+    /** Free blocks of the page designer: HTML text or a PHP snippet event. */
+    public static function block(Table $t, array $b, $page)
+    {
+        if (($b['type'] ?? '') === 'html') return Sanitizer::clean($t->app->label(isset($b['html']) ? $b['html'] : ''));
+        if (($b['type'] ?? '') === 'snippet' && !empty($b['event'])) {
+            ob_start();
+            $t->app->event($t->name, $b['event'], [$page]);
+            return ob_get_clean();
+        }
+        return '';
     }
 }
 
@@ -386,5 +399,22 @@ class Theme
     public static function modeScript()
     {
         return "<script>(function(){try{var d=document.documentElement,m=localStorage.getItem('mc-theme')||d.getAttribute('data-mode');if(!m||m==='auto')m=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.setAttribute('data-bs-theme',m);var a=d.getAttribute('data-mc-dark-attr');if(a)d.setAttribute(a,m);var c=d.getAttribute('data-mc-dark-class');if(c)document.addEventListener('DOMContentLoaded',function(){document.body.classList.toggle(c,m==='dark')})}catch(e){}})()</script>";
+    }
+}
+
+/** Custom buttons of a page (imported from phpr or defined in the designer). */
+class Buttons
+{
+    public static function html(Table $t, $page, $row, $keys = null)
+    {
+        $h = '';
+        foreach (isset($t->def['buttons']) ? $t->def['buttons'] : [] as $b) {
+            if (!in_array($page, $b['pages'], true) || (bool)(!empty($b['row'])) !== (bool)$row) continue;
+            $label = $t->app->label(isset($b['label']) ? $b['label'] : '', '');
+            $h .= '<button type="button" class="btn btn-sm ' . ($row ? 'btn-link px-1' : 'btn-outline-primary') . ' mc-cbtn" data-table="' . h($t->name) . '" data-btn="' . h($b['id']) . '"'
+                . ($keys !== null ? " data-keys='" . h(json_encode($keys)) . "'" : '') . ' title="' . h($label) . '">'
+                . (!empty($b['icon']) ? '<i class="bi bi-' . h($b['icon']) . '"></i> ' : '') . ($row && !empty($b['icon']) ? '' : h($label)) . '</button>';
+        }
+        return $h;
     }
 }

@@ -21,13 +21,17 @@ $cancel = $master ? $app->url('view', ['t' => $master['table']->name, 'k' => $ma
 <?php if ($errors): ?><div class="alert alert-danger"><ul class="mb-0"><?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach ?></ul></div><?php endif ?>
 <form method="post" action="<?= h($app->url($mode, $qs)) ?>"<?= $hasFiles ? ' enctype="multipart/form-data"' : '' ?> class="mc-form" novalidate>
 <?= $app->csrfField() ?>
-<?php foreach ($sections as $si => $sec_): ?>
-<div class="card mb-3">
-  <?php if ($sec_['title'] !== ''): ?><div class="card-header fw-semibold"><?= h($sec_['title']) ?></div><?php endif ?>
+<?php $tabs = array_values(array_filter($sections, function ($s) { return $s['style'] === 'tab'; })); ?>
+<?php if ($tabs): ?><ul class="nav nav-tabs mb-0" role="tablist"><?php foreach ($tabs as $ti => $s): ?><li class="nav-item"><button class="nav-link<?= $ti === 0 ? ' active' : '' ?>" type="button" data-bs-toggle="tab" data-bs-target="#mc-ftab-<?= $ti ?>"><?= h($s['title'] !== '' ? $s['title'] : '#' . ($ti + 1)) ?></button></li><?php endforeach ?></ul><div class="tab-content mb-3"><?php endif ?>
+<?php $tabIndex = 0; foreach ($sections as $si => $sec_): $isTab = $sec_['style'] === 'tab'; $ccols = $sec_['columns'] ?: $cols; ?>
+<?php if ($isTab): ?><div class="tab-pane fade<?= $tabIndex === 0 ? ' show active' : '' ?>" id="mc-ftab-<?= $tabIndex++ ?>"><?php endif ?>
+<div class="card mb-3<?= $isTab ? ' border-top-0 rounded-top-0' : '' ?>">
+  <?php if ($sec_['title'] !== '' && !$isTab): ?><div class="card-header fw-semibold"><?= h($sec_['title']) ?></div><?php endif ?>
   <div class="card-body"><div class="row g-3">
+  <?php foreach ($sec_['blocks'] as $blk): ?><div class="col-12"><?= \MiB\Layout::block($t, $blk, $mode) ?></div><?php endforeach ?>
   <?php foreach ($sec_['fields'] as $f):
       $n = $f['name'];
-      $span = isset($f['layout'][$mode]['span']) ? (int)$f['layout'][$mode]['span'] : (in_array($f['editAs']['type'], ['textarea', 'richtext'], true) ? 12 : (int)(12 / $cols));
+      $span = isset($f['layout'][$mode]['span']) ? (int)$f['layout'][$mode]['span'] : (in_array($f['editAs']['type'], ['textarea', 'richtext'], true) ? 12 : (int)(12 / $ccols));
       if ($f['editAs']['type'] === 'hidden') { echo \MiB\Controls::render($t, $f, isset($row[$n]) ? $row[$n] : null, $mode, ['row' => $row]); continue; }
       $hint = isset($f['hint']) ? $app->label($f['hint']) : '';
   ?>
@@ -40,8 +44,11 @@ $cancel = $master ? $app->url('view', ['t' => $master['table']->name, 'k' => $ma
   <?php endforeach ?>
   </div></div>
 </div>
+<?php if ($isTab): ?></div><?php endif ?>
 <?php endforeach ?>
+<?php if ($tabs): ?></div><?php endif ?>
 <div class="d-flex flex-wrap gap-2 mc-form-buttons">
+  <?= \MiB\Buttons::html($t, $mode, false, $keys) ?>
   <?php if ($lockedBy === ''): ?>
   <button class="btn btn-primary" name="_next" value="list"><i class="bi bi-check-lg"></i> <?= h(t('btn.save')) ?></button>
   <?php if (empty($_GET['popup'])): ?>

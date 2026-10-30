@@ -628,6 +628,23 @@ class Pages
         (new Reports($this->app))->chartData(isset($_GET['c']) ? (string)$_GET['c'] : '');
     }
 
+    /** Custom buttons (phpr OnServer): JSON {params, keys, selected[]} -> {result}. */
+    public function page_button()
+    {
+        $t = $this->table();
+        $this->app->security->check($t->name, 'S');
+        $id = isset($_GET['b']) ? preg_replace('/\W/', '_', (string)$_GET['b']) : '';
+        $in = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($in)) $in = $_POST;
+        $params = isset($in['params']) && is_array($in['params']) ? $in['params'] : [];
+        $keys = isset($in['keys']) && is_array($in['keys']) ? $in['keys'] : [];
+        $selected = isset($in['selected']) && is_array($in['selected']) ? $in['selected'] : [];
+        $result = [];
+        $button = new \CompatButton($t->name, $keys, $selected);
+        $r = $this->app->event($t->name, 'Button_' . $id, [$params, &$result, $button]);
+        $this->app->json(['result' => $result]);
+    }
+
     /** Public landing page (Project settings → Landing page). */
     public function page_welcome()
     {

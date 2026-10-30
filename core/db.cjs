@@ -77,6 +77,7 @@ async function connect(conn, password) {
     }
     case 'oracle': {
       const oracledb = require('oracledb');
+      oracledb.autoCommit = true; // otherwise inserts/DDL from the designer are rolled back on close
       const c = await oracledb.getConnection({ user: conn.user, password: pw, connectString: `${conn.host || 'localhost'}:${Number(conn.port) || 1521}/${conn.database}` });
       return {
         driver: 'oracle',
@@ -92,9 +93,14 @@ async function connect(conn, password) {
       const initSqlJs = require('sql.js');
       const SQL = await initSqlJs();
       const db = new SQL.Database(fs.existsSync(conn.file) ? fs.readFileSync(conn.file) : undefined);
+      // sql.js works in memory: changes are written back to the file on save()/close().
+      let dirty = false;
+      const save = async () => { if (conn.file) fs.writeFileSync(conn.file, Buffer.from(db.export())); dirty = false; };
       return {
         driver: 'sqlite',
+        save,
         query: async (sql, params = []) => {
+          if (!/^\s*(select|pragma|with)\b/i.test(sql)) dirty = true;
           const st = db.prepare(sql);
           st.bind(params);
           const rows = [];
@@ -102,7 +108,7 @@ async function connect(conn, password) {
           st.free();
           return rows;
         },
-        close: async () => db.close(),
+        close: async () => { if (dirty) await save(); db.close(); },
       };
     }
     default:

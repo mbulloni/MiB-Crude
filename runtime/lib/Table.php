@@ -63,7 +63,7 @@ class Table
     public function fields($where)
     {
         $out = [];
-        foreach ($this->def['fields'] as $f) if (!empty($f['show'][$where])) $out[] = $f;
+        foreach ($this->def['fields'] as $f) if (!empty($f['show'][$where]) && !isset(Compat::$hiddenFields[$f['name']])) $out[] = $f;
         return $out;
     }
 

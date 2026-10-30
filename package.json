@@ -12,7 +12,8 @@
     "test": "node --test tests/*.test.cjs",
     "server": "node server/mibcrude-server.cjs",
     "dist": "vite build && electron-builder --linux AppImage deb",
-    "dist:deb": "vite build && electron-builder --linux deb"
+    "dist:deb": "vite build && electron-builder --linux deb",
+    "test:db": "for db in mysql pgsql sqlite sqlsrv oracle; do echo \"== $db\"; MIBCRUDE_TEST_DB=$db node --test tests/e2e.test.cjs || exit 1; done"
   },
   "author": {
     "name": "Michele",
@@ -72,7 +73,8 @@
       "priority": "optional"
     },
     "asarUnpack": [
-      "electron/docker/**"
+      "electron/docker/**",
+      "electron/docker-oci/**"
     ]
   },
   "dependencies": {

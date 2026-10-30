@@ -15,12 +15,14 @@ $sections = \MiB\Layout::sections($t, 'view', $fields);
       <?php foreach ($keys as $k => $v): ?><input type="hidden" name="k[<?= h($k) ?>]" value="<?= h($v) ?>"><?php endforeach ?>
       <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> <?= h(t('btn.delete')) ?></button></form>
   <?php endif ?>
+  <?= \MiB\Buttons::html($t, 'view', false, $keys) ?>
   <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i></button>
   <a class="btn btn-link btn-sm ms-auto" href="<?= h($master ? $app->url('list', array_merge(['t' => $t->name], $master['qs'])) : $app->url('list', ['t' => $t->name])) ?>"><i class="bi bi-arrow-left"></i> <?= h(t('btn.back')) ?></a>
 </div>
 <?php foreach ($sections as $s): ?>
 <div class="card mb-3">
   <?php if ($s['title'] !== ''): ?><div class="card-header fw-semibold"><?= h($s['title']) ?></div><?php endif ?>
+  <?php foreach ($s['blocks'] as $blk): ?><div class="card-body pb-0"><?= \MiB\Layout::block($t, $blk, 'view') ?></div><?php endforeach ?>
   <div class="card-body mc-scroll-x"><dl class="row mb-0 mc-view">
     <?php foreach ($s['fields'] as $f): ?>
       <dt class="col-sm-4 col-lg-3 text-secondary fw-normal"><?= h($t->fieldLabel($f)) ?></dt>
