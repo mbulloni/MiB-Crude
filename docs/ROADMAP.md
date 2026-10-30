@@ -1,27 +1,28 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.1.0 (2026-10-30): nucleo completo e testato end-to-end su MariaDB.
+Stato v0.2.0 (2026-10-30): tutti i punti della roadmap iniziale implementati e testati; restano i limiti sotto.
 
-## Da fare (ordine proposto)
-1. **Test sugli altri database**: PostgreSQL, SQL Server (immagine Docker mssql presente), Oracle (gvenzl/oracle-free), SQLite — introspezione designer + runtime PDO. Oracle nell'anteprima Docker non è supportato (serve pdo_oci con Instant Client).
-2. **Page designer WYSIWYG** drag & drop (oggi: sezioni + larghezze campo), pagine personalizzate, blocchi di codice/HTML nelle pagine.
-3. **Modifica in linea** nella lista e add/edit in finestra popup; anteprima record al passaggio del mouse.
-4. **SAML 2.0** (Enterprise): SP con firma XML (openssl + DOM C14N).
-5. **Web Report & Chart Builder** per gli utenti finali dentro l'app (tabelle mc_reports), rispettando la sicurezza.
-6. **Autenticazione a due fattori** (TOTP; il campo `totp_secret` esiste già in mc_users).
-7. **Template aziendali** pronti (anagrafiche, ticket, calendario risorse, documenti) e **creazione/modifica tabelle** dal designer.
-8. **Assistente AI** per scrivere eventi (Claude API) con contesto del progetto.
-9. Viste aggiuntive: calendario, mappa, galleria, kanban; campi QR code e firma.
-10. Pacchetti `.deb`/AppImage, icona installata, aggiornamenti integrati.
-11. Mappatura gruppi OIDC nel designer (il runtime la supporta già: `groupMap`).
+## Fatto (v0.2.0, 2026-10-30)
+1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
+2. Page designer a sezioni (riquadri/schede, colonne, larghezze per pagina) con blocchi HTML e snippet PHP.
+3. Modifica in linea nella lista, add/edit/view in finestra popup.
+4. SAML 2.0 (SP con verifica firma XML resistente al wrapping, metadati SP).
+5. Web Report & Chart Builder per gli utenti finali (mc_reports, rispetta i permessi).
+6. Autenticazione a due fattori TOTP (attivazione dal profilo, reset dall'amministrazione).
+7. Modelli aziendali (CRM, helpdesk, prenotazione risorse, archivio documenti) che creano tabelle e dati su qualunque database; creazione/modifica tabelle dal designer.
+8. Assistente AI per gli eventi (Claude, contesto del progetto, correzione automatica dopo `php -l`).
+9. Viste calendario, mappa, galleria, kanban; campi QR code e firma.
+10. Pacchetti `.deb` e AppImage, icona installata, aggiornamenti integrati dalle release GitHub.
+11. Mappatura gruppi OIDC e SAML nel designer.
+12. Eventi JavaScript phpr (API client `pageObj`, `Runner.*`), eventi dei grafici `JS_ModifyChart` (strato AnyChart su ECharts).
+13–16. Varianti di pagina come viste, dashboard, sezioni e layout delle pagine, `$xt`/`hideItem` con effetto.
+18. Pulsanti personalizzati phpr (OnBefore/OnServer/OnAfter).
+19. Import/export tabelle in ZIP; origini dati REST.
 
-## Import phpr — limiti noti (2026-10-30)
-12. Eventi JavaScript (`EVENT_JS_*`, 641 solo nel progetto reale di prova) e pulsanti/campi personalizzati: salvati in `import-phpr/`, da riscrivere; serve un'API client compatibile (`pageObj`, `ctrl`, `Runner.*`).
-13. Pagine phpr con più varianti (es. `list`, `list1`): importata solo la principale.
-14. Dashboard phpr (tipo 4) non convertite; grafici convertiti con aggregazione "somma".
-15. Layout grafici delle pagine (celle, tab, stili per pagina) non importati: si usa il layout standard.
-16. `$xt->assign`, `$pageObject->hideItem` e simili sono accettati ma senza effetto.
-17. Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto.
-18. Pulsanti personalizzati phpr (OnBefore/OnServer/OnAfter in subversion/EVENTS.sqlite) non ancora convertiti.
-19. Tabelle e query: import/export tabelle in formato JSON (.mibtables.json), non ZIP come phpr; connessioni REST non supportate.
-20. Temi grafici: adattatori per Metronic 8, DesignReset (Cork/Equation, anche menu orizzontali) e Satria (pagine di accesso e presentazione). Non compatibili: Slim (Bootstrap 4), Webarch (Bootstrap 3), Material Admin (AngularJS). Il tema va importato su ogni computer del team (la libreria è locale).
+## Limiti aperti
+- Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto (non raggiungibili dall'ambiente di sviluppo).
+- Progetto reale di prova: un evento `BeforeMoveNext` ha un errore di sintassi già nel progetto originale; resta disattivato.
+- Origini REST: ricerca, filtri, ordinamento e totali sono eseguiti dall'app dopo aver letto l'intero elenco (adatto a risorse di qualche migliaio di record); lookup verso tabelle REST, report e grafici su origini REST non supportati.
+- Strato AnyChart: copre le chiamate usate dai progetti reali (etichette, serie, legenda, tooltip, assi e scale, zoom); le altre vengono ignorate senza errori.
+- Temi: adattatori per Metronic 8, DesignReset (Cork/Equation) e Satria; non compatibili Slim (Bootstrap 4), Webarch (Bootstrap 3), Material Admin (AngularJS). Il tema va importato su ogni computer del team.
+- Aggiornamenti integrati: puntano a `mbulloni/MiB-Crude` su GitHub; senza release pubblicate il controllo segnala l'errore.

@@ -11,10 +11,15 @@ const G = require('../core/generator.cjs');
 const D = require('../core/db.cjs');
 const DDL = require('../core/ddl.cjs');
 
-const CONNS = [
-  [{ id: 'main', name: 'Demo', driver: 'mysql', host: '127.0.0.1', port: 3306, database: 'mibcrude_demo', user: 'mibcrude' }, 'mibcrude'],
-  [{ id: 'main', name: 'Demo', driver: 'sqlite', file: path.join(os.tmpdir(), `mc-tpl-${process.pid}.sqlite`) }, ''],
-];
+const ALL = {
+  mysql: [{ id: 'main', name: 'Demo', driver: 'mysql', host: '127.0.0.1', port: 3306, database: 'mibcrude_demo', user: 'mibcrude' }, 'mibcrude'],
+  sqlite: [{ id: 'main', name: 'Demo', driver: 'sqlite', file: path.join(os.tmpdir(), `mc-tpl-${process.pid}.sqlite`) }, ''],
+  pgsql: [{ id: 'main', name: 'Demo', driver: 'pgsql', host: '127.0.0.1', port: 15432, database: 'mibcrude_demo', user: 'mibcrude' }, 'mibcrude'],
+  sqlsrv: [{ id: 'main', name: 'Demo', driver: 'sqlsrv', host: '127.0.0.1', port: 11433, database: 'mibcrude_demo', user: 'sa' }, 'MiBcrude!2026'],
+  oracle: [{ id: 'main', name: 'Demo', driver: 'oracle', host: '127.0.0.1', port: 11521, database: 'FREEPDB1', user: 'mibcrude' }, 'mibcrude'],
+};
+// Default: MariaDB and SQLite; MIBCRUDE_TEST_DB=pgsql|sqlsrv|oracle uses the Docker containers of docs/TESTING.md.
+const CONNS = process.env.MIBCRUDE_TEST_DB ? [ALL[process.env.MIBCRUDE_TEST_DB]] : [ALL.mysql, ALL.sqlite];
 
 for (const [conn, pw] of CONNS) {
   test(`all business templates on ${conn.driver}`, async () => {
