@@ -170,6 +170,8 @@ function generate(proj, opts = {}) {
   w('runtime/bootstrap.php', fs.readFileSync(path.join(RUNTIME, 'bootstrap.php'), 'utf8'));
   copied += copyDir(path.join(RUNTIME, 'assets'), path.join(out, 'assets'));
   copied += copyDir(path.join(proj.dir, 'custom'), path.join(out, 'custom'));
+  // public/: files served from the application root (phpr "source" folder).
+  copied += copyDir(path.join(proj.dir, 'public'), out);
   const logo = path.join(proj.dir, 'custom', 'logo.png');
   if (fs.existsSync(logo)) fs.copyFileSync(logo, path.join(out, 'assets', 'logo.png'));
 
@@ -195,9 +197,17 @@ function generate(proj, opts = {}) {
       if (f.viewAs && f.viewAs.type === 'custom' && f.viewAs.code) {
         extra.push(`    public function ViewAs_${ident(f.name)}($value, $row, $context)\n    {\n${indentCode(eventBody(f.viewAs.code), '        ')}\n    }`);
       }
+      // PHP expressions (imported from phpr): default value, auto-update value, lookup WHERE.
+      if (f.defaultCode) extra.push(`    public function Default_${ident(f.name)}()\n    {\n        return ${f.defaultCode};\n    }`);
+      if (f.autoUpdateCode) extra.push(`    public function AutoUpdate_${ident(f.name)}()\n    {\n        return ${f.autoUpdateCode};\n    }`);
+      const lk = f.editAs && f.editAs.lookup;
+      if (lk && lk.whereCode) extra.push(`    public function LookupWhere_${ident(f.name)}()\n    {\n        return ${lk.whereCode};\n    }`);
     }
     const evs = (proj.events || {})[t.name] || {};
     if (Object.values(evs).some((c) => eventBody(c).trim()) || extra.length) {
+      // Method names come from field names: avoid duplicates after sanitizing.
+      const seen = new Set();
+      for (let i = extra.length - 1; i >= 0; i--) { const m = extra[i].match(/function (\w+)\(/)[1]; if (seen.has(m)) extra.splice(i, 1); else seen.add(m); }
       const cls = 'Ev_' + file;
       eventsIndex[t.name] = cls;
       w(`events/${cls}.php`, eventClass(cls, t.name, evs, extra));

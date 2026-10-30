@@ -19,7 +19,7 @@ class Format
     }
 
     /** Plain text (export, filters, titles). */
-    public static function plain(Table $t, array $f, $v, array $row = null)
+    public static function plain(Table $t, array $f, $v, ?array $row = null)
     {
         if ($row && isset($row['__lk'][$f['name']])) return $row['__lk'][$f['name']];
         if ($v === null) return '';
@@ -47,6 +47,7 @@ class Format
     public static function html(Table $t, array $f, array $row, $context = 'list')
     {
         $n = $f['name'];
+        if (isset($row['__html'][$n])) return $row['__html'][$n];
         $v = isset($row[$n]) ? $row[$n] : null;
         $va = $f['viewAs'];
         if ($va['type'] === 'custom') {

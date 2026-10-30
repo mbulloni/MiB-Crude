@@ -103,7 +103,7 @@ $curUrl = $_SERVER['REQUEST_URI'];
   <tbody>
   <?php if (!$rows): ?><tr><td colspan="<?= count($fields) + 2 ?>" class="text-center text-secondary py-4"><?= h(t('list.empty')) ?></td></tr><?php endif ?>
   <?php foreach ($rows as $row): $keys = $t->keysFromRow($row); $kq = array_merge($base, ['k' => $keys]); ?>
-    <tr>
+    <tr<?= isset($row['__rowcss']) ? ' style="' . h($row['__rowcss']) . '"' : '' ?>>
       <?php if ($canDel && !$embedded): ?><td class="mc-col-check"><input type="checkbox" class="form-check-input mc-check" name="sel[]" value="<?= h(json_encode($keys)) ?>"></td><?php endif ?>
       <td class="mc-col-actions text-nowrap">
         <?php if ($t->def['keys']): ?>
@@ -117,7 +117,7 @@ $curUrl = $_SERVER['REQUEST_URI'];
         <?php endif ?>
       </td>
       <?php foreach ($fields as $f): ?>
-        <td class="<?= in_array($f['viewAs']['type'], ['number', 'currency', 'percent'], true) ? 'text-end' : '' ?>"><?= \MiB\Format::html($t, $f, $row, 'list') ?></td>
+        <td class="<?= in_array($f['viewAs']['type'], ['number', 'currency', 'percent'], true) ? 'text-end' : '' ?>"<?= isset($row['__css'][$f['name']]) ? ' style="' . h($row['__css'][$f['name']]) . '"' : '' ?>><?= \MiB\Format::html($t, $f, $row, 'list') ?></td>
       <?php endforeach ?>
     </tr>
   <?php endforeach ?>

@@ -6,7 +6,8 @@ import { Btn, I, Modal, Row, Text } from './ui';
 
 export default function Welcome() {
   const [info, setInfo] = useState<any>(null);
-  const [dlg, setDlg] = useState<'' | 'new' | 'git' | 'team'>('');
+  const [dlg, setDlg] = useState<'' | 'new' | 'git' | 'team' | 'phpr'>('');
+  const [report, setReport] = useState<any>(null);
   const [f, setF] = useState<Record<string, string>>({});
   useEffect(() => { call('app:info').then((i) => { setInfo(i); if (i.openOnStart) open(i.openOnStart); }); }, []);
   const recent: string[] = info?.settings?.recent || [];
@@ -23,6 +24,12 @@ export default function Welcome() {
     const dir = `${f.dir.replace(/\/$/, '')}/${f.name}`;
     await openProject(await call<Project>('project:new', dir, f.name));
     toast('Progetto creato: aggiungi una connessione al database', 'ok');
+  });
+  const importPhpr = () => run('Importazione progetto phpr…', async () => {
+    if (!f.phpr || !f.dir) throw new Error('Indica il file .phpr e la cartella di destinazione');
+    const r = await call('import:phpr', f.phpr, f.dir);
+    setDlg('');
+    setReport(r);
   });
   const clone = () => run('Clonazione…', async () => {
     if (!f.url || !f.dir) throw new Error('Indica URL e cartella');
@@ -49,6 +56,7 @@ export default function Welcome() {
           <button className="big-action" onClick={() => open()}><I n="folder2-open" /><b>Apri progetto</b><span>Cartella con mibcrude.json</span></button>
           <button className="big-action" onClick={() => setDlg('git')}><I n="git" /><b>Clona da Git</b><span>Lavoro in team via repository</span></button>
           <button className="big-action" onClick={() => setDlg('team')}><I n="people" /><b>Server del team</b><span>Modifica condivisa in tempo reale</span></button>
+          <button className="big-action" onClick={() => setDlg('phpr')}><I n="box-arrow-in-down" /><b>Importa progetto .phpr</b><span>Converte un progetto .phpr</span></button>
         </div>
         {recent.length > 0 && <>
           <h3>Recenti</h3>
@@ -59,6 +67,20 @@ export default function Welcome() {
         <Row label="Nome"><Text value={f.name} onChange={(v) => set('name')(v.replace(/[^A-Za-z0-9_.-]/g, '_'))} placeholder="gestionale" /></Row>
         <Row label="Cartella padre" hint={f.dir && f.name ? `Il progetto sarà in ${f.dir}/${f.name}` : 'Il progetto è una cartella di file di testo: mettila sotto Git per lavorare in team'}>
           <span className="inline"><Text value={f.dir} onChange={set('dir')} /><Btn icon="folder" onClick={() => pickDir('dir', 'Cartella padre')} /></span></Row>
+      </Modal>}
+      {dlg === 'phpr' && <Modal title="Importa un progetto phpr" onClose={() => setDlg('')} footer={<><Btn onClick={() => setDlg('')}>Annulla</Btn><Btn kind="primary" icon="box-arrow-in-down" onClick={importPhpr}>Importa</Btn></>}>
+        <p className="help">Converte tabelle, query SQL, campi, lookup, pagine (dall'archivio PAGES*.sqlite accanto al file), master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi phpr funzionano grazie allo strato di compatibilità (DB::Query, Security::getUserName, $pageObject…). Il progetto originale non viene modificato.</p>
+        <Row label="File .phpr"><span className="inline"><Text value={f.phpr} onChange={set('phpr')} mono /><Btn icon="file-earmark" onClick={async () => { const p = await call<string | null>('dialog:file', 'Progetto phpr', [{ name: 'phpr', extensions: ['phpr'] }]); if (p) setF({ ...f, phpr: p }); }} /></span></Row>
+        <Row label="Cartella padre" hint="Verrà creata una nuova cartella con il nome del progetto"><span className="inline"><Text value={f.dir} onChange={set('dir')} /><Btn icon="folder" onClick={() => pickDir('dir', 'Cartella padre')} /></span></Row>
+      </Modal>}
+      {report && <Modal wide title="Importazione completata" onClose={() => setReport(null)} footer={<><Btn icon="file-text" onClick={() => call('shell:openPath', report.reportFile)}>Apri il rapporto</Btn><Btn kind="primary" onClick={async () => { const r = report; setReport(null); await openProject(r.proj); }}>Apri il progetto</Btn></>}>
+        <ul className="problems">
+          <li><I n="table" /> {report.report.tables} tabelle (di cui {report.report.sqlViews} query SQL), {report.report.charts} grafici</li>
+          <li><I n="lightning" /> {report.report.events} eventi convertiti, {report.report.eventsSkipped.length} da rivedere (JavaScript o non supportati, salvati in import-phpr/)</li>
+          <li><I n="database" /> Connessioni: {report.report.connections.join(', ')} — password salvate solo in .mibcrude-local</li>
+          <li><I n="window-stack" /> Pagine: {report.report.pagesFile ? report.report.pagesFile.split('/').pop() : 'archivio assente, tutti i campi in tutte le pagine'}</li>
+        </ul>
+        {report.report.warnings.length > 0 && <><h4>Avvisi ({report.report.warnings.length})</h4><ul className="problems">{report.report.warnings.slice(0, 40).map((w: string, i: number) => <li key={i} className="warning">{w}</li>)}</ul></>}
       </Modal>}
       {dlg === 'git' && <Modal title="Clona un progetto da Git" onClose={() => setDlg('')} footer={<><Btn onClick={() => setDlg('')}>Annulla</Btn><Btn kind="primary" icon="download" onClick={clone}>Clona</Btn></>}>
         <Row label="URL repository"><Text value={f.url} onChange={set('url')} placeholder="git@github.com:team/gestionale.git" mono /></Row>

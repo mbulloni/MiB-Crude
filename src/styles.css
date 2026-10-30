@@ -166,11 +166,11 @@ progress { width: 100%; }
 .toast.ok { border-left-color: var(--ok); } .toast.err { border-left-color: var(--err); }
 
 .welcome { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.welcome-card { width: 760px; max-width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 28px 32px; }
+.welcome-card { width: 900px; max-width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 28px 32px; }
 .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
 .brand img { width: 64px; height: 64px; border-radius: 12px; }
 .brand h1 { margin: 0; font-size: 26px; } .brand p { margin: 4px 0 0; color: var(--muted); }
-.welcome-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.welcome-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
 .big-action { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 10px; padding: 14px; cursor: pointer; font: inherit; }
 .big-action:hover { border-color: var(--accent); background: var(--accent-soft); }
 .big-action i { font-size: 22px; color: var(--accent); } .big-action span { color: var(--muted); font-size: 12px; }

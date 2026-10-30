@@ -170,6 +170,10 @@ const TABLE_EVENTS = {
   AfterDelete: { args: '$old, $page', help: 'Dopo l\'eliminazione.' },
   BeforeImport: { args: '&$values, $page', help: 'Per ogni riga importata. return false per saltarla.' },
   CustomValidate: { args: '$values, &$errors, $page', help: 'Validazioni personalizzate: $errors[campo] = "messaggio".' },
+  TableInit: { args: '', help: 'Alla prima apertura della tabella in ogni richiesta.' },
+  BeforeProcess: { args: '$page', help: 'All\'inizio di ogni pagina della tabella ($page = list, add, edit, view, search, print, export, import).' },
+  BeforeShow: { args: '$page', help: 'Subito prima di mostrare la pagina.' },
+  AfterImport: { args: '$result, $page', help: 'Dopo un\'importazione: $result con added, updated, skipped, errors.' },
 };
 
 const GLOBAL_EVENTS = {

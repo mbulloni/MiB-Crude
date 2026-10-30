@@ -168,6 +168,11 @@ class Security
         session_regenerate_id(true);
         $_SESSION['mc_user'] = $user;
         $_SESSION['mc_seen'] = time();
+        // Session variables used by phpr event code.
+        $_SESSION['UserID'] = $user['username'];
+        $_SESSION['UserName'] = $user['fullname'] ?: $user['username'];
+        $_SESSION['GroupID'] = $user['groups'] ? $user['groups'][0] : '';
+        $_SESSION['AccessLevel'] = !empty($user['admin']) ? 'Admin' : 'User';
         $this->rightsCache = null;
         if ($this->managed() && !empty($user['id'])) {
             $db = $this->app->db();

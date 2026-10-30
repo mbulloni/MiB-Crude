@@ -28,8 +28,8 @@ class Upload
     {
         $n = $f['name'];
         $up = isset($f['editAs']['upload']) ? $f['editAs']['upload'] : [];
-        $clear = !empty($_POST[$n . '__clear']);
-        $incoming = self::incoming($n);
+        $clear = !empty(Table::postValue($_POST, $n . '__clear'));
+        $incoming = self::incoming(isset($_FILES[$n]) ? $n : strtr($n, ' .', '__'));
         $isDb = $t->isDbFile($f);
         if (!$incoming) {
             if (!$clear) return self::UNCHANGED;

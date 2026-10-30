@@ -14,7 +14,9 @@ class Pages
     private function table()
     {
         $name = isset($_GET['t']) ? (string)$_GET['t'] : '';
-        return $this->app->table($name);
+        $t = $this->app->table($name);
+        if (in_array($this->app->page, ['list', 'add', 'edit', 'view', 'search', 'print', 'export', 'import'], true)) $this->app->event($t->name, 'BeforeProcess', [$this->app->page]);
+        return $t;
     }
 
     private function layout()
@@ -94,6 +96,7 @@ class Pages
         $fields = $t->fields('list');
         $t->resolveLookups($rows, $fields);
         $this->app->event($t->name, 'BeforeShowList', [&$rows, 'list']);
+        $this->app->event($t->name, 'BeforeShow', ['list']);
         $filters = [];
         if (!empty($page['filterPanel'])) {
             foreach ($t->def['fields'] as $f) if (!empty($f['filter'])) $filters[] = ['field' => $f, 'values' => $t->filterValues($f, $req)];
@@ -118,7 +121,7 @@ class Pages
         $msg = '';
         $row = [];
         foreach ($t->fields('add') as $f) {
-            if (isset($f['defaultValue']) && $f['defaultValue'] !== '') $row[$f['name']] = Table::expand($f['defaultValue']);
+            if (($d = $t->defaultFor($f)) !== null) $row[$f['name']] = $d;
             if (isset($_GET['v'][$f['name']])) $row[$f['name']] = (string)$_GET['v'][$f['name']];
         }
         // Copy an existing record ("Copy" button).
@@ -145,6 +148,8 @@ class Pages
                 $row = array_merge($row, $_POST);
             }
         }
+        $this->app->event($t->name, 'ProcessValues', [&$row, 'add']);
+        $this->app->event($t->name, 'BeforeShow', ['add']);
         $this->app->title = $t->caption() . ' — ' . t('page.add');
         $this->app->render('form', ['t' => $t, 'mode' => 'add', 'row' => $row, 'errors' => $errors, 'msg' => $msg, 'master' => $master, 'keys' => null, 'lockedBy' => ''], $this->layout());
     }
@@ -181,6 +186,7 @@ class Pages
             $row = array_merge($row, $_POST);
         }
         $this->app->event($t->name, 'ProcessValues', [&$row, 'edit']);
+        $this->app->event($t->name, 'BeforeShow', ['edit']);
         $this->app->title = $t->caption() . ' — ' . t('page.edit');
         $this->app->render('form', ['t' => $t, 'mode' => 'edit', 'row' => $row, 'errors' => $errors, 'msg' => $msg, 'master' => $master, 'keys' => $keys, 'lockedBy' => $lockedBy], $this->layout());
     }
@@ -226,6 +232,7 @@ class Pages
         $t->resolveLookups($rows, $t->fields('view'));
         $row = $rows[0];
         $this->app->event($t->name, 'ProcessValues', [&$row, 'view']);
+        $this->app->event($t->name, 'BeforeShow', ['view']);
         $details = [];
         foreach ($t->details() as $d) {
             if (!in_array('view', isset($d['showIn']) ? $d['showIn'] : ['view'], true) || !$this->app->security->can($d['table'], 'S')) continue;
@@ -246,6 +253,8 @@ class Pages
         $rows = $t->fetch($req, 5000, 0, isset($_GET['o']) ? (string)$_GET['o'] : '', isset($_GET['d']) ? (string)$_GET['d'] : 'asc', 'print');
         $fields = $t->fields('print');
         $t->resolveLookups($rows, $fields);
+        $this->app->event($t->name, 'BeforeShowList', [&$rows, 'print']);
+        $this->app->event($t->name, 'BeforeShow', ['print']);
         $this->app->title = $t->caption();
         $this->app->render('print', ['t' => $t, 'rows' => $rows, 'fields' => $fields, 'totals' => $t->totals($req)], 'layout_print');
     }
@@ -286,6 +295,7 @@ class Pages
         $t = $this->table();
         if (!$t->enabled('search')) throw new HttpError(t('error.notfound'), 404);
         $this->app->security->check($t->name, 'S');
+        $this->app->event($t->name, 'BeforeShow', ['search']);
         $this->app->title = $t->caption() . ' — ' . t('page.search');
         $this->app->render('search', ['t' => $t, 's' => isset($_GET['s']) && is_array($_GET['s']) ? $_GET['s'] : []], $this->layout());
     }
@@ -357,7 +367,7 @@ class Pages
                     if (count($result['errors']) > 200) break;
                 }
                 if (!empty($_POST['atomic']) && $result['errors']) { $db->rollback(); $result['added'] = $result['updated'] = 0; $result['rolledBack'] = true; }
-                else $db->commit();
+                else { $db->commit(); $this->app->event($t->name, 'AfterImport', [$result, 'import']); }
             } catch (\Throwable $e) {
                 $db->rollback();
                 throw $e;

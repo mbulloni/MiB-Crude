@@ -17,6 +17,12 @@ const CONN = { id: 'main', name: 'Demo', driver: 'mysql', host: '127.0.0.1', por
 const PW = 'mibcrude';
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 const BASE = `http://127.0.0.1:${PORT}/index.php`;
+// MIBCRUDE_TEST_PHP=8.4 runs the generated app on PHP 8.4 in Docker (image tests/docker).
+const PHP8 = process.env.MIBCRUDE_TEST_PHP === '8.4';
+function phpServer(outDir) {
+  if (!PHP8) return spawn(process.env.MIBCRUDE_PHP_BIN || 'php', ['-d', 'display_errors=1', '-d', 'error_reporting=-1', '-S', `127.0.0.1:${PORT}`, '-t', outDir], { stdio: 'ignore' });
+  return spawn('docker', ['run', '--rm', '--network', 'host', '--name', `mibcrude-e2e-${PORT}`, '-v', `${outDir}:${outDir}`, 'mibcrude-php-test:8.4', 'php', '-S', `127.0.0.1:${PORT}`, '-t', outDir], { stdio: 'ignore' });
+}
 
 function resetDb() {
   execFileSync('sh', ['-c', `mysql -h 127.0.0.1 -u mibcrude -pmibcrude mibcrude_demo < ${path.join(__dirname, 'fixtures', 'demo-mysql.sql')}`]);
@@ -30,6 +36,9 @@ function client() {
     const r = await fetch(url.startsWith('http') ? url : BASE + url, { redirect: 'manual', ...opts, headers: { cookie: cookie(), ...(opts.headers || {}) } });
     for (const c of r.headers.getSetCookie ? r.headers.getSetCookie() : []) { const [kv] = c.split(';'); const [k, v] = kv.split('='); jar[k] = v; }
     const text = await r.text();
+    // Any PHP notice/warning/deprecation printed into a page is a failure (PHP 8 strictness).
+    const leak = text.match(/(Deprecated|Warning|Notice|Fatal error)<\/b>?:[^\n]{0,240}|(Deprecated|Warning|Notice|Fatal error): [^\n]{0,240}/);
+    assert.ok(!leak, `PHP message in ${url}: ${leak && leak[0]}`);
     return { status: r.status, location: r.headers.get('location'), text, headers: r.headers };
   };
   const csrf = (html) => (html.match(/name="_csrf" value="([a-f0-9]+)"/) || [])[1];
@@ -73,11 +82,14 @@ test.before(async () => {
   const reloaded = P.loadProject(dir);
   const res = G.generate(reloaded, { debug: true });
   assert.deepStrictEqual(G.lint(res.outDir), []);
-  server = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', res.outDir], { stdio: 'ignore' });
-  for (let i = 0; i < 50; i++) { try { await fetch(BASE + '?p=ping'); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
+  server = phpServer(res.outDir);
+  for (let i = 0; i < 100; i++) { try { await fetch(BASE + '?p=ping'); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
 });
 
-test.after(() => { if (server) server.kill(); });
+test.after(() => {
+  if (server) server.kill();
+  if (PHP8) try { execFileSync('docker', ['rm', '-f', `mibcrude-e2e-${PORT}`], { stdio: 'ignore' }); } catch { /* gone */ }
+});
 
 test('project round-trips through files deterministically', () => {
   const a = P.serialize(P.loadProject(dir));

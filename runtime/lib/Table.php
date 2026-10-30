@@ -18,6 +18,29 @@ class Table
         $this->name = $def['name'];
         $this->db = $app->db($def['connection']);
         foreach ($def['fields'] as $f) $this->fieldsByName[$f['name']] = $f;
+        $app->event($this->name, 'TableInit', []);
+    }
+
+    /** Method suffix for per-field generated code (Default_x, AutoUpdate_x, LookupWhere_x, ViewAs_x). */
+    public static function ident($name)
+    {
+        $s = preg_replace('/[^A-Za-z0-9_]/', '_', $name);
+        return preg_match('/^[0-9]/', $s) ? '_' . $s : $s;
+    }
+
+    /** PHP turns spaces and dots of top-level form names into underscores. */
+    public static function postValue(array $post, $name)
+    {
+        if (array_key_exists($name, $post)) return $post[$name];
+        $mangled = strtr($name, ' .', '__');
+        return array_key_exists($mangled, $post) ? $post[$mangled] : null;
+    }
+
+    /** Value of a PHP default/auto-update expression imported from phpr. */
+    private function codeValue($kind, $f)
+    {
+        $r = $this->app->event($this->name, $kind . '_' . self::ident($f['name']), []);
+        return $r === true ? null : $r;
     }
 
     public function caption()
@@ -186,6 +209,7 @@ class Table
         $order = '';
         $this->app->event($this->name, 'BeforeSelect', [&$extra, &$order, $page]);
         if (trim($extra) !== '') $w[] = '(' . $extra . ')';
+        $order = preg_replace('/^\s*order\s+by\s+/i', '', (string)$order);
         return [$w ? implode(' AND ', $w) : '1=1', $p, $order];
     }
 
@@ -319,7 +343,7 @@ class Table
     }
 
     /** Options for a lookup field: [['value'=>..,'label'=>..], ...] */
-    public function lookupOptions($f, $q = '', $parent = null, $limit = 0, array $only = null)
+    public function lookupOptions($f, $q = '', $parent = null, $limit = 0, ?array $only = null)
     {
         if (is_string($f)) $f = $this->field($f);
         $lk = $this->lookupDef($f);
@@ -339,6 +363,10 @@ class Table
         $w = [];
         $p = [];
         if (!empty($lk['where'])) $w[] = '(' . $lk['where'] . ')';
+        if (!empty($lk['whereCode'])) {
+            $code = $this->app->event($this->name, 'LookupWhere_' . self::ident($f['name']), []);
+            if (is_string($code) && trim($code) !== '') $w[] = '(' . $code . ')';
+        }
         if (!empty($lk['dependsOn']['field']) && $parent !== null) { $w[] = $db->q($lk['dependsOn']['linkField']) . ' = ?'; $p[] = $parent; }
         if ($q !== '') { $w[] = $db->like($disp); $p[] = "%$q%"; }
         if ($only !== null) {
@@ -419,8 +447,8 @@ class Table
                 if ($v !== Upload::UNCHANGED) $vals[$n] = $v;
                 continue;
             }
-            if ($type === 'password' && $mode === 'edit' && (!isset($post[$n]) || $post[$n] === '')) continue;
-            $raw = isset($post[$n]) ? $post[$n] : null;
+            $raw = self::postValue($post, $n);
+            if ($type === 'password' && $mode === 'edit' && ($raw === null || $raw === '')) continue;
             if ($type === 'checkbox') { $vals[$n] = $raw ? 1 : 0; continue; }
             if (is_array($raw)) $raw = implode(',', array_map('strval', $raw));
             $vals[$n] = $this->normalizeInput($f, $raw);
@@ -429,8 +457,17 @@ class Table
         foreach ($this->def['fields'] as $f) {
             $au = isset($f['autoUpdate'][$mode]) ? $f['autoUpdate'][$mode] : '';
             if ($au !== '' && $au !== null) $vals[$f['name']] = self::expand($au);
+            if (!empty($f['autoUpdateCode']) && ($mode === 'edit' || $mode === 'add')) $vals[$f['name']] = $this->codeValue('AutoUpdate', $f);
         }
         return $vals;
+    }
+
+    /** Default value for the add form and for inserts. */
+    public function defaultFor($f)
+    {
+        if (!empty($f['defaultCode'])) return $this->codeValue('Default', $f);
+        if (isset($f['defaultValue']) && $f['defaultValue'] !== '') return self::expand($f['defaultValue']);
+        return null;
     }
 
     public function normalizeInput($f, $raw)
@@ -498,10 +535,11 @@ class Table
 
     private function onlyWritable(array $vals)
     {
+        // Alias columns of SQL datasources are written to their real column.
         $out = [];
         foreach ($vals as $k => $v) {
             $f = $this->field($k);
-            if ($f && empty($f['autoInc']) && empty($f['calculated'])) $out[$k] = $v;
+            if ($f && empty($f['autoInc']) && empty($f['calculated'])) $out[!empty($f['column']) ? $f['column'] : $k] = $v;
         }
         return $out;
     }
@@ -518,7 +556,7 @@ class Table
         $wt = $this->writeTable();
         if (!$wt) return [false, null, t('error.readonly')];
         foreach ($this->def['fields'] as $f) {
-            if (!array_key_exists($f['name'], $vals) && isset($f['defaultValue']) && $f['defaultValue'] !== '' && empty($f['autoInc'])) $vals[$f['name']] = self::expand($f['defaultValue']);
+            if (!array_key_exists($f['name'], $vals) && empty($f['autoInc']) && ($d = $this->defaultFor($f)) !== null) $vals[$f['name']] = $d;
         }
         $own = $this->app->security->ownership($this->name, true);
         if ($own) $vals[$own['field']] = userId();

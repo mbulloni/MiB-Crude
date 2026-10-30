@@ -110,6 +110,17 @@ handle('project:new', (dir, name) => {
   try { git.init(dir); } catch { /* git optional */ }
   return proj;
 });
+handle('import:phpr', async (file, parentDir) => {
+  const { importPhpr } = require('../core/phpr-import.cjs');
+  const name = path.basename(file, '.phpr').replace(/[^A-Za-z0-9_.-]/g, '_');
+  let dir = path.join(parentDir, name);
+  for (let i = 2; fs.existsSync(dir); i++) dir = path.join(parentDir, `${name}_${i}`);
+  const r = await importPhpr(file, dir);
+  current = { dir };
+  addRecent(dir);
+  try { await git.init(dir); } catch { /* git optional */ }
+  return { proj: r.proj, report: r.report, reportFile: path.join(dir, 'import-phpr', 'REPORT.md') };
+});
 handle('project:open', (dir) => {
   const proj = P.loadProject(dir);
   current = { dir };

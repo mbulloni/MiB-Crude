@@ -45,8 +45,8 @@ class Export
                 $o = fopen('php://output', 'w');
                 fwrite($o, "\xEF\xBB\xBF");
                 $sep = App::$i->setting('decimalSeparator', ',') === ',' ? ';' : ',';
-                fputcsv($o, $head, $sep);
-                foreach ($data as $line) fputcsv($o, array_map(function ($v) { return $v === null ? '' : (string)$v; }, $line), $sep);
+                fputcsv($o, $head, $sep, '"', '\\');
+                foreach ($data as $line) fputcsv($o, array_map(function ($v) { return $v === null ? '' : (string)$v; }, $line), $sep, '"', '\\');
                 fclose($o);
         }
     }
@@ -105,7 +105,7 @@ class Export
         fwrite($h, $text);
         rewind($h);
         $rows = [];
-        while (($r = fgetcsv($h, 0, $sep)) !== false) if ($r !== [null]) $rows[] = $r;
+        while (($r = fgetcsv($h, 0, $sep, '"', '\\')) !== false) if ($r !== [null]) $rows[] = $r;
         fclose($h);
         $head = $rows ? array_map('trim', array_shift($rows)) : [];
         return [$head, $rows];

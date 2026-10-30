@@ -9,7 +9,7 @@ class Events
 /** Audit trail in the mc_audit table. */
 class Audit
 {
-    public static function enabled(Table $t = null)
+    public static function enabled(?Table $t = null)
     {
         $app = App::$i;
         if (!$app->setting('audit')) return false;
@@ -178,7 +178,7 @@ class Oidc
         throw new HttpError(t('error.notfound'), 404);
     }
 
-    private static function http($url, array $post = null, array $headers = [])
+    private static function http($url, ?array $post = null, array $headers = [])
     {
         $opts = ['http' => ['method' => $post === null ? 'GET' : 'POST', 'timeout' => 15, 'ignore_errors' => true,
             'header' => implode("\r\n", array_merge($headers, $post === null ? [] : ['Content-Type: application/x-www-form-urlencoded']))]];
