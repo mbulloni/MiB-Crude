@@ -57,7 +57,7 @@ function freePort(start) {
 
 function dockerImage() {
   try { execFileSync('docker', ['image', 'inspect', IMAGE], { stdio: 'pipe' }); return; } catch { /* build */ }
-  execFileSync('docker', ['build', '-t', IMAGE, path.join(__dirname, 'docker')], { stdio: 'pipe', timeout: 15 * 60 * 1000 });
+  execFileSync('docker', ['build', '-t', IMAGE, path.join(__dirname, 'docker').replace('app.asar', 'app.asar.unpacked')], { stdio: 'pipe', timeout: 15 * 60 * 1000 });
 }
 
 async function start(proj, outDir) {

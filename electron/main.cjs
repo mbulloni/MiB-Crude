@@ -3,6 +3,13 @@
 // everything touching disk, databases, PHP, Git, deploy targets or the team server lives here.
 
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
+
+// `mib-crude --team-server --data DIR [--port N] [--add-user NAME]`: run the team server headless.
+const TEAM_SERVER = process.argv.includes('--team-server');
+if (TEAM_SERVER) {
+  app.disableHardwareAcceleration();
+  require('../server/mibcrude-server.cjs').cli();
+}
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -223,5 +230,5 @@ handle('team:checkout', async (url, user, token, projectName, dir) => {
 });
 handle('team:publish', async (url, user, token, projectName) => team.publish({ url, user, token, project: projectName, dir: need().dir }));
 
-app.whenReady().then(createWindow);
-app.on('window-all-closed', () => { preview.stopAll(); app.quit(); });
+if (!TEAM_SERVER) app.whenReady().then(createWindow);
+if (!TEAM_SERVER) app.on('window-all-closed', () => { preview.stopAll(); app.quit(); });

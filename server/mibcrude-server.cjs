@@ -37,6 +37,7 @@ const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest('hex'
 const readUsers = () => { try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { return {}; } };
 const writeUsers = (u) => fs.writeFileSync(USERS_FILE, JSON.stringify(u, null, 2), { mode: 0o600 });
 
+function cli() {
 if (has('add-user')) {
   const name = arg('add-user');
   if (!/^[A-Za-z0-9_.@-]{2,60}$/.test(name || '')) { console.error('Nome utente non valido'); process.exit(1); }
@@ -50,6 +51,11 @@ if (has('add-user')) {
 if (has('list-users')) {
   for (const [n, u] of Object.entries(readUsers())) console.log(`${n}\t${u.role}\t${u.created}`);
   process.exit(0);
+}
+  const port = Number(arg('port', 7300));
+  const host = arg('host', '0.0.0.0');
+  if (!Object.keys(readUsers()).length) console.log(`Nessun utente: crea il primo con --data ${DATA} --add-user <nome> --role admin`);
+  return startServer(port, host).then(() => console.log(`MiB-Crude team server in ascolto su ws://${host}:${port} (dati: ${DATA})`));
 }
 
 // --- project storage --------------------------------------------------------------
@@ -256,11 +262,6 @@ function startServer(port, host) {
   return new Promise((resolve) => server.listen(port, host, () => resolve(server)));
 }
 
-if (require.main === module) {
-  const port = Number(arg('port', 7300));
-  const host = arg('host', '0.0.0.0');
-  if (!Object.keys(readUsers()).length) console.log(`Nessun utente: crea il primo con --data ${DATA} --add-user <nome> --role admin`);
-  startServer(port, host).then(() => console.log(`MiB-Crude team server in ascolto su ws://${host}:${port} (dati: ${DATA})`));
-}
+if (require.main === module) cli();
 
-module.exports = { startServer };
+module.exports = { startServer, cli };
