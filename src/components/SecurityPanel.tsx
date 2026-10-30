@@ -7,6 +7,11 @@ import { useItemLock } from './TeamPanel';
 
 const LETTERS: [string, string][] = [['S', 'Elenco'], ['V', 'Vista'], ['A', 'Nuovo'], ['E', 'Modifica'], ['D', 'Elimina'], ['P', 'Stampa/Esp.'], ['I', 'Importa']];
 
+function GroupMap({ value, onChange }: { value?: Record<string, string>; onChange: (v: Record<string, string>) => void }) {
+  return <textarea className="inp mono" rows={3} value={Object.entries(value || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
+    onChange={(e) => onChange(Object.fromEntries(e.target.value.split('\n').map((l) => l.split('=').map((x) => x.trim())).filter((x) => x[0] && x[1])))} />;
+}
+
 export default function SecurityPanel() {
   const p = useStore((s) => s.proj)!;
   const secrets = useStore((s) => s.secrets);
@@ -107,6 +112,18 @@ export default function SecurityPanel() {
             <Row label="Gruppi AD → gruppi app" hint="Una riga per mappatura: GruppoAD=idgruppo"><textarea className="inp mono" rows={3} value={Object.entries(sec.providers.ldap.groupMap || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
               onChange={(e) => set((s) => { s.providers.ldap.groupMap = Object.fromEntries(e.target.value.split('\n').map((l) => l.split('=').map((x) => x.trim())).filter((x) => x[0] && x[1])); })} /></Row>
           </Section>
+          <Section title="SAML 2.0 (ADFS, Entra ID, Okta, Shibboleth…)" help="Metadati da registrare presso il provider: https://tuo-sito/percorso/index.php?p=saml&metadata=1 (risposte su ?p=saml&acs=1). La firma della risposta o dell'asserzione è obbligatoria.">
+            <Row label="Attivo"><Check value={sec.providers.saml?.enabled} onChange={(v) => set((s) => { s.providers.saml = { ...(s.providers.saml || {}), enabled: v }; })} /></Row>
+            <Row label="Etichetta pulsante"><LangText value={sec.providers.saml?.label} onChange={(v) => set((s) => { s.providers.saml.label = v; })} /></Row>
+            <Row label="Entity ID del provider"><Text value={sec.providers.saml?.idpEntityId} onChange={(v) => set((s) => { s.providers.saml.idpEntityId = v; })} mono /></Row>
+            <Row label="URL SSO del provider"><Text value={sec.providers.saml?.idpSsoUrl} onChange={(v) => set((s) => { s.providers.saml.idpSsoUrl = v; })} mono placeholder="https://login.microsoftonline.com/<tenant>/saml2" /></Row>
+            <Row label="Certificato del provider" hint="PEM o base64 del certificato di firma"><textarea className="inp mono" rows={4} value={sec.providers.saml?.idpCert || ''} onChange={(e) => set((s) => { s.providers.saml.idpCert = e.target.value; })} /></Row>
+            <Row label="Entity ID dell'app" hint="Vuoto: URL dei metadati"><Text value={sec.providers.saml?.spEntityId} onChange={(v) => set((s) => { s.providers.saml.spEntityId = v; })} mono /></Row>
+            <Row label="Attributi" hint="Nomi degli attributi SAML: utente (vuoto = NameID), email, nome, gruppi">
+              <span className="inline"><Text value={sec.providers.saml?.usernameAttr} onChange={(v) => set((s) => { s.providers.saml.usernameAttr = v; })} placeholder="utente" /><Text value={sec.providers.saml?.emailAttr} onChange={(v) => set((s) => { s.providers.saml.emailAttr = v; })} placeholder="email" />
+                <Text value={sec.providers.saml?.nameAttr} onChange={(v) => set((s) => { s.providers.saml.nameAttr = v; })} placeholder="nome" /><Text value={sec.providers.saml?.groupAttr} onChange={(v) => set((s) => { s.providers.saml.groupAttr = v; })} placeholder="gruppi" /></span></Row>
+            <Row label="Gruppi provider → gruppi app"><GroupMap value={sec.providers.saml?.groupMap} onChange={(v) => set((s) => { s.providers.saml.groupMap = v; })} /></Row>
+          </Section>
           <Section title="OpenID Connect (Okta, Entra ID, Google, Keycloak…)" actions={<Btn small icon="plus-lg" onClick={() => set((s) => { s.providers.oidc.push({ id: `sso${s.providers.oidc.length + 1}`, label: { it: 'Azienda' }, enabled: true, issuer: '', clientId: '', scopes: 'openid email profile', usernameClaim: 'email' }); })}>Provider</Btn>}
             help="Redirect URI da registrare presso il provider: https://tuo-sito/percorso/index.php?p=oidc&cb=1">
             {sec.providers.oidc.map((o, i) => <div className="card" key={i}>
@@ -118,6 +135,7 @@ export default function SecurityPanel() {
               <Row label="Client secret" hint="Salvato solo sul tuo computer"><Text type="password" value={secrets.oidc?.[o.id]} onChange={(v) => saveSecrets({ oidc: { ...(secrets.oidc || {}), [o.id]: v } })} /></Row>
               <Row label="Claim nome utente"><Text value={o.usernameClaim} onChange={(v) => set((s) => { s.providers.oidc[i].usernameClaim = v; })} mono /></Row>
               <Row label="Claim gruppi"><Text value={o.groupClaim} onChange={(v) => set((s) => { s.providers.oidc[i].groupClaim = v; })} mono placeholder="groups" /></Row>
+              <Row label="Gruppi provider → gruppi app" hint="Una riga per mappatura: GruppoProvider=idgruppo"><GroupMap value={o.groupMap} onChange={(v) => set((s) => { s.providers.oidc[i].groupMap = v; })} /></Row>
             </div>)}
           </Section>
         </div>}

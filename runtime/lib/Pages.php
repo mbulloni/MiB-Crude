@@ -520,6 +520,14 @@ class Pages
         Oidc::start(isset($_GET['id']) ? (string)$_GET['id'] : '');
     }
 
+    /** SAML 2.0: ?p=saml (start), ?p=saml&acs=1 (POST from the IdP), ?p=saml&metadata=1 (SP metadata). */
+    public function page_saml()
+    {
+        if (!empty($_GET['metadata'])) { Saml::metadata(); return; }
+        if (!empty($_GET['acs'])) { Saml::acs(); return; }
+        Saml::start();
+    }
+
     public function page_setup()
     {
         $sec = $this->app->security;
