@@ -97,7 +97,7 @@ function defaultField(col, languages) {
 
 function defaultPages(cfg = {}) {
   return {
-    list: { enabled: true, pageSize: cfg.pageSize || 20, quickSearch: true, searchPanel: true, filterPanel: false, inlineAdd: false, inlineEdit: false, defaultSort: null, rowActions: ['view', 'edit', 'delete'], selectable: true, totals: true },
+    list: { enabled: true, pageSize: cfg.pageSize || 20, quickSearch: true, searchPanel: true, filterPanel: false, inlineAdd: false, inlineEdit: false, updateSelected: true, defaultSort: null, rowActions: ['view', 'edit', 'delete'], selectable: true, totals: true },
     add: { enabled: true, mode: 'page' },
     edit: { enabled: true, mode: 'page' },
     view: { enabled: true },

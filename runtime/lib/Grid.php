@@ -96,7 +96,7 @@ class Grid
         $page = $t->page('list');
         $embedded = !empty($_GET['embed']);
         $canDel = $t->enabled('delete') && $app->security->can($t->name, 'D');
-        $cols = self::columns($t, $canDel, $embedded);
+        $cols = self::columns($t, $canDel || $t->canUpdateSelected(), $embedded);
         $draw = isset($_GET['draw']) ? (int)$_GET['draw'] : 0;
         $start = max(0, isset($_GET['start']) ? (int)$_GET['start'] : 0);
         $len = isset($_GET['length']) ? (int)$_GET['length'] : (int)$page['pageSize'];

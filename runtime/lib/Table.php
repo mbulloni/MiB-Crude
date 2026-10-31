@@ -83,6 +83,22 @@ class Table
         return true;
     }
 
+    /** "Update selected" on the list: edit page and permission, a writable source, option not turned off. */
+    public function canUpdateSelected()
+    {
+        return $this->enabled('edit') && $this->app->security->can($this->name, 'E') && $this->writeTable() !== null
+            && (!isset($this->def['pages']['list']['updateSelected']) || $this->def['pages']['list']['updateSelected']);
+    }
+
+    /** Fields that "Update selected" can set: editable, not keys, not files or passwords. */
+    public function bulkFields()
+    {
+        $keys = $this->def['keys'];
+        return array_values(array_filter($this->fields('edit'), function ($f) use ($keys) {
+            return !in_array($f['editAs']['type'], ['readonly', 'hidden', 'file', 'image', 'password'], true) && !in_array($f['name'], $keys, true);
+        }));
+    }
+
     public function writeTable()
     {
         $s = $this->def['source'];

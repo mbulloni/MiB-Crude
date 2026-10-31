@@ -5,7 +5,8 @@ $base = ['t' => $t->name];
 if ($master) $base = array_merge($base, $master['qs']);
 $keep = array_merge($base, array_filter(['s' => $req['s'], 'f' => $req['f']]));
 $canDel = $t->enabled('delete') && $sec->can($t->name, 'D');
-$cols = \MiB\Grid::columns($t, $canDel, $embedded);
+$canUpd = $t->canUpdateSelected() && !\MiB\Compat::hidden('updatesel');
+$cols = \MiB\Grid::columns($t, $canDel || $canUpd, $embedded);
 $page = $t->page('list');
 $hasTotals = false;
 foreach ($cols as $c) if (!empty($c['field']['totals'])) $hasTotals = true;
@@ -54,6 +55,9 @@ if ($viewDef && in_array($curView, ['calendar', 'map'], true)) $needLibs = [$cur
   <?php endif ?>
   <?php if ($canDel && !\MiB\Compat::hidden('delete')): ?>
     <button class="btn btn-outline-danger btn-sm mc-delete-selected" form="mcListForm" disabled><i class="bi bi-trash"></i> <?= h(t('btn.delete_sel')) ?></button>
+  <?php endif ?>
+  <?php if ($canUpd && $t->bulkFields()): ?>
+    <button class="btn btn-outline-primary btn-sm mc-update-selected" form="mcListForm" formaction="<?= h($app->url('updatesel', ['t' => $t->name])) ?>" disabled><i class="bi bi-pencil-square"></i> <?= h(t('btn.update_sel')) ?></button>
   <?php endif ?>
   <?php if (!\MiB\Compat::hidden('export') && $t->enabled('export') && $sec->can($t->name, 'P')): ?>
     <div class="dropdown">

@@ -348,6 +348,65 @@ class Pages
         redirect($back);
     }
 
+    // --- update selected --------------------------------------------------------
+
+    /** "Update selected" (phpr): the same values on every selected record, through the normal edit path. */
+    public function page_updatesel()
+    {
+        $t = $this->table();
+        if (!$this->post() || !$t->canUpdateSelected()) throw new HttpError(t('error.notfound'), 404);
+        $sel = [];
+        $selJson = [];
+        foreach (isset($_POST['sel']) && is_array($_POST['sel']) ? $_POST['sel'] : [] as $json) {
+            $k = json_decode((string)$json, true);
+            if (is_array($k)) { $sel[] = $t->keysFromRequest(['k' => $k]); $selJson[] = (string)$json; }
+        }
+        $back = isset($_POST['_back']) && strpos($_POST['_back'], 'index.php?') === 0 ? $_POST['_back'] : $this->app->url('list', ['t' => $t->name]);
+        if (!$sel) redirect($back);
+        $fields = $t->bulkFields();
+        $names = array_map(function ($f) { return $f['name']; }, $fields);
+        $chosen = array_values(array_intersect(isset($_POST['_fields']) && is_array($_POST['_fields']) ? array_map('strval', $_POST['_fields']) : [], $names));
+        $error = '';
+        if (!empty($_POST['_apply'])) {
+            if (!$chosen) $error = t('updsel.none');
+            else {
+                $all = $t->valuesFromPost('edit', $_POST, null);
+                $editNames = array_map(function ($f) { return $f['name']; }, $t->fields('edit'));
+                $vals = [];
+                // the chosen fields, plus automatic values (updated_at = {now}, updated_by = {user}…)
+                foreach ($all as $n => $v) if (in_array($n, $chosen, true) || !in_array($n, $editNames, true)) $vals[$n] = $v;
+                $done = 0;
+                $fail = [];
+                foreach ($sel as $keys) {
+                    $label = implode('/', array_map('strval', $keys));
+                    $row = $t->fetchOne($keys);
+                    if (!$row) { $fail[] = $label . ': ' . t('error.notfound'); continue; }
+                    $by = Locks::acquire($t, $keys);
+                    if ($by !== '') { $fail[] = $label . ': ' . t('updsel.locked', $by); continue; }
+                    try {
+                        $errs = $t->validate(array_merge($row, $vals), 'edit', $keys);
+                        if ($errs) $fail[] = $label . ': ' . implode('; ', $errs);
+                        else {
+                            list($ok, $msg) = $t->update($keys, $vals);
+                            if ($ok) $done++; else $fail[] = $label . ': ' . $msg;
+                        }
+                    } catch (\PDOException $e) {
+                        $fail[] = $label . ': ' . $this->dbError($e);
+                    } catch (\RuntimeException $e) {
+                        $fail[] = $label . ': ' . $e->getMessage();
+                    }
+                    Locks::release($t, $keys);
+                }
+                if ($done) $this->app->flash('success', t('msg.updated', $done));
+                foreach (array_slice($fail, 0, 20) as $f) $this->app->flash('danger', $f);
+                if (count($fail) > 20) $this->app->flash('danger', t('updsel.more', count($fail) - 20));
+                redirect($back);
+            }
+        }
+        $this->app->title = $t->caption() . ' — ' . t('updsel.title', count($sel));
+        $this->app->render('updatesel', ['t' => $t, 'fields' => $fields, 'chosen' => $chosen, 'selJson' => $selJson, 'back' => $back, 'error' => $error, 'count' => count($sel)], $this->layout());
+    }
+
     // --- search ---------------------------------------------------------------
 
     public function page_search()

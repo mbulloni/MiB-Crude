@@ -91,7 +91,12 @@
     });
   }
   var delBtn = $('.mc-delete-selected');
-  var syncSel = function () { if (delBtn) delBtn.disabled = !$$('.mc-check:checked').length; };
+  var updBtn = $('.mc-update-selected');
+  var syncSel = function () {
+    var none = !$$('.mc-check:checked').length;
+    if (delBtn) delBtn.disabled = none;
+    if (updBtn) updBtn.disabled = none;
+  };
   if (listForm) {
     var all = $('.mc-check-all');
     if (all) all.addEventListener('change', function () { $$('.mc-check').forEach(function (c) { c.checked = all.checked; }); syncSel(); });

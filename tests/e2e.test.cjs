@@ -334,3 +334,48 @@ test('permissions for a non-admin group', async () => {
   r = await u.req('?p=admin');
   assert.strictEqual(r.status, 403);
 });
+
+test('update selected: the same values on the chosen records only', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=list&t=orders');
+  assert.match(r.text, /mc-update-selected/);
+  const csrf = c.csrf(r.text);
+  const db = await require('../core/db.cjs').connect(CONN, PW);
+  const q = (sql) => sql.replace(/\b(orders|status|id)\b/g, (m) => require('../core/ddl.cjs').quote(CONN.driver, m));
+  const read = async () => Object.fromEntries((await db.query(q('SELECT id, status FROM orders ORDER BY id'))).map((x) => {
+    const o = Object.fromEntries(Object.entries(x).map(([k, v]) => [k.toLowerCase(), v]));
+    return [String(o.id), String(o.status)];
+  }));
+  try {
+    const before = await read();
+    const ids = Object.keys(before).slice(0, 3);
+    const sel = ids.slice(0, 2).map((id) => ['sel[]', JSON.stringify({ id: Number(id) })]);
+    // first step: the form with the fields
+    r = await c.post('?p=updatesel&t=orders', [['_csrf', csrf], ...sel]);
+    assert.strictEqual(r.status, 200);
+    assert.match(r.text, /name="_fields\[\]" value="status"/);
+    assert.doesNotMatch(r.text, /name="_fields\[\]" value="id"/, 'keys are not offered');
+    // no field ticked: nothing changes, the form says why
+    r = await c.post('?p=updatesel&t=orders', [['_csrf', csrf], ...sel, ['_apply', '1'], ['status', 'closed']]);
+    assert.strictEqual(r.status, 200);
+    assert.deepStrictEqual(await read(), before);
+    r = await c.post('?p=updatesel&t=orders', [['_csrf', csrf], ...sel, ['_apply', '1'], ['_fields[]', 'status'], ['status', 'closed'], ['_back', 'index.php?p=list&t=orders']]);
+    assert.strictEqual(r.status, 302, r.text.slice(0, 500));
+    const after = await read();
+    assert.deepStrictEqual([after[ids[0]], after[ids[1]], after[ids[2]]], ['closed', 'closed', before[ids[2]]]);
+    r = await c.req('?p=list&t=orders');
+    assert.match(r.text, /2 record modificati|2 records updated/);
+    r = await c.req('?p=admin&s=audit');
+    assert.match(r.text, /closed/);
+  } finally { await db.close(); }
+  // a non-admin group without edit permission does not get the button
+  const u = client();
+  r = await u.req('?p=login');
+  await u.post('?p=login', { _csrf: u.csrf(r.text), username: 'luca', password: 'Password1' });
+  r = await u.req('?p=list&t=orders');
+  assert.doesNotMatch(r.text, /mc-update-selected/);
+  r = await u.post('?p=updatesel&t=orders', [['_csrf', u.csrf(r.text)], ['sel[]', '{"id":1}']]);
+  assert.strictEqual(r.status, 404);
+});
