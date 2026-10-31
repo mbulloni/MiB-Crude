@@ -698,7 +698,8 @@ class Pages
                     if ($verify) {
                         $link = Oidc::redirectUri();
                         $link = str_replace('p=oidc&cb=1', 'p=verify&token=' . $token, $link);
-                        sendMail($values['email'], t('register.mail_subject'), t('register.mail_body', h($values['username']), h($link)));
+                        MailTemplates::builtin('register', $values['email'], ['username' => $values['username'], 'fullname' => $values['fullname'], 'email' => $values['email'], 'link' => $link],
+                            'register.mail_subject', 'register.mail_body', [h($values['username']), h($link)]);
                     }
                     $this->app->event('_global', 'AfterRegister', [$values]);
                     $done = true;
@@ -733,7 +734,8 @@ class Pages
                 $token = bin2hex(random_bytes(16));
                 $db->update(Schema::t('users'), ['token' => hash('sha256', $token), 'token_expires' => date('Y-m-d H:i:s', time() + 3600)], ['id' => $row['id']]);
                 $link = str_replace('p=oidc&cb=1', 'p=reset&token=' . $token, Oidc::redirectUri());
-                sendMail($row['email'], t('forgot.mail_subject'), t('forgot.mail_body', h($row['username']), h($link)));
+                MailTemplates::builtin('forgot', $row['email'], ['username' => $row['username'], 'fullname' => isset($row['fullname']) ? $row['fullname'] : '', 'email' => $row['email'], 'link' => $link],
+                    'forgot.mail_subject', 'forgot.mail_body', [h($row['username']), h($link)]);
             }
             $sent = true; // same answer whether or not the user exists
         }

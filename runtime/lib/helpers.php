@@ -65,6 +65,12 @@ function sendMail($to, $subject, $body, $html = true)
     return \MiB\Mailer::send($to, $subject, $body, $html);
 }
 
+/** Email from a template of the project (Progetto › Modelli email): sendTemplate('ordine_spedito', $to, ['numero' => 12]). */
+function sendTemplate($name, $to, array $values = [])
+{
+    return \MiB\MailTemplates::send($name, $to, $values);
+}
+
 function appUrl($page, $params = [])
 {
     return \MiB\App::$i->url($page, $params);
