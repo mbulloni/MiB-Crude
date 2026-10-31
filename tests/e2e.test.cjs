@@ -107,6 +107,9 @@ test.before(async () => {
   };
   fs.mkdirSync(path.join(dir, 'public', 'inc'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'public', 'inc', 'footer.php'), '<div class="mc-test-footer">Piede <?= date("Y") ?></div>');
+  // scheduled task, run from the administration
+  proj.project.settings.tasks = [{ name: 'conta_ordini', title: { it: 'Conta ordini' }, cron: '0 3 * * *', enabled: true }];
+  proj.events._global = { ...(proj.events._global || {}), Task_conta_ordini: "<?php\n$message = 'ordini: ' . db()->value('SELECT COUNT(*) FROM ' . db()->table('orders'));\n" };
   proj.project.settings.api = { enabled: true };
   proj.project.settings.webBuilder = { enabled: true };
   proj.reports.push({ name: 'sales', title: { it: 'Vendite', en: 'Sales' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'customer_id', 'total'], showDetails: true });
@@ -544,4 +547,25 @@ test('saved searches: per user, shared by an administrator, applied from the lis
   r = await a.req('?p=list&t=orders');
   assert.doesNotMatch(r.text, /Solo mia/);
   assert.match(r.text, /Spediti/);
+});
+
+test('scheduled tasks: administration page and "Run now"', async () => {
+  const a = client();
+  let r = await a.req('?p=login');
+  await a.post('?p=login', { _csrf: a.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await a.req('?p=admin&s=tasks');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /Conta ordini/);
+  assert.match(r.text, /0 3 \* \* \*/);
+  assert.match(r.text, /cron\.php/);
+  r = await a.post('?p=admin&s=tasks', { _csrf: a.csrf(r.text), run: 'conta_ordini' });
+  assert.strictEqual(r.status, 302);
+  r = await a.req('?p=admin&s=tasks');
+  assert.match(r.text, /ordini: \d+/);
+  assert.match(r.text, /text-bg-success/);
+  // not for other users
+  const u = client();
+  r = await u.req('?p=login');
+  await u.post('?p=login', { _csrf: u.csrf(r.text), username: 'luca', password: 'Password1' });
+  assert.strictEqual((await u.req('?p=admin&s=tasks')).status, 403);
 });

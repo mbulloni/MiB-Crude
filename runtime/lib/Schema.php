@@ -4,7 +4,7 @@ namespace MiB;
 /** System tables (users, groups, rights, audit, locks, notifications) created on first run in the main database. */
 class Schema
 {
-    const VERSION = 4;
+    const VERSION = 5;
 
     public static function prefix()
     {
@@ -29,7 +29,9 @@ class Schema
         $s = $c['security'];
         return ($s['enabled'] && $s['mode'] === 'database') || !empty($c['settings']['audit']) || !empty($c['settings']['recordLocking']) || !empty($c['settings']['webBuilder']['enabled'])
             || (!empty($s['dynamicPermissions']) && $s['enabled'])
-            || ($s['enabled'] && (!isset($c['settings']['notifications']) || $c['settings']['notifications'] !== false));
+            || ($s['enabled'] && (!isset($c['settings']['notifications']) || $c['settings']['notifications'] !== false))
+            || ($s['enabled'] && (!isset($c['settings']['savedSearches']) || $c['settings']['savedSearches'] !== false))
+            || !empty($c['settings']['tasks']);
     }
 
     public static function ensure()
@@ -79,6 +81,8 @@ class Schema
                 . "{$c('icon')} {$vc(50)}, {$c('url')} {$vc(500)}, {$c('new_window')} $int DEFAULT 0, {$c('created_at')} $ts, {$c('expires_at')} $ts)$engine",
             'searches' => 'CREATE TABLE ' . $q('searches') . " ({$c('id')} $id, {$c('username')} {$vc(150)}, {$c('table_name')} {$vc(150)}, {$c('title')} {$vc(200)}, "
                 . "{$c('query_json')} $text, {$c('shared')} $int DEFAULT 0, {$c('created_at')} $ts)$engine",
+            'tasks' => 'CREATE TABLE ' . $q('tasks') . " ({$c('name')} {$vc(100)} NOT NULL PRIMARY KEY, {$c('last_run')} $ts, {$c('ok')} $int DEFAULT 0, "
+                . "{$c('message')} $text, {$c('duration')} " . ['mysql' => 'DECIMAL(12,3)', 'pgsql' => 'NUMERIC(12,3)', 'sqlsrv' => 'DECIMAL(12,3)', 'oracle' => 'NUMBER(12,3)', 'sqlite' => 'REAL'][$d] . ")$engine",
             'notif_seen' => 'CREATE TABLE ' . $q('notif_seen') . " ({$c('username')} {$vc(150)} NOT NULL PRIMARY KEY, {$c('last_id')} $int DEFAULT 0)$engine",
         ];
     }

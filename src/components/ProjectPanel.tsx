@@ -2,6 +2,7 @@ import { saveSecrets, update, useStore } from '../store';
 import { Area, Check, LangText, Num, Row, Section, Select, Text } from './ui';
 import ThemesSection from './ThemesSection';
 import RegionsSection from './RegionsSection';
+import TasksSection from './TasksSection';
 
 const LANGS: [string, string][] = [['it', 'Italiano'], ['en', 'English'], ['fr', 'Français'], ['de', 'Deutsch'], ['es', 'Español'], ['pt', 'Português'], ['nl', 'Nederlands'], ['ro', 'Română'], ['pl', 'Polski']];
 const COLORS = ['#0d6efd', '#2f6fd6', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#198754', '#20c997', '#0dcaf0', '#343a40', '#ffc107'];
@@ -54,6 +55,7 @@ export default function ProjectPanel() {
           </Section>
           <ThemesSection />
           <RegionsSection />
+          <TasksSection />
           <Section title="Pagina di presentazione" help="Pagina pubblica mostrata aprendo l'applicazione (index.php), con i pulsanti Accedi/Registrati o Entra. Usa il tema delle pagine di accesso.">
             <Row label="Attiva"><Check value={st.landing?.enabled} onChange={(v) => set((x) => { x.settings.landing = { ...(x.settings.landing || {}), enabled: v }; })} /></Row>
             {st.landing?.enabled && <>

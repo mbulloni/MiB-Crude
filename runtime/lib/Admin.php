@@ -31,6 +31,7 @@ class Admin
         if (!empty($sec->cfg['dynamicPermissions']) && $sec->cfg['mode'] !== 'ntlm') { $sections['groups'] = t('admin.groups'); $sections['rights'] = t('admin.rights'); }
         if ($this->app->setting('audit')) $sections['audit'] = t('admin.audit');
         if (Notifications::enabled()) $sections['notifications'] = t('notif.title');
+        if (Tasks::all()) $sections['tasks'] = t('task.title');
         if (!isset($sections[$section])) $section = key($sections);
         if (!$section) throw new HttpError(t('error.notfound'), 404);
         $data = $this->{'s_' . $section}();
@@ -179,6 +180,23 @@ class Admin
         }
         $users = $this->app->security->isManaged() ? array_column($this->lower($this->db->all('SELECT ' . $this->db->q('username') . ' FROM ' . $this->db->table(Schema::t('users')) . ' ORDER BY ' . $this->db->q('username'))), 'username') : [];
         return ['rows' => Notifications::recent(), 'users' => $users];
+    }
+
+    /** Scheduled tasks: schedule, next and last run, result; "Run now". */
+    private function s_tasks()
+    {
+        if ($this->post() && isset($_POST['run'])) {
+            list($ok, $msg) = Tasks::run((string)$_POST['run']);
+            $this->app->flash($ok ? 'success' : 'danger', t($ok ? 'task.done' : 'task.failed', (string)$_POST['run']) . ($msg !== '' ? ' — ' . $msg : ''));
+            redirect($this->app->url('admin', ['s' => 'tasks']));
+        }
+        $state = Tasks::state();
+        $rows = [];
+        foreach (Tasks::all() as $name => $t) {
+            $rows[] = ['name' => $name, 'title' => $this->app->label($t['title'], $name), 'cron' => $t['cron'], 'enabled' => !empty($t['enabled']),
+                'valid' => Tasks::parse($t['cron']) !== null, 'next' => Tasks::next($t['cron'], time()), 'state' => isset($state[$name]) ? $state[$name] : null];
+        }
+        return ['rows' => $rows, 'cronLine' => '* * * * * ' . (PHP_BINARY ?: 'php') . ' ' . $this->app->root . DIRECTORY_SEPARATOR . 'cron.php'];
     }
 
     // --- Windows (NTLM) profiles: the R-LAB tables, edited in place --------------------------------

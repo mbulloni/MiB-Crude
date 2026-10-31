@@ -87,6 +87,18 @@
     <td class="text-nowrap"><?= $r['expires_at'] ? h(\MiB\Format::date($r['expires_at'], 'dateTimeFormat')) : '' ?></td>
     <td><form method="post"><?= $app->csrfField() ?><button class="btn btn-sm btn-link text-danger" name="delete" value="<?= (int)$r['id'] ?>" title="<?= h(t('btn.delete')) ?>"><i class="bi bi-trash"></i></button></form></td></tr>
   <?php endforeach ?></tbody></table></div></div>
+<?php elseif ($section === 'tasks'): ?>
+  <p class="small text-secondary"><i class="bi bi-clock-history"></i> <?= h(t('task.help')) ?></p>
+  <pre class="small bg-body-tertiary border rounded p-2 mc-cron-line"><?= h($cronLine) ?></pre>
+  <div class="card"><div class="mc-scroll"><table class="table table-sm mb-0 small align-middle"><thead><tr><th><?= h(t('task.task')) ?></th><th><?= h(t('task.schedule')) ?></th><th><?= h(t('task.next')) ?></th><th><?= h(t('task.last')) ?></th><th><?= h(t('task.result')) ?></th><th></th></tr></thead><tbody>
+  <?php foreach ($rows as $r): $st = $r['state']; ?>
+    <tr class="mc-task-row" data-task="<?= h($r['name']) ?>"><td><strong><?= h($r['title']) ?></strong><div class="text-secondary"><?= h($r['name']) ?></div></td>
+    <td><code><?= h($r['cron']) ?></code><?php if (!$r['valid']): ?> <span class="badge text-bg-danger"><?= h(t('task.invalid')) ?></span><?php elseif (!$r['enabled']): ?> <span class="badge text-bg-secondary"><?= h(t('task.off')) ?></span><?php endif ?></td>
+    <td class="text-nowrap"><?= $r['enabled'] && $r['next'] ? h(\MiB\Format::date(date('Y-m-d H:i:s', $r['next']), 'dateTimeFormat')) : '—' ?></td>
+    <td class="text-nowrap"><?= $st ? h(\MiB\Format::date($st['last_run'], 'dateTimeFormat')) . ' <span class="text-secondary">(' . h(number_format($st['duration'], 2)) . ' s)</span>' : '—' ?></td>
+    <td class="text-break"><?php if ($st): ?><span class="badge text-bg-<?= $st['ok'] ? 'success' : 'danger' ?>"><?= h(t($st['ok'] ? 'task.ok' : 'task.error')) ?></span> <?= h($st['message']) ?><?php endif ?></td>
+    <td><form method="post"><?= $app->csrfField() ?><button class="btn btn-sm btn-outline-primary text-nowrap" name="run" value="<?= h($r['name']) ?>"><i class="bi bi-play-fill"></i> <?= h(t('task.run')) ?></button></form></td></tr>
+  <?php endforeach ?></tbody></table></div></div>
 <?php elseif ($section === 'ntlm_users'): ?>
   <p class="small text-secondary"><i class="bi bi-windows"></i> <?= h(t('ntlm.users_help', $cfg['userTable'])) ?><?php if ($me !== ''): ?> · <?= h(t('ntlm.you', $me)) ?><?php endif ?></p>
   <form method="post" class="card mb-3"><?= $app->csrfField() ?><input type="hidden" name="action" value="add"><div class="card-body row g-2 align-items-end">
