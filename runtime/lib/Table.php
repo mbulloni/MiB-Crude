@@ -161,7 +161,7 @@ class Table
         if ($q !== '') {
             $or = [];
             foreach ($this->fields('search') as $f) {
-                if ($this->isDbFile($f)) continue;
+                if ($this->isDbFile($f) || Crypto::isEncrypted($f)) continue;
                 $lk = $this->lookupDef($f);
                 if ($lk && $lk['kind'] === 'table' && empty($lk['multiple'])) {
                     $lt = $this->lookupTableDb($lk);
@@ -187,6 +187,8 @@ class Table
                 $f = $this->field($name);
                 if (!$f || empty($f['show']['search']) || !is_array($c)) continue;
                 $op = isset($c['op']) ? $c['op'] : 'contains';
+                // encrypted values differ at every save: only "empty / not empty" can be asked to the database
+                if (Crypto::isEncrypted($f) && !in_array($op, ['empty', 'notempty'], true)) continue;
                 $v = isset($c['v']) ? $c['v'] : '';
                 $v2 = isset($c['v2']) ? $c['v2'] : '';
                 if (is_array($v)) {
@@ -218,7 +220,7 @@ class Table
         if (!empty($req['f']) && is_array($req['f'])) {
             foreach ($req['f'] as $name => $vals) {
                 $f = $this->field($name);
-                if (!$f || empty($f['filter']) || !is_array($vals) || !$vals) continue;
+                if (!$f || empty($f['filter']) || Crypto::isEncrypted($f) || !is_array($vals) || !$vals) continue;
                 $w[] = $this->col($name) . ' IN (' . implode(',', array_fill(0, count($vals), '?')) . ')';
                 $p = array_merge($p, array_values($vals));
             }
@@ -266,7 +268,7 @@ class Table
         $sql = 'SELECT ' . $this->selectList() . ' FROM ' . $this->from() . " WHERE $w";
         $sql = $limit > 0 ? $this->db->limit($sql, $limit, $offset, $this->orderBy($sort, $dir, $eo))
             : $sql . (($o = $this->orderBy($sort, $dir, $eo)) !== '' ? " ORDER BY $o" : '');
-        return $this->db->all($sql, $p);
+        return Crypto::decryptRows($this, $this->db->all($sql, $p));
     }
 
     /** Aggregates for list totals: field => [sum|avg|count => value] */
@@ -325,7 +327,7 @@ class Table
         $order = '';
         $this->app->event($this->name, 'BeforeSelect', [&$extra, &$order, $this->app->page]);
         if (trim($extra) !== '') $where[] = '(' . $extra . ')';
-        return $this->db->row('SELECT ' . $this->selectList($withBlobs) . ' FROM ' . $this->from() . ' WHERE ' . implode(' AND ', $where), $params);
+        return Crypto::decryptRow($this, $this->db->row('SELECT ' . $this->selectList($withBlobs) . ' FROM ' . $this->from() . ' WHERE ' . implode(' AND ', $where), $params));
     }
 
     // --- lookups ---------------------------------------------------------------
@@ -571,7 +573,10 @@ class Table
             if (!empty($val['regex']) && @preg_match('~' . str_replace('~', '\~', $val['regex']) . '~u', (string)$v) !== 1) {
                 $errors[$n] = !empty($val['regexMessage']) ? $this->app->label($val['regexMessage']) : t('val.format', $label);
             }
-            if (!empty($val['unique']) && $this->memory) {
+            // an encrypted value is different at every save: the database cannot compare it
+            if (!empty($val['unique']) && Crypto::isEncrypted($f)) {
+                // not checked
+            } elseif (!empty($val['unique']) && $this->memory) {
                 if (Rest::exists($this, $n, $v, $keys)) $errors[$n] = t('val.unique', $label);
             } elseif (!empty($val['unique']) && ($wt = $this->writeTable())) {
                 $sql = 'SELECT COUNT(*) FROM ' . $this->db->table($wt) . ' WHERE ' . $this->db->q($n) . ' = ?';
@@ -614,6 +619,8 @@ class Table
         $msg = '';
         if ($this->app->event($this->name, 'BeforeAdd', [&$vals, &$msg, $page]) === false) return [false, null, $msg ?: t('msg.cancelled')];
         Geocode::apply($this, $vals);
+        $plain = $vals;
+        Crypto::encryptValues($this, $vals);
         $vals = $this->onlyWritable($vals);
         $auto = $this->autoField();
         if ($this->rest) $keys = Rest::insert($this, $vals);
@@ -623,7 +630,7 @@ class Table
             foreach ($this->def['keys'] as $k) $keys[$k] = ($k === $auto) ? $id : (isset($vals[$k]) ? $vals[$k] : null);
         }
         Audit::log($this, 'add', $keys, null, $vals);
-        $this->app->event($this->name, 'AfterAdd', [$vals, $keys, $page]);
+        $this->app->event($this->name, 'AfterAdd', [array_merge($vals, array_intersect_key($plain, $vals)), $keys, $page]);
         return [true, $keys, ''];
     }
 
@@ -636,13 +643,15 @@ class Table
         $msg = '';
         if ($this->app->event($this->name, 'BeforeEdit', [&$vals, $old, &$msg, $page]) === false) return [false, $msg ?: t('msg.cancelled')];
         Geocode::apply($this, $vals, $old);
+        $plain = $vals;
+        Crypto::encryptValues($this, $vals);
         $vals = $this->onlyWritable($vals);
         if ($this->rest) Rest::update($this, $keys, $vals, $old);
         else $this->db->update($wt, $this->blobs($vals), $keys);
         $newKeys = $keys;
         foreach ($keys as $k => $v) if (array_key_exists($k, $vals)) $newKeys[$k] = $vals[$k];
         Audit::log($this, 'edit', $keys, $old, $vals);
-        $this->app->event($this->name, 'AfterEdit', [$vals, $old, $newKeys, $page]);
+        $this->app->event($this->name, 'AfterEdit', [array_merge($vals, array_intersect_key($plain, $vals)), $old, $newKeys, $page]);
         return [true, ''];
     }
 

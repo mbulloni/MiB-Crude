@@ -91,6 +91,7 @@
  "captcha.wrong": "Risposta di verifica errata",
  "confirm.delete": "Eliminare questo record?",
  "confirm.delete_sel": "Eliminare i record selezionati?",
+ "crypt.nokey": "Chiave di cifratura mancante: generala nel designer (finestra del campo cifrato) e usala nella configurazione dell'app (config/secrets.php)",
  "dt.colvis": "Colonne",
  "dt.info": "Record da _START_ a _END_ di _TOTAL_",
  "dt.infoEmpty": "Nessun record",

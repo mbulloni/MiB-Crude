@@ -91,6 +91,7 @@
  "captcha.wrong": "Wrong verification answer",
  "confirm.delete": "Delete this record?",
  "confirm.delete_sel": "Delete the selected records?",
+ "crypt.nokey": "Encryption key missing: generate it in the designer (dialog of the encrypted field) and use it in the app configuration (config/secrets.php)",
  "dt.colvis": "Columns",
  "dt.info": "Records _START_ to _END_ of _TOTAL_",
  "dt.infoEmpty": "No records",

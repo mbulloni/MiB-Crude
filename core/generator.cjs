@@ -320,6 +320,7 @@ function generate(proj, opts = {}) {
   sc.mail.password = secrets.mailPassword || '';
   sc.sms = { password: secrets.smsPassword || '' };
   sc.geocode = { key: secrets.geocodeKey || '' };
+  sc.encryptionKey = secrets.encryptionKey || '';
   w('config/secrets.php', phpFile(sc, 'Passwords. Keep this file out of version control and readable only by the web server.'));
 
   for (const [code, dict] of Object.entries(buildLang(proj))) w(`lang/${code}.php`, phpFile(dict, `Strings (${code})`));

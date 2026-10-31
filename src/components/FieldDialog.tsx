@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { call } from '../api';
-import { useStore } from '../store';
+import { saveSecrets, useStore } from '../store';
 import type { Field, Lookup, Table } from '../types';
 import CodeEditor from './CodeEditor';
 import { Btn, Check, LangText, Modal, Num, Row, Section, Select, Tabs, Text } from './ui';
@@ -47,6 +47,22 @@ function LookupEditor({ t, lk, onChange }: { t: Table; lk: Lookup; onChange: (l:
       </>}
     </>
   );
+}
+
+/** Encrypted field and the project key (secrets.encryptionKey, also in config/secrets.php of the app). */
+function EncryptRow({ f, onChange }: { f: Field; onChange: (v: boolean) => void }) {
+  const secrets = useStore((st) => st.secrets);
+  const on = !!(f as { encrypt?: boolean }).encrypt;
+  const textual = !['int', 'decimal', 'bool', 'date', 'datetime', 'time', 'binary'].includes(f.type);
+  const gen = () => { const b = new Uint8Array(32); crypto.getRandomValues(b); saveSecrets({ encryptionKey: btoa(String.fromCharCode(...b)) }); };
+  return <>
+    <Row label="Cifrato nel database" hint={textual ? 'AES-256: nel database c\'è solo il valore cifrato, l\'app lo mostra in chiaro. Non si può cercare né filtrare su questo campo e la colonna deve essere un testo lungo (circa 1,4 volte il valore + 45 caratteri)' : 'Solo per campi di testo'}>
+      <Check value={on} onChange={onChange} label="Cifra il valore (dati personali, IBAN, codici fiscali…)" /></Row>
+    {on && <Row label="Chiave di cifratura" hint="Unica per il progetto, salvata solo su questo computer e nella configurazione dell'app generata (config/secrets.php). Senza la stessa chiave i dati cifrati non si leggono più: conservane una copia sicura e usa la stessa sul server di produzione">
+      {secrets.encryptionKey
+        ? <span className="inline"><code className="muted">{secrets.encryptionKey.slice(0, 6)}…</code><Btn small icon="clipboard" onClick={() => navigator.clipboard.writeText(secrets.encryptionKey!)}>Copia</Btn></span>
+        : <Btn small kind="primary" icon="key" onClick={gen}>Genera la chiave</Btn>}</Row>}
+  </>;
 }
 
 export default function FieldDialog({ t, field, onChange, onClose }: { t: Table; field: Field; onChange: (f: Field) => void; onClose: () => void }) {
@@ -97,6 +113,7 @@ export default function FieldDialog({ t, field, onChange, onClose }: { t: Table;
       {tab === 'val' && <Section title="">
         <Row label="Obbligatorio"><Check value={val.required} onChange={(v) => setVal({ required: v })} /></Row>
         <Row label="Valore unico"><Check value={val.unique} onChange={(v) => setVal({ unique: v })} label="Controlla che non esista già nella tabella" /></Row>
+        <EncryptRow f={f} onChange={(encrypt) => s({ encrypt } as Partial<Field>)} />
         <Row label="Email"><Check value={val.email} onChange={(v) => setVal({ email: v })} /></Row>
         <Row label="Minimo / massimo"><span className="inline"><Text value={val.min as any} onChange={(v) => setVal({ min: v })} /><Text value={val.max as any} onChange={(v) => setVal({ max: v })} /></span></Row>
         <Row label="Lunghezza min / max"><span className="inline"><Num value={val.minLength} onChange={(v) => setVal({ minLength: v || undefined })} /><Num value={val.maxLength} onChange={(v) => setVal({ maxLength: v || undefined })} /></span></Row>

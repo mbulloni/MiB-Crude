@@ -55,7 +55,7 @@ export interface Project {
   dir: string; project: ProjectMeta; connections: Connection[]; tables: Table[]; events: Record<string, Record<string, string>>;
   menu: { items: MenuItem[] }; security: Security; lang: Record<string, Record<string, string>>; reports: Report[]; charts: Chart[]; dashboards: Dashboard[];
 }
-export interface Secrets { connections?: Record<string, string>; oidc?: Record<string, string>; mailPassword?: string; smsPassword?: string; geocodeKey?: string; deploy?: Record<string, string>; team?: { url: string; user: string; token: string; project: string } }
+export interface Secrets { connections?: Record<string, string>; oidc?: Record<string, string>; mailPassword?: string; smsPassword?: string; geocodeKey?: string; encryptionKey?: string; deploy?: Record<string, string>; team?: { url: string; user: string; token: string; project: string } }
 export interface TeamState { connected: boolean; user: string; project: string; role: string; locks: Record<string, { user: string; since: number }>; presence: { id: string; user: string; focus: string }[]; conflicts: string[] }
 
 export type Nav =

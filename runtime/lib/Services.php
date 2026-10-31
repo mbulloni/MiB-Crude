@@ -25,7 +25,7 @@ class Audit
             foreach ($row as $k => $v) {
                 if ($k === '__lk') continue;
                 $f = $t->field($k);
-                if ($f && ($t->isDbFile($f) || $f['editAs']['type'] === 'password')) $v = '***';
+                if ($f && ($t->isDbFile($f) || $f['editAs']['type'] === 'password' || Crypto::isEncrypted($f))) $v = '***';
                 if (is_array($v)) $v = '***';
                 $out[$k] = $v;
             }

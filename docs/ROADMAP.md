@@ -74,8 +74,10 @@ Stato v0.10.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST com
 - **Report crosstab**: `crosstab: {field, interval, desc}` nel report; righe dai raggruppamenti (con subtotali), più totali per cella, totali di riga/colonna/generale, celle collegate alla lista filtrata, XLSX. Provato su tutti e cinque i database.
 - **Aggiunta in linea** nella lista (opzione della pagina lista): campi semplici della lista in una riga sopra la griglia, salvataggio in JSON con BeforeAdd/AfterAdd e validazione, valori predefiniti per gli altri campi, lista ricaricata. Provato su tutti i database e nel browser.
 - **Pagine a passi**: stile di sezione «Passo» nel designer delle pagine; indicatore dei passi, Avanti/Indietro, controllo dei campi del passo, salvataggio all'ultimo passo, riapertura sul passo con l'errore dopo un salvataggio rifiutato. Provato nel browser e nell'e2e.
+- **Campi cifrati**: `field.encrypt`, AES-256-GCM con `encryptionKey` nei segreti (generata nel designer, finestra del campo), cifratura dopo gli eventi Before*, decifratura in lettura, valori in chiaro preesistenti cifrati al salvataggio successivo, esclusi da ricerca/filtri/unicità, mascherati nel registro; errore chiaro senza chiave. Provato su SQLite (tests/crypto.test.cjs).
 
 ## Limiti aperti
+- Campi cifrati: solo campi di testo e solo tabelle e query SQL (non REST né stored procedure); niente ricerca, filtro, ordinamento sensato né controllo di unicità; un lookup che mostra un campo cifrato di un'altra tabella mostra il valore cifrato; perdere la chiave significa perdere i dati.
 - Annulla/ripeti: non annulla operazioni già eseguite sul database o sul disco (creazione tabelle, importazioni di file, salvataggio), solo lo stato del progetto nel designer.
 - Geocodifica: Google non provato con una chiave reale; il pulsante della mappa elabora 20 record per clic (con Nominatim pubblico circa 20 secondi), per molti record conviene un'attività pianificata.
 - SMS: Twilio non provato con un account reale (stessa chiamata documentata da Twilio); il codice via email è provato solo nell'invio del modello, non in un accesso completo.
