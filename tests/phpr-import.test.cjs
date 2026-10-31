@@ -32,17 +32,20 @@ test('phpr events are wrapped with their variables', () => {
   assert.match(m.text, /applyRecord\('ordini', \$data, \$record\)/);
 });
 
-// Optional real project: MIBCRUDE_PHPR_SAMPLE=/path/project.phpr
+// Optional real project, any phpr 10.x .phpr: MIBCRUDE_PHPR_SAMPLE=/path/project.phpr
+// (MIBCRUDE_PHPR_TABLES=n also checks the number of imported tables).
 const REAL = process.env.MIBCRUDE_PHPR_SAMPLE || '';
-test('real phpr 10.3 project imports and generates valid PHP', { skip: !(REAL && fs.existsSync(REAL)) && 'progetto phpr reale non indicato (MIBCRUDE_PHPR_SAMPLE)' }, async () => {
+test('real phpr 10.3 project imports and generates valid PHP', { skip: !(REAL && fs.existsSync(REAL)) && 'progetto phpr reale non indicato (MIBCRUDE_PHPR_SAMPLE)' }, async (t) => {
   const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mc-phpr-')), 'p');
+  t.after(() => fs.rmSync(path.dirname(dir), { recursive: true, force: true })); // the import holds real DB passwords, even when a check fails
   const { proj, report } = await I.importPhpr(REAL, dir, { copySource: false });
-  assert.strictEqual(report.tables, 8);
-  assert.ok(report.events > 100);
+  assert.ok(report.tables > 0 && proj.tables.length >= report.tables, `tabelle: ${report.tables} su ${proj.tables.length} origini dati`);
+  if (process.env.MIBCRUDE_PHPR_TABLES) assert.strictEqual(report.tables, Number(process.env.MIBCRUDE_PHPR_TABLES));
+  t.diagnostic(`${path.basename(REAL)}: ${report.tables} tabelle, ${report.events} eventi, ${report.eventsSkipped.length} non convertiti`);
+  assert.deepStrictEqual(report.warnings.filter((w) => /non valido/.test(w)), [], 'eventi disattivati per errori di sintassi');
   assert.ok(!fs.readFileSync(path.join(dir, 'connections', `${proj.connections[0].id}.json`), 'utf8').includes('password'));
   const res = G.generate(proj, { outDir: path.join(dir, 'out') });
   assert.deepStrictEqual(G.lint(res.outDir), []);
-  fs.rmSync(path.dirname(dir), { recursive: true, force: true }); // the import holds real DB passwords
 });
 
 test('events of tables with spaces survive save/load', () => {
