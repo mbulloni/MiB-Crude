@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { update, useStore } from '../store';
 import type { Chart, Dashboard, DashItem, Report } from '../types';
 import CodeEditor from './CodeEditor';
-import { Btn, Check, Empty, LangText, Num, Row, Section, Select, lbl, slug } from './ui';
+import { Btn, Check, Empty, I, LangText, Num, Row, Section, Select, lbl, slug } from './ui';
 
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
 const INTERVALS: [string, string][] = [['', 'Valore'], ['year', 'Anno'], ['quarter', 'Trimestre'], ['month', 'Mese'], ['week', 'Settimana'], ['day', 'Giorno'], ['letter', 'Iniziale'], ['tens', 'Decine']];
@@ -66,10 +66,19 @@ function ReportEditor({ r, set }: { r: Report; set: (fn: (x: Report) => void) =>
         <Select value={a.field} options={fields} onChange={(v) => set((x) => { x.aggregates[i].field = v; })} />
         <Btn small kind="ghost" icon="x-lg" onClick={() => set((x) => { x.aggregates.splice(i, 1); })} /></div>)}
     </Section>
-    <Section title="Righe di dettaglio">
+    <Section title="Campi incrociati (crosstab)" help="Le colonne del report diventano i valori di un campo (per esempio i mesi o le aree): ogni cella mostra i totali per riga (raggruppamenti) e colonna, con i totali di riga e di colonna; un clic su una cella apre la lista filtrata">
+      <Row label="Colonne da"><span className="inline">
+        <Select value={r.crosstab?.field || ''} options={[['', 'Nessuno: report a gruppi'] as [string, string], ...fields]} onChange={(v) => set((x) => { if (v) x.crosstab = { ...(x.crosstab || {}), field: v }; else delete x.crosstab; })} />
+        {r.crosstab?.field && <><Select value={r.crosstab.interval || ''} options={INTERVALS} onChange={(v) => set((x) => { x.crosstab = { ...x.crosstab!, interval: v }; })} />
+          <Check label="Decrescente" value={r.crosstab.desc} onChange={(v) => set((x) => { x.crosstab = { ...x.crosstab!, desc: v }; })} /></>}
+      </span></Row>
+      {r.crosstab?.field && !r.groups.length && <p className="help warn"><I n="exclamation-triangle" /> Aggiungi almeno un raggruppamento: sono le righe della tabella incrociata.</p>}
+      {r.crosstab?.field && !r.aggregates.length && <p className="help warn"><I n="exclamation-triangle" /> Aggiungi almeno un totale: è il valore delle celle.</p>}
+    </Section>
+    {!r.crosstab?.field && <Section title="Righe di dettaglio">
       <Row label="Mostra le righe"><Check value={r.showDetails} onChange={(v) => set((x) => { x.showDetails = v; })} /></Row>
       <Row label="Colonne"><span className="chips">{fields.map(([f, l]) => <Check key={f} label={l} value={r.columns.includes(f)} onChange={(v) => set((x) => { x.columns = v ? [...x.columns, f] : x.columns.filter((y) => y !== f); })} />)}</span></Row>
-    </Section>
+    </Section>}
   </>;
 }
 

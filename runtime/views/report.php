@@ -30,6 +30,47 @@ $renderNode = function ($node, $depth) use (&$renderNode, $t, $aggs, $columns, $
   <a class="btn btn-sm btn-outline-secondary ms-auto" href="<?= h($app->url('report', ['r' => $name, 'fmt' => 'xlsx'])) ?>"><i class="bi bi-file-earmark-excel"></i> XLSX</a>
   <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= h($app->url('report', ['r' => $name, 'print' => 1])) ?>"><i class="bi bi-printer"></i></a></div>
 <?php endif ?>
+<?php if (!empty($def['crosstab']['field'])):
+    // Crosstab: rows = groups (nested, with subtotals), columns = buckets of crosstab.field, cells = aggregates
+    $ct = $def['crosstab'];
+    $all = [];
+    foreach ($tree['children'] as $c) $all = array_merge($all, $c['all']);
+    $cols = \MiB\Reports::crossColumns($t, $ct, $all);
+    $nAgg = max(1, count($aggs));
+    $cell = function ($a, $v, $url, $total = false) use ($fmtAgg) {
+        $txt = h($fmtAgg($a, $v));
+        return '<td class="text-end' . ($total ? ' fw-semibold' : '') . '">' . ($url && $txt !== '' ? '<a class="mc-xt-link" href="' . h($url) . '">' . $txt . '</a>' : $txt) . '</td>';
+    };
+    $crossRows = function ($node, $depth, $path) use (&$crossRows, $t, $ct, $aggs, $cols, $cell) {
+        $html = '';
+        foreach ($node['children'] as $c) {
+            $p = array_merge($path, [[$c['field'], $c['interval'], $c['raw']]]);
+            $cells = \MiB\Reports::crossCells($t, $ct, $aggs, $c['all']);
+            $html .= '<tr class="' . ($c['children'] ? 'mc-rg mc-rg-' . $depth : 'mc-xt-row') . '"><th class="fw-normal" style="padding-left:' . (0.5 + $depth * 1.25) . 'rem">'
+                . ($c['children'] ? '<strong>' . h($c['label']) . '</strong>' : h($c['label'])) . '</th>';
+            foreach ($cols as $k => $col) foreach ($aggs as $a) {
+                $v = isset($cells[$k][$a['field'] . ':' . $a['fn']]) ? $cells[$k][$a['field'] . ':' . $a['fn']] : null;
+                $html .= $cell($a, $v, \MiB\Reports::cellUrl($t, array_merge($p, [[$ct['field'], isset($ct['interval']) ? $ct['interval'] : '', $col['raw']]])));
+            }
+            // row total
+            foreach ($aggs as $a) $html .= $cell($a, $c['totals'][$a['field'] . ':' . $a['fn']], \MiB\Reports::cellUrl($t, $p), true);
+            $html .= '</tr>';
+            if ($c['children']) $html .= $crossRows($c, $depth + 1, $p);
+        }
+        return $html;
+    };
+    $grand = \MiB\Reports::crossCells($t, $ct, $aggs, $all);
+?>
+<div class="card"><div class="mc-scroll"><table class="table table-sm table-bordered mb-0 mc-report mc-crosstab">
+<thead><tr><th rowspan="<?= count($aggs) > 1 ? 2 : 1 ?>"><?= h(implode(' / ', array_map(function ($g) use ($t) { return $t->fieldLabel($g['field']); }, isset($def['groups']) ? $def['groups'] : []))) ?> <span class="text-secondary">×</span> <?= h($t->fieldLabel($ct['field'])) ?></th>
+<?php foreach ($cols as $col): ?><th class="text-end" colspan="<?= $nAgg ?>"><?= h($col['label']) ?></th><?php endforeach ?><th class="text-end" colspan="<?= $nAgg ?>"><?= h(t('report.grandtotal')) ?></th></tr>
+<?php if (count($aggs) > 1): ?><tr><?php for ($i = 0; $i <= count($cols); $i++): foreach ($aggs as $a): ?><th class="text-end small fw-normal"><?= h(t('agg.' . $a['fn'])) ?> <?= h($t->fieldLabel($a['field'])) ?></th><?php endforeach; endfor ?></tr><?php endif ?></thead>
+<tbody><?= $crossRows($tree, 0, []) ?></tbody>
+<tfoot><tr class="mc-totals"><th><?= h(t('report.grandtotal')) ?> <span class="badge text-bg-light"><?= (int)$count ?></span></th>
+<?php foreach ($cols as $k => $col): foreach ($aggs as $a): ?><?= $cell($a, isset($grand[$k][$a['field'] . ':' . $a['fn']]) ? $grand[$k][$a['field'] . ':' . $a['fn']] : null, \MiB\Reports::cellUrl($t, [[$ct['field'], isset($ct['interval']) ? $ct['interval'] : '', $col['raw']]]), true) ?><?php endforeach; endforeach ?>
+<?php foreach ($aggs as $a): ?><td class="text-end fw-bold"><?= h($fmtAgg($a, $tree['totals'][$a['field'] . ':' . $a['fn']])) ?></td><?php endforeach ?></tr></tfoot>
+</table></div></div>
+<?php else: ?>
 <div class="card"><div class="mc-scroll"><table class="table table-sm mb-0 mc-report">
 <thead><tr><?php if ($columns): foreach ($columns as $f): ?><th><?= h($t->fieldLabel($f)) ?></th><?php endforeach; else: ?><th></th><?php endif ?>
 <?php foreach ($aggs as $a): ?><th class="text-end"><?= h(t('agg.' . $a['fn'])) ?> <?= h($t->fieldLabel($a['field'])) ?></th><?php endforeach ?></tr></thead>
@@ -37,3 +78,4 @@ $renderNode = function ($node, $depth) use (&$renderNode, $t, $aggs, $columns, $
 <tfoot><tr class="mc-totals"><td colspan="<?= max(1, count($columns)) ?>"><?= h(t('report.grandtotal')) ?> <span class="badge text-bg-light"><?= (int)$count ?></span></td>
 <?php foreach ($aggs as $a): ?><td class="text-end fw-semibold"><?= h($fmtAgg($a, $tree['totals'][$a['field'] . ':' . $a['fn']])) ?></td><?php endforeach ?></tr></tfoot>
 </table></div></div>
+<?php endif ?>

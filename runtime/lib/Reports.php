@@ -100,14 +100,56 @@ class Reports
         $buckets = [];
         foreach ($rows as $r) {
             list($k, $label) = self::bucket($t, $g['field'], isset($g['interval']) ? $g['interval'] : '', $r);
-            if (!isset($buckets[$k])) $buckets[$k] = ['key' => $k, 'label' => $label, 'rows' => []];
+            if (!isset($buckets[$k])) $buckets[$k] = ['key' => $k, 'label' => $label, 'rows' => [], 'raw' => isset($r[$g['field']]) ? $r[$g['field']] : null];
             $buckets[$k]['rows'][] = $r;
         }
         ksort($buckets, SORT_STRING);
         if (!empty($g['desc'])) $buckets = array_reverse($buckets, true);
         $children = [];
-        foreach ($buckets as $b) $children[] = array_merge(['key' => $b['key'], 'label' => $b['label'], 'field' => $g['field']], $this->group($t, $b['rows'], $groups, $aggs));
+        foreach ($buckets as $b) $children[] = array_merge(['key' => $b['key'], 'label' => $b['label'], 'field' => $g['field'], 'interval' => isset($g['interval']) ? $g['interval'] : '', 'raw' => $b['raw'], 'all' => $b['rows']],
+            $this->group($t, $b['rows'], $groups, $aggs));
         return ['rows' => [], 'totals' => $totals, 'children' => $children];
+    }
+
+    /**
+     * Crosstab (def.crosstab = {field, interval, desc}): the column buckets of every row, then for each set of
+     * rows the aggregates per column. Returns ['cols' => [key => [label, raw]], 'cells' => fn(rows) => [key => [agg => v]]].
+     */
+    public static function crossColumns(Table $t, array $ct, array $rows)
+    {
+        $cols = [];
+        foreach ($rows as $r) {
+            list($k, $label) = self::bucket($t, $ct['field'], isset($ct['interval']) ? $ct['interval'] : '', $r);
+            if (!isset($cols[$k])) $cols[$k] = ['label' => $label, 'raw' => isset($r[$ct['field']]) ? $r[$ct['field']] : null];
+        }
+        ksort($cols, SORT_STRING);
+        return !empty($ct['desc']) ? array_reverse($cols, true) : $cols;
+    }
+
+    /** Aggregates of $rows split by the column buckets: [colKey => [field:fn => value]] */
+    public static function crossCells(Table $t, array $ct, array $aggs, array $rows)
+    {
+        $by = [];
+        foreach ($rows as $r) {
+            list($k) = self::bucket($t, $ct['field'], isset($ct['interval']) ? $ct['interval'] : '', $r);
+            $by[$k][] = $r;
+        }
+        $out = [];
+        foreach ($by as $k => $list) foreach ($aggs as $a) $out[$k][$a['field'] . ':' . $a['fn']] = self::aggregate($a['fn'], array_column($list, $a['field']));
+        return $out;
+    }
+
+    /** Link to the list filtered on the buckets of a cell ([field, interval, raw] each), or null. */
+    public static function cellUrl(Table $t, array $parts)
+    {
+        if (!$t->enabled('list') || !App::$i->security->can($t->name, 'S')) return null;
+        $q = ['t' => $t->name];
+        foreach ($parts as $p) {
+            $f = self::bucketFilter($t, $p[0], $p[1], $p[2]);
+            if ($f === null) return null;
+            $q = array_merge_recursive($q, $f);
+        }
+        return App::$i->url('list', $q);
     }
 
     public function report($name, $embedded = false)
@@ -128,6 +170,7 @@ class Reports
 
     private function exportReport(Table $t, array $def, array $tree, array $columns)
     {
+        if (!empty($def['crosstab']['field'])) return $this->exportCrosstab($t, $def, $tree);
         $head = [];
         $data = [];
         $fields = [];
@@ -141,6 +184,38 @@ class Reports
                 return;
             }
             foreach ($node['children'] as $c) $walk($c, array_merge($path, [$c['label']]));
+        };
+        $walk($tree, []);
+        $file = Export::xlsx($head, $data, $fields);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="report_' . date('Ymd_His') . '.xlsx"');
+        readfile($file);
+        @unlink($file);
+    }
+
+    private function exportCrosstab(Table $t, array $def, array $tree)
+    {
+        $ct = $def['crosstab'];
+        $aggs = isset($def['aggregates']) ? $def['aggregates'] : [];
+        $all = [];
+        foreach ($tree['children'] as $c) $all = array_merge($all, $c['all']);
+        if (!$tree['children']) $all = $tree['rows'];
+        $cols = self::crossColumns($t, $ct, $all);
+        $head = [];
+        $fields = [];
+        foreach (isset($def['groups']) ? $def['groups'] : [] as $g) { $head[] = $t->fieldLabel($g['field']); $fields[] = ['type' => 'string']; }
+        foreach ($cols as $c) foreach ($aggs as $a) { $head[] = $c['label'] . (count($aggs) > 1 ? ' — ' . t('agg.' . $a['fn']) . ' ' . $t->fieldLabel($a['field']) : ''); $fields[] = ['type' => 'decimal']; }
+        foreach ($aggs as $a) { $head[] = t('report.grandtotal') . (count($aggs) > 1 ? ' — ' . t('agg.' . $a['fn']) . ' ' . $t->fieldLabel($a['field']) : ''); $fields[] = ['type' => 'decimal']; }
+        $data = [];
+        $walk = function ($node, $path) use (&$walk, &$data, $t, $ct, $aggs, $cols) {
+            foreach ($node['children'] as $c) {
+                if ($c['children']) { $walk($c, array_merge($path, [$c['label']])); continue; }
+                $cells = self::crossCells($t, $ct, $aggs, $c['all']);
+                $line = array_merge($path, [$c['label']]);
+                foreach ($cols as $k => $col) foreach ($aggs as $a) $line[] = isset($cells[$k][$a['field'] . ':' . $a['fn']]) ? $cells[$k][$a['field'] . ':' . $a['fn']] : null;
+                foreach ($aggs as $a) $line[] = $c['totals'][$a['field'] . ':' . $a['fn']];
+                $data[] = $line;
+            }
         };
         $walk($tree, []);
         $file = Export::xlsx($head, $data, $fields);

@@ -113,6 +113,7 @@ test.before(async () => {
   proj.project.settings.api = { enabled: true };
   proj.project.settings.webBuilder = { enabled: true };
   proj.reports.push({ name: 'sales', title: { it: 'Vendite', en: 'Sales' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'customer_id', 'total'], showDetails: true });
+  proj.reports.push({ name: 'cross', title: { it: 'Incrociato' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }, { field: 'id', fn: 'count' }], columns: [], showDetails: false, crosstab: { field: 'order_date', interval: 'year' } });
   proj.charts.push({ name: 'bystatus', title: { it: 'Per stato' }, table: 'orders', type: 'bar', labelField: 'status', series: [{ field: 'total', fn: 'sum' }] });
   proj.charts.push({ name: 'bymonth', title: { it: 'Per mese' }, table: 'orders', type: 'line', labelField: 'order_date', labelInterval: 'month', series: [{ field: 'total', fn: 'sum' }] });
   proj.dashboards.push({ name: 'main', title: { it: 'Cruscotto' }, items: [{ type: 'count', table: 'orders', width: 4 }, { type: 'chart', ref: 'bystatus', width: 8 }, { type: 'report', ref: 'sales', width: 12 }] });
@@ -571,4 +572,36 @@ test('scheduled tasks: administration page and "Run now"', async () => {
   r = await u.req('?p=login');
   await u.post('?p=login', { _csrf: u.csrf(r.text), username: 'luca', password: 'Password1' });
   assert.strictEqual((await u.req('?p=admin&s=tasks')).status, 403);
+});
+
+test('crosstab report: rows × columns, row and column totals, cells link to the list, XLSX', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=report&r=cross');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /mc-crosstab/);
+  // columns = years of order_date, two aggregates per column
+  const years = [...r.text.matchAll(/<th class="text-end" colspan="2">(\d{4})<\/th>/g)].map((m) => m[1]);
+  assert.ok(years.length >= 1, 'year columns');
+  // the count cells of a row add up to its total count; the grand total equals the number of orders
+  const rows = [...r.text.matchAll(/<tr class="mc-xt-row">([\s\S]*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td class="text-end[^"]*">(?:<a[^>]*>)?([^<]*)/g)].map((x) => x[1]));
+  assert.ok(rows.length >= 1);
+  const num = (s) => (s === '' ? 0 : Number(s.replace(/\./g, '').replace(',', '.')));
+  let totalCount = 0;
+  for (const cells of rows) {
+    const counts = cells.filter((_, i) => i % 2 === 1);
+    const rowTotal = counts.pop();
+    assert.strictEqual(counts.reduce((a, b) => a + num(b), 0), num(rowTotal), cells.join(' | '));
+    totalCount += num(rowTotal);
+  }
+  const all = JSON.parse((await c.req('?p=dt&t=orders&draw=1&start=0&length=1')).text).recordsTotal;
+  assert.strictEqual(totalCount, all);
+  // a cell opens the list filtered on its row (status) and its column (year range)
+  const link = (r.text.match(/class="mc-xt-link" href="([^"]+)"/) || [])[1].replace(/&amp;/g, '&');
+  assert.match(decodeURIComponent(link), /p=list&t=orders&f\[status\]\[0\]=[^&]+&s\[order_date\]\[op\]=between&s\[order_date\]\[v\]=\d{4}-01-01&s\[order_date\]\[v2\]=\d{4}-12-31/);
+  assert.strictEqual((await c.req(link.replace(/^index\.php/, ''))).status, 200);
+  const x = await c.req('?p=report&r=cross&fmt=xlsx');
+  assert.strictEqual(x.status, 200);
+  assert.ok(x.text.startsWith('PK'), 'XLSX (zip) file');
 });

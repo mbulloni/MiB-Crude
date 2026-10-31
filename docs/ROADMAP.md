@@ -70,6 +70,9 @@ Stato v0.10.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST com
 - **Filtri REST nella sintassi dell'API**: oltre a `?campo=valore`, json-server (`_ne`, `_like`, `_gte`, `_lte`), Strapi (`filters[campo][$op]`) e modelli personalizzati per operatore; condizioni esatte → l'API pagina anche il risultato, condizioni approssimate (es. maggiore con solo `_gte`) restringono i record e l'app ricontrolla. Provato con un'API di prova (tests/rest-filters.test.cjs).
 - **Personalizzazione del tema da parte degli utenti** (il «pannello impostazioni» dei template): pulsante con la tavolozza nell'intestazione, colori di Material Admin e menu laterale/orizzontale di Slim, scelta salvata nel browser dell'utente (cookie) e verificata sui valori ammessi; disattivabile nel progetto. Provato su Material e Slim (tests/themes.test.cjs) e con uno screenshot.
 
+## Dopo v0.10.0 (in corso)
+- **Report crosstab**: `crosstab: {field, interval, desc}` nel report; righe dai raggruppamenti (con subtotali), più totali per cella, totali di riga/colonna/generale, celle collegate alla lista filtrata, XLSX. Provato su tutti e cinque i database.
+
 ## Limiti aperti
 - Annulla/ripeti: non annulla operazioni già eseguite sul database o sul disco (creazione tabelle, importazioni di file, salvataggio), solo lo stato del progetto nel designer.
 - Geocodifica: Google non provato con una chiave reale; il pulsante della mappa elabora 20 record per clic (con Nominatim pubblico circa 20 secondi), per molti record conviene un'attività pianificata.
