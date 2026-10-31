@@ -423,10 +423,13 @@ class Pages
                         }
                     } catch (\PDOException $e) {
                         $result['errors'][] = t('import.row', $n + 2) . ': ' . $this->dbError($e);
+                    } catch (\RuntimeException $e) {
+                        // REST datasources: API error for this record.
+                        $result['errors'][] = t('import.row', $n + 2) . ': ' . $e->getMessage();
                     }
                     if (count($result['errors']) > 200) break;
                 }
-                if (!empty($_POST['atomic']) && $result['errors']) { $db->rollback(); $result['added'] = $result['updated'] = 0; $result['rolledBack'] = true; }
+                if (!empty($_POST['atomic']) && $result['errors'] && $db->pdo) { $db->rollback(); $result['added'] = $result['updated'] = 0; $result['rolledBack'] = true; }
                 else { $db->commit(); $this->app->event($t->name, 'AfterImport', [$result, 'import']); }
             } catch (\Throwable $e) {
                 $db->rollback();

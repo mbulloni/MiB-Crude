@@ -234,7 +234,7 @@ class Table
 
     public function count(array $req, $page = 'list')
     {
-        if ($this->rest) return count(Rest::filter($this, $req));
+        if ($this->rest) return Rest::count($this, $req);
         list($w, $p) = $this->buildWhere($req, $page);
         return (int)$this->db->value('SELECT COUNT(*) FROM ' . $this->from() . " WHERE $w", $p);
     }
@@ -327,7 +327,8 @@ class Table
     {
         if (!empty($lk['connection'])) return $this->app->db($lk['connection']);
         if ($this->app->hasTable($lk['table'])) return $this->app->table($lk['table'])->db;
-        return $this->db;
+        // A REST datasource has no SQL: lookups to plain tables go to the main database.
+        return $this->rest ? $this->app->db() : $this->db;
     }
 
     private function lookupDisplayExpr($lk, Db $db)
@@ -370,6 +371,10 @@ class Table
                 $out[] = ['value' => (string)$v['value'], 'label' => $lab];
             }
             return $out;
+        }
+        if (empty($lk['connection']) && $this->app->hasTable($lk['table']) && ($src = $this->app->table($lk['table'])) && $src->rest) {
+            if ($only !== null && !$only) return [];
+            return Rest::lookupOptions($src, $lk, $q, $parent, $limit, $only);
         }
         $db = $this->lookupTableDb($lk);
         $disp = $this->lookupDisplayExpr($lk, $db);
@@ -429,10 +434,13 @@ class Table
     public function filterValues($f, array $req)
     {
         unset($req['f'][$f['name']]);
-        list($w, $p) = $this->buildWhere($req, 'filter');
-        $col = $this->col($f['name']);
-        $rows = $this->db->all("SELECT $col AS mc_v, COUNT(*) AS mc_n FROM " . $this->from() . " WHERE $w GROUP BY $col ORDER BY $col", $p);
-        $rows = array_map(function ($r) { return array_change_key_case($r, CASE_LOWER); }, $rows);
+        if ($this->rest) $rows = Rest::distinct($this, $req, $f['name']);
+        else {
+            list($w, $p) = $this->buildWhere($req, 'filter');
+            $col = $this->col($f['name']);
+            $rows = $this->db->all("SELECT $col AS mc_v, COUNT(*) AS mc_n FROM " . $this->from() . " WHERE $w GROUP BY $col ORDER BY $col", $p);
+            $rows = array_map(function ($r) { return array_change_key_case($r, CASE_LOWER); }, $rows);
+        }
         $fake = [];
         foreach ($rows as $r) $fake[] = [$f['name'] => $r['mc_v']];
         $this->resolveLookups($fake, [$f]);
@@ -543,7 +551,9 @@ class Table
             if (!empty($val['regex']) && @preg_match('~' . str_replace('~', '\~', $val['regex']) . '~u', (string)$v) !== 1) {
                 $errors[$n] = !empty($val['regexMessage']) ? $this->app->label($val['regexMessage']) : t('val.format', $label);
             }
-            if (!empty($val['unique']) && ($wt = $this->writeTable())) {
+            if (!empty($val['unique']) && $this->rest) {
+                if (Rest::exists($this, $n, $v, $keys)) $errors[$n] = t('val.unique', $label);
+            } elseif (!empty($val['unique']) && ($wt = $this->writeTable())) {
                 $sql = 'SELECT COUNT(*) FROM ' . $this->db->table($wt) . ' WHERE ' . $this->db->q($n) . ' = ?';
                 $p = [$v];
                 if ($keys) { list($kw, $kp) = $this->db->where($keys); $sql .= " AND NOT ($kw)"; $p = array_merge($p, $kp); }

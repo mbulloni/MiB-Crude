@@ -3,18 +3,26 @@ namespace MiB;
 
 /**
  * REST datasource (like the classic REST views): records come from a JSON API instead of SQL.
- * The list endpoint is read once per request; search, filters, sorting, paging and totals run
- * in memory. Single records, insert, update and delete use the item endpoint when configured.
+ * Without paging the list endpoint is read once per request and search, filters, sorting,
+ * paging and totals run in memory. With source.paging the API pages the records: list pages,
+ * quick search and sorting are delegated to it when it supports them, everything else (advanced
+ * search, filter panel, totals, reports, charts, lookups) reads all the pages and works in memory.
+ * Single records, insert, update and delete use the item endpoint when configured.
  *
  * Connection: driver "rest", url, auth (none|bearer|basic|header|query), user (basic user or
  * header/query parameter name); password from secrets = token or password.
- * Table source: {type: rest, path, dataPath, itemPath, updateMethod, totalPath}
+ * Table source: {type: rest, path, dataPath, itemPath, itemDataPath, updateMethod, paging}
+ * paging: {mode: page|offset, pageParam, firstPage, offsetParam, sizeParam, pageSize, totalPath,
+ *          searchParam, sortParam, dirParam} (no dirParam: descending sort is sent as "-field")
  */
 class Rest
 {
+    /** Upper bound of records read from a paged API (same as reports). */
+    const MAX_ROWS = 50000;
     private $c;
     private $secret;
     private static $cache = [];
+    private $get = [];
 
     public function __construct(array $connection, $secret)
     {
@@ -25,6 +33,8 @@ class Rest
     /** HTTP call returning decoded JSON (or null for an empty body). */
     public function request($method, $path, $body = null)
     {
+        if ($method === 'GET' && $body === null && array_key_exists($path, $this->get)) return $this->get[$path];
+        if ($method !== 'GET') $this->get = [];
         $url = preg_match('~^https?://~', $path) ? $path : rtrim($this->c['url'], '/') . '/' . ltrim($path, '/');
         $headers = ['Accept: application/json', 'User-Agent: MiB-Crude'];
         $auth = isset($this->c['auth']) ? $this->c['auth'] : 'none';
@@ -47,6 +57,7 @@ class Rest
         if (trim($text) === '') return null;
         $json = json_decode($text, true);
         if ($json === null && json_last_error() !== JSON_ERROR_NONE) throw new \RuntimeException("REST $method $url: risposta non JSON");
+        if ($method === 'GET') $this->get[$path] = $json;
         return $json;
     }
 
@@ -103,19 +114,114 @@ class Rest
 
     // --- datasource operations used by Table ----------------------------------
 
+    /** Paging settings of the source, or null when the API returns everything at once. */
+    public static function paging(Table $t)
+    {
+        $p = isset($t->def['source']['paging']) ? $t->def['source']['paging'] : null;
+        return is_array($p) && !empty($p['mode']) && in_array($p['mode'], ['page', 'offset'], true) ? $p : null;
+    }
+
+    /** Path with extra query parameters (empty values are left out). */
+    private static function withQuery($path, array $params)
+    {
+        $params = array_filter($params, function ($v) { return $v !== null && $v !== ''; });
+        return $params ? $path . (strpos($path, '?') === false ? '?' : '&') . http_build_query($params) : $path;
+    }
+
+    /** Query parameters for one page of $size records starting at $offset (null: not expressible). */
+    private static function pageParams(array $pg, $offset, $size)
+    {
+        $sizeParam = isset($pg['sizeParam']) ? $pg['sizeParam'] : '';
+        $out = $sizeParam !== '' ? [$sizeParam => $size] : [];
+        if ($pg['mode'] === 'offset') {
+            $out[!empty($pg['offsetParam']) ? $pg['offsetParam'] : 'offset'] = $offset;
+            return $out;
+        }
+        if ($offset % $size !== 0) return null;
+        $first = isset($pg['firstPage']) && $pg['firstPage'] !== '' ? (int)$pg['firstPage'] : 1;
+        $out[!empty($pg['pageParam']) ? $pg['pageParam'] : 'page'] = $first + intdiv($offset, $size);
+        return $out;
+    }
+
+    private static function listOf(Table $t, $json, $path)
+    {
+        $s = $t->def['source'];
+        $list = self::at($json, isset($s['dataPath']) ? $s['dataPath'] : '');
+        if (!is_array($list)) throw new \RuntimeException("REST $path: nessun elenco in \"" . (isset($s['dataPath']) ? $s['dataPath'] : '') . '"');
+        $rows = [];
+        foreach ($list as $r) if (is_array($r)) $rows[] = self::flatten($r);
+        return $rows;
+    }
+
     public static function all(Table $t)
     {
         $s = $t->def['source'];
         $key = $t->name;
-        if (!isset(self::$cache[$key])) {
-            $json = $t->rest->request('GET', $s['path']);
-            $list = self::at($json, isset($s['dataPath']) ? $s['dataPath'] : '');
-            if (!is_array($list)) throw new \RuntimeException("REST {$s['path']}: nessun elenco in \"" . (isset($s['dataPath']) ? $s['dataPath'] : '') . '"');
-            $rows = [];
-            foreach ($list as $r) if (is_array($r)) $rows[] = self::flatten($r);
-            self::$cache[$key] = $rows;
+        if (isset(self::$cache[$key])) return self::$cache[$key];
+        $pg = self::paging($t);
+        if (!$pg) return self::$cache[$key] = self::listOf($t, $t->rest->request('GET', $s['path']), $s['path']);
+        // Read page after page: stop on a short or empty page, at the declared total, on a page
+        // equal to the previous one (API ignoring the paging parameters) or at MAX_ROWS.
+        $size = !empty($pg['pageSize']) ? max(1, (int)$pg['pageSize']) : 100;
+        $rows = [];
+        $prev = null;
+        while (count($rows) < self::MAX_ROWS) {
+            $path = self::withQuery($s['path'], self::pageParams($pg, count($rows), $size));
+            $json = $t->rest->request('GET', $path);
+            $page = self::listOf($t, $json, $path);
+            $sig = md5(json_encode($page));
+            if (!$page || $sig === $prev) break;
+            $prev = $sig;
+            $rows = array_merge($rows, $page);
+            $total = !empty($pg['totalPath']) ? self::at($json, $pg['totalPath']) : null;
+            if (count($page) < $size || (is_numeric($total) && count($rows) >= $total)) break;
         }
-        return self::$cache[$key];
+        return self::$cache[$key] = array_slice($rows, 0, self::MAX_ROWS);
+    }
+
+    /**
+     * Query parameters when the API itself can answer the request (paging configured, only quick
+     * search and sorting it supports, no ownership restriction); null means in-memory processing.
+     */
+    private static function delegated(Table $t, array $req, $sort, $dir)
+    {
+        $pg = self::paging($t);
+        if (!$pg || !empty($req['master']) || !empty($req['f']) || $t->app->security->ownership($t->name)) return null;
+        if (!empty($req['s']) && is_array($req['s'])) foreach ($req['s'] as $c) {
+            if (!is_array($c)) continue;
+            $v = isset($c['v']) ? $c['v'] : '';
+            if ((is_array($v) ? array_filter($v, 'strlen') : $v !== '') || (isset($c['op']) && in_array($c['op'], ['empty', 'notempty'], true))) return null;
+        }
+        $params = [];
+        $q = isset($req['q']) ? trim((string)$req['q']) : '';
+        if ($q !== '') {
+            if (empty($pg['searchParam'])) return null;
+            $params[$pg['searchParam']] = $q;
+        }
+        if (!$sort) {
+            $ds = isset($t->def['pages']['list']['defaultSort']) ? $t->def['pages']['list']['defaultSort'] : null;
+            if ($ds && !empty($ds['field'])) { $sort = $ds['field']; $dir = isset($ds['dir']) ? $ds['dir'] : 'asc'; }
+        }
+        if ($sort && $t->field($sort)) {
+            if (empty($pg['sortParam'])) return null;
+            $desc = strtolower((string)$dir) === 'desc';
+            if (!empty($pg['dirParam'])) { $params[$pg['sortParam']] = $sort; $params[$pg['dirParam']] = $desc ? 'desc' : 'asc'; }
+            else $params[$pg['sortParam']] = ($desc ? '-' : '') . $sort;
+        }
+        return $params;
+    }
+
+    public static function count(Table $t, array $req)
+    {
+        $pg = self::paging($t);
+        $params = !empty($pg['totalPath']) ? self::delegated($t, $req, '', 'asc') : null;
+        if ($params !== null) {
+            $size = !empty($pg['pageSize']) ? max(1, (int)$pg['pageSize']) : 100;
+            $path = self::withQuery($t->def['source']['path'], $params + self::pageParams($pg, 0, $size));
+            $total = self::at($t->rest->request('GET', $path), $pg['totalPath']);
+            if (is_numeric($total)) return (int)$total;
+        }
+        return count(self::filter($t, $req));
     }
 
     private static function contains($v, $needle)
@@ -185,6 +291,12 @@ class Rest
 
     public static function fetch(Table $t, array $req, $limit, $offset, $sort, $dir)
     {
+        $params = $limit > 0 ? self::delegated($t, $req, $sort, $dir) : null;
+        $pp = $params !== null ? self::pageParams(self::paging($t), $offset, $limit) : null;
+        if ($pp !== null) {
+            $path = self::withQuery($t->def['source']['path'], $params + $pp);
+            return self::listOf($t, $t->rest->request('GET', $path), $path);
+        }
         $rows = self::filter($t, $req);
         if (!$sort) {
             $ds = isset($t->def['pages']['list']['defaultSort']) ? $t->def['pages']['list']['defaultSort'] : null;
@@ -201,10 +313,11 @@ class Rest
 
     public static function totals(Table $t, array $req)
     {
+        $fields = array_filter($t->fields('list'), function ($f) { return !empty($f['totals']); });
+        if (!$fields) return [];
         $rows = self::filter($t, $req);
         $out = [];
-        foreach ($t->fields('list') as $f) {
-            if (empty($f['totals'])) continue;
+        foreach ($fields as $f) {
             $vals = [];
             foreach ($rows as $r) if (isset($r[$f['name']]) && $r[$f['name']] !== '') $vals[] = $r[$f['name']];
             $num = array_map('floatval', $vals);
@@ -229,15 +342,83 @@ class Rest
 
     public static function fetchOne(Table $t, array $keys)
     {
+        // A paged API would be read entirely: ask the item endpoint first.
+        if (self::paging($t) && !empty($t->def['source']['itemPath'])) {
+            $one = self::fetchItem($t, $keys);
+            if ($one) return $one;
+        }
         foreach (self::filter($t, []) as $r) {
             $ok = true;
             foreach ($keys as $k => $v) if ((string)(isset($r[$k]) ? $r[$k] : '') !== (string)$v) $ok = false;
             if ($ok) return $r;
         }
-        if (empty($t->def['source']['itemPath'])) return null;
+        return empty($t->def['source']['itemPath']) || self::paging($t) ? null : self::fetchItem($t, $keys);
+    }
+
+    private static function fetchItem(Table $t, array $keys)
+    {
         try { $json = $t->rest->request('GET', self::itemPath($t, $keys)); } catch (\RuntimeException $e) { return null; }
         $item = self::at($json, isset($t->def['source']['itemDataPath']) ? $t->def['source']['itemDataPath'] : '');
         return is_array($item) ? self::flatten($item) : null;
+    }
+
+    // --- lookups, filter panel, unique check (SQL-free equivalents) ----------------
+
+    /** Display text of a lookup row: field name or "{first} {last}" template. */
+    private static function display(array $lk, array $r)
+    {
+        $d = isset($lk['display']) && $lk['display'] !== '' ? $lk['display'] : $lk['key'];
+        if (strpos($d, '{') === false) return isset($r[$d]) ? (string)$r[$d] : '';
+        return preg_replace_callback('/\{([A-Za-z0-9_.]+)\}/', function ($m) use ($r) { return isset($r[$m[1]]) ? (string)$r[$m[1]] : ''; }, $d);
+    }
+
+    /** Lookup options from a REST datasource. SQL conditions of the lookup (where) do not apply. */
+    public static function lookupOptions(Table $src, array $lk, $q, $parent, $limit, $only)
+    {
+        $rows = self::all($src);
+        $out = [];
+        $key = $lk['key'];
+        $only = $only === null ? null : array_flip(array_map('strval', $only));
+        $link = !empty($lk['dependsOn']['field']) && $parent !== null ? $lk['dependsOn']['linkField'] : null;
+        foreach ($rows as $r) {
+            $v = isset($r[$key]) ? (string)$r[$key] : '';
+            if ($only !== null && !isset($only[$v])) continue;
+            if ($link !== null && (string)(isset($r[$link]) ? $r[$link] : '') !== (string)$parent) continue;
+            $label = self::display($lk, $r);
+            if ($q !== '' && mb_stripos($label, $q) === false) continue;
+            $out[$v] = ['value' => $v, 'label' => $label, 'o' => !empty($lk['orderBy']) && isset($r[$lk['orderBy']]) ? $r[$lk['orderBy']] : $label];
+        }
+        $out = array_values($out);
+        usort($out, function ($a, $b) { return self::cmp($a['o'], $b['o']); });
+        if ($limit > 0) $out = array_slice($out, 0, $limit);
+        return array_map(function ($o) { return ['value' => $o['value'], 'label' => $o['label']]; }, $out);
+    }
+
+    /** Distinct values with counts for the filter panel: [['mc_v'=>..,'mc_n'=>..], ...] */
+    public static function distinct(Table $t, array $req, $field)
+    {
+        $n = [];
+        foreach (self::filter($t, $req) as $r) {
+            $v = isset($r[$field]) ? $r[$field] : null;
+            $k = $v === null ? "\0" : (string)$v;
+            if (!isset($n[$k])) $n[$k] = ['mc_v' => $v, 'mc_n' => 0];
+            $n[$k]['mc_n']++;
+        }
+        $out = array_values($n);
+        usort($out, function ($a, $b) { return self::cmp($a['mc_v'], $b['mc_v']); });
+        return $out;
+    }
+
+    /** True when another record (keys excluded) already has this value. */
+    public static function exists(Table $t, $field, $value, $keys)
+    {
+        foreach (self::all($t) as $r) {
+            if ((string)(isset($r[$field]) ? $r[$field] : '') !== (string)$value) continue;
+            $same = (bool)$keys;
+            if ($keys) foreach ($keys as $k => $kv) if ((string)(isset($r[$k]) ? $r[$k] : '') !== (string)$kv) $same = false;
+            if (!$same) return true;
+        }
+        return false;
     }
 
     /** Returns the new keys (from the response when the API returns the created record). */

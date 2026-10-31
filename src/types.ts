@@ -1,6 +1,8 @@
 // Project shapes (mirror of core/project.cjs and core/defaults.cjs).
 export type L = Record<string, string>;
 
+/** API paging of a REST datasource (see runtime/lib/Rest.php). */
+export interface RestPaging { mode: '' | 'page' | 'offset'; pageParam?: string; firstPage?: number; offsetParam?: string; sizeParam?: string; pageSize?: number; totalPath?: string; searchParam?: string; sortParam?: string; dirParam?: string }
 export interface Connection { id: string; name: string; driver: 'mysql' | 'pgsql' | 'sqlsrv' | 'oracle' | 'sqlite' | 'rest'; url?: string; auth?: 'none' | 'bearer' | 'basic' | 'header' | 'query'; host?: string; port?: number | string; database?: string; user?: string; schema?: string; file?: string; encrypt?: boolean }
 
 export interface Lookup {
@@ -19,7 +21,7 @@ export interface Field {
 }
 export interface Detail { table: string; masterKeys: string[]; detailKeys: string[]; showIn: string[]; listPreview?: boolean }
 export interface Table {
-  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest'; table?: string; sql?: string; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string };
+  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest'; table?: string; sql?: string; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
   layout?: Record<string, { sections: { title: L; fields: string[]; style?: 'card' | 'tab'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;

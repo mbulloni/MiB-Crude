@@ -64,7 +64,7 @@ async function sample(conn, secret, p, dataPath) {
   return { dataPath: dp || '', rows: rows.slice(0, 50), columns, total: rows.length };
 }
 
-/** opts: {name, path, dataPath, key, itemPath, updateMethod, readOnly} */
+/** opts: {name, path, dataPath, key, itemPath, updateMethod, readOnly, paging} */
 async function addRestView(proj, conn, secret, opts) {
   if (proj.tables.some((t) => t.name === opts.name)) throw new Error(`Esiste già un'origine dati "${opts.name}"`);
   const s = await sample(conn, secret, opts.path, opts.dataPath);
@@ -75,6 +75,7 @@ async function addRestView(proj, conn, secret, opts) {
     connection: conn.id, languages: proj.project.languages, settings: proj.project.settings,
   });
   ds.source = { type: 'rest', path: opts.path, dataPath: s.dataPath, itemPath: opts.itemPath || '', itemDataPath: opts.itemDataPath || '', updateMethod: opts.updateMethod || 'PUT' };
+  if (opts.paging && opts.paging.mode) ds.source.paging = opts.paging;
   ds.keys = key ? [key] : [];
   ds.readOnly = !!opts.readOnly || !key;
   proj.tables.push(ds);

@@ -8,6 +8,7 @@ import FieldDialog, { EDIT_AS, VIEW_AS } from './FieldDialog';
 import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
 import { useItemLock } from './TeamPanel';
 import PageDesigner from './PageDesigner';
+import RestPagingFields from './RestPaging';
 
 const SHOW: [string, string][] = [['list', 'Lista'], ['view', 'Vista'], ['add', 'Nuovo'], ['edit', 'Modifica'], ['search', 'Ricerca'], ['export', 'Esporta'], ['import', 'Importa'], ['print', 'Stampa']];
 type TabKey = 'general' | 'fields' | 'pages' | 'layout' | 'details' | 'events' | 'api';
@@ -63,8 +64,14 @@ export default function TableEditor({ name }: { name: string }) {
             <p className="help">Query SQL dell'origine dati:</p>
             <CodeEditor language="sql" value={t.source.sql || ''} onChange={(v) => set((x) => { x.source.sql = v; })} height={180} readOnly={ro} />
             <Row label="Tabella da aggiornare" hint="Rende la query modificabile: inserimenti e modifiche vanno in questa tabella"><Text value={t.source.updateTable} onChange={(v) => set((x) => { x.source.updateTable = v; x.readOnly = !v; })} mono /></Row>
+          </> : t.source.type === 'rest' ? <>
+            <Row label="Percorso elenco" hint="GET che restituisce i record, es. /users"><Text value={t.source.path} onChange={(v) => set((x) => { x.source.path = v; })} mono /></Row>
+            <Row label="Percorso dei dati" hint="Dove si trova l'elenco nella risposta JSON (es. data)"><Text value={t.source.dataPath} onChange={(v) => set((x) => { x.source.dataPath = v; })} mono /></Row>
+            <Row label="Percorso record" hint="{campo} = valore della chiave. Vuoto = percorso elenco/{chiave}"><Text value={t.source.itemPath} onChange={(v) => set((x) => { x.source.itemPath = v; })} mono /></Row>
+            <Row label="Modifica con"><Select value={t.source.updateMethod || 'PUT'} options={[['PUT', 'PUT (record completo)'], ['PATCH', 'PATCH (solo campi cambiati)']]} onChange={(v) => set((x) => { x.source.updateMethod = v; })} /></Row>
+            <RestPagingFields value={t.source.paging} onChange={(v) => set((x) => { if (v) x.source.paging = v; else delete x.source.paging; })} />
           </> : <Row label="Tabella"><Text value={t.source.table} onChange={(v) => set((x) => { x.source.table = v; })} mono /></Row>}
-          <Row label="Filtro fisso (WHERE)" hint="SQL sempre applicato, es. src.cancellato = 0"><Text value={t.where} onChange={(v) => set((x) => { x.where = v; })} mono /></Row>
+          {t.source.type !== 'rest' && <Row label="Filtro fisso (WHERE)" hint="SQL sempre applicato, es. src.cancellato = 0"><Text value={t.where} onChange={(v) => set((x) => { x.where = v; })} mono /></Row>}
         </Section>
         <Section title="Opzioni">
           <Row label="Sola lettura"><Check value={t.readOnly} onChange={(v) => set((x) => { x.readOnly = v; })} /></Row>

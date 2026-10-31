@@ -231,7 +231,8 @@ class Db
         return date('Y-m-d H:i:s');
     }
 
-    public function begin() { $this->pdo->beginTransaction(); }
-    public function commit() { $this->pdo->commit(); }
-    public function rollback() { if ($this->pdo->inTransaction()) $this->pdo->rollBack(); }
+    // REST connections have no transactions: each record is written by its own API call.
+    public function begin() { if ($this->pdo) $this->pdo->beginTransaction(); }
+    public function commit() { if ($this->pdo) $this->pdo->commit(); }
+    public function rollback() { if ($this->pdo && $this->pdo->inTransaction()) $this->pdo->rollBack(); }
 }

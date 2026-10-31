@@ -19,10 +19,13 @@ Stato v0.2.0 (2026-10-30): tutti i punti della roadmap iniziale implementati e t
 18. Pulsanti personalizzati phpr (OnBefore/OnServer/OnAfter).
 19. Import/export tabelle in ZIP; origini dati REST.
 
+## Dopo v0.2.0
+- Origini REST complete (2026-10-31): paginazione dell'API (numero di pagina o scostamento, totale, ricerca e ordinamento delegati all'API), lookup verso tabelle REST da tabelle SQL e REST (anche a cascata, modello `{campo} ({campo})`), pannello filtri, controllo valori unici, importazione, report, grafici e dashboard su origini REST; paginazione modificabile anche dopo la creazione (scheda Generale della tabella).
+
 ## Limiti aperti
 - Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto (non raggiungibili dall'ambiente di sviluppo).
 - Progetto reale di prova: un evento `BeforeMoveNext` ha un errore di sintassi già nel progetto originale; resta disattivato.
-- Origini REST: ricerca, filtri, ordinamento e totali sono eseguiti dall'app dopo aver letto l'intero elenco (adatto a risorse di qualche migliaio di record); lookup verso tabelle REST, report e grafici su origini REST non supportati.
+- Origini REST: senza paginazione dell'API ogni richiesta legge l'intero elenco; con la paginazione solo lista, ricerca rapida e ordinamento sono eseguiti dall'API, mentre ricerca avanzata, pannello filtri, totali, report, grafici e lookup leggono tutte le pagine (massimo 50.000 record). Le condizioni SQL dei lookup (`where`) non si applicano ai lookup verso tabelle REST; l'importazione su REST non può essere annullata in blocco (ogni record è una chiamata all'API).
 - Strato AnyChart: copre le chiamate usate dai progetti reali (etichette, serie, legenda, tooltip, assi e scale, zoom); le altre vengono ignorate senza errori.
 - Temi: adattatori per Metronic 8, DesignReset (Cork/Equation) e Satria; non compatibili Slim (Bootstrap 4), Webarch (Bootstrap 3), Material Admin (AngularJS). Il tema va importato su ogni computer del team.
 - Aggiornamenti integrati: puntano a `mbulloni/MiB-Crude` su GitHub; senza release pubblicate il controllo segnala l'errore.

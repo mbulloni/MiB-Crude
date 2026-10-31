@@ -4,10 +4,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { call } from '../api';
 import { run, toast, update, useStore } from '../store';
-import type { Project, Table } from '../types';
+import type { Project, RestPaging, Table } from '../types';
 import CodeEditor from './CodeEditor';
 import { Btn, Check, Empty, I, Modal, Row, Select, Text, lbl, slug } from './ui';
 import { ConnectionDialog } from './ConnectionsPanel';
+import RestPagingFields from './RestPaging';
 
 type DbTable = { name: string; type: string };
 type Col = { name: string; type: string; size: number | string; scale: number | string; pk: boolean; autoInc: boolean; nullable: boolean; default: string; orig?: string | null };
@@ -165,7 +166,7 @@ function RestDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: strin
   const p = useStore((s) => s.proj)!;
   const rest = p.connections.filter((c) => c.driver === 'rest');
   const [conn, setConn] = useState(rest.some((c) => c.id === conn0) ? conn0 : rest[0]?.id || '');
-  const [o, setO] = useState({ name: '', path: '', dataPath: '', key: '', itemPath: '', updateMethod: 'PUT', readOnly: false });
+  const [o, setO] = useState<{ name: string; path: string; dataPath: string; key: string; itemPath: string; updateMethod: string; readOnly: boolean; paging?: RestPaging }>({ name: '', path: '', dataPath: '', key: '', itemPath: '', updateMethod: 'PUT', readOnly: false });
   const [prev, setPrev] = useState<{ dataPath: string; rows: any[]; columns: { name: string }[]; total: number } | null>(null);
   const s = (patch: Partial<typeof o>) => setO({ ...o, ...patch });
   const preview = () => run('Lettura dal servizio…', async () => {
@@ -183,7 +184,7 @@ function RestDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: strin
   return (
     <Modal wide title="Nuova origine dati REST" onClose={onClose}
       footer={<><Btn icon="play" onClick={preview} disabled={!o.path}>Leggi e mostra i campi</Btn><span className="grow" /><Btn onClick={onClose}>Annulla</Btn><Btn kind="primary" icon="check-lg" onClick={ok} disabled={!prev}>Crea</Btn></>}>
-      <p className="help">Una risorsa di un'API JSON diventa una tabella dell'applicazione: lista con ricerca, filtri, ordinamento e totali (eseguiti dall'app), visualizza, modifica ed eliminazione tramite l'API.</p>
+      <p className="help">Una risorsa di un'API JSON diventa una tabella dell'applicazione: lista con ricerca, filtri, ordinamento e totali (eseguiti dall'app o, con la paginazione, dall'API), lookup, report e grafici, visualizza, modifica ed eliminazione tramite l'API.</p>
       <Row label="Connessione"><Select value={conn} options={rest.map((c) => [c.id, `${c.name} — ${c.url}`])} onChange={setConn} /></Row>
       <Row label="Percorso elenco" hint="GET che restituisce i record, es. /users o /orders?status=open"><Text value={o.path} onChange={(v) => s({ path: v })} mono /></Row>
       <Row label="Percorso dei dati" hint="Dove si trova l'elenco nella risposta JSON (es. data, result.items); vuoto = rilevato automaticamente"><Text value={o.dataPath} onChange={(v) => s({ dataPath: v })} mono /></Row>
@@ -192,6 +193,7 @@ function RestDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: strin
       <Row label="Percorso record" hint="Per visualizza/modifica/elimina; {campo} = valore della chiave. Vuoto = percorso elenco/{chiave}"><Text value={o.itemPath} onChange={(v) => s({ itemPath: v })} mono placeholder={o.key ? `${o.path.split('?')[0].replace(/\/$/, '')}/{${o.key}}` : ''} /></Row>
       <Row label="Modifica con"><span className="inline"><Select value={o.updateMethod} options={[['PUT', 'PUT (record completo)'], ['PATCH', 'PATCH (solo campi cambiati)']]} onChange={(v) => s({ updateMethod: v })} />
         <Check label="Sola lettura" value={o.readOnly} onChange={(v) => s({ readOnly: v })} /></span></Row>
+      <RestPagingFields value={o.paging} onChange={(v) => s({ paging: v })} />
       {prev && <><p className="help">{prev.total} record letti, {cols.length} campi{prev.dataPath ? ` (dati in "${prev.dataPath}")` : ''}.</p>
         <div className="preview-table"><table className="grid"><thead><tr>{cols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
           <tbody>{prev.rows.slice(0, 10).map((r, i) => <tr key={i}>{cols.map((c) => <td key={c}>{String(r[c] ?? '')}</td>)}</tr>)}</tbody></table></div></>}
