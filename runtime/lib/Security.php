@@ -162,10 +162,20 @@ class Security
             Audit::raw('login_failed', $username);
             return t('login.failed');
         }
-        // Second factor: users with an authenticator app confirm with a code.
-        if ($this->twoFactorEnabled() && !empty($user['id']) && $this->totpSecret($user['id'])) {
-            $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time()];
-            return '2fa';
+        // Second factor: users with an authenticator app confirm with its code, the others (when the project
+        // sends codes) with one sent by email or SMS.
+        if ($this->twoFactorEnabled() && !empty($user['id'])) {
+            if ($this->totpSecret($user['id'])) {
+                $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time(), 'mode' => 'totp'];
+                return '2fa';
+            }
+            if ($this->twoFactorChannel() !== '') {
+                $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time(), 'mode' => 'code'];
+                $err = $this->sendTwoFactorCode();
+                if ($err === '') return '2fa';
+                unset($_SESSION['mc_2fa_pending']);
+                if ($this->twoFactorRequired()) { Audit::raw('2fa_failed', $user['username']); return $err; }
+            }
         }
         $this->startUserSession($user);
         return '';
@@ -359,6 +369,41 @@ class Security
         return $this->twoFactorEnabled() && !empty($this->cfg['twoFactor']['required']);
     }
 
+    /** 'email' or 'sms': users without an authenticator app get a code that way ('' = TOTP only). */
+    public function twoFactorChannel()
+    {
+        $c = isset($this->cfg['twoFactor']['channel']) ? (string)$this->cfg['twoFactor']['channel'] : '';
+        return in_array($c, ['email', 'sms'], true) ? $c : '';
+    }
+
+    /** New 6-digit code for the pending login, sent by email or SMS. Returns '' or the error for the user. */
+    public function sendTwoFactorCode()
+    {
+        $p = $_SESSION['mc_2fa_pending'];
+        $user = $p['user'];
+        $code = sprintf('%06d', random_int(0, 999999));
+        $app = $this->app;
+        if ($this->twoFactorChannel() === 'sms') {
+            $phone = Sms::phone($user);
+            if ($phone === '') return t('2fa.nophone');
+            $err = Sms::send($phone, t('2fa.sms', $code, $app->label($app->config['title'])));
+            if ($err !== '') { error_log('[MiB-Crude] 2fa sms: ' . $err); return t('2fa.notsent'); }
+            $p['to'] = Sms::mask($phone);
+        } else {
+            $db = $app->db();
+            $email = (string)$db->value('SELECT ' . $db->q('email') . ' FROM ' . $db->table(Schema::t('users')) . ' WHERE ' . $db->q('id') . ' = ?', [$user['id']]);
+            if ($email === '') return t('2fa.noemail');
+            if (!MailTemplates::builtin('twofactor', $email, ['username' => $user['username'], 'code' => $code], '2fa.mail_subject', '2fa.mail_body', [h($code)])) return t('2fa.notsent');
+            $p['to'] = preg_replace('/^(.).*?(@.*)$/', '$1•••$2', $email);
+        }
+        $p['hash'] = hash('sha256', $code);
+        $p['tries'] = 0;
+        $p['at'] = time();
+        $p['sent'] = time();
+        $_SESSION['mc_2fa_pending'] = $p;
+        return '';
+    }
+
     public function totpSecret($userId)
     {
         $db = $this->app->db();
@@ -375,7 +420,11 @@ class Security
     {
         $p = isset($_SESSION['mc_2fa_pending']) ? $_SESSION['mc_2fa_pending'] : null;
         if (!$p || time() - $p['at'] > 300) { unset($_SESSION['mc_2fa_pending']); return t('2fa.expired'); }
-        if (!Totp::verify($this->totpSecret($p['user']['id']), $code)) { Audit::raw('2fa_failed', $p['user']['username']); return t('2fa.wrong'); }
+        if (isset($p['mode']) && $p['mode'] === 'code') {
+            if (empty($p['hash']) || $p['tries'] >= 5) { unset($_SESSION['mc_2fa_pending']); Audit::raw('2fa_failed', $p['user']['username']); return t('2fa.expired'); }
+            $_SESSION['mc_2fa_pending']['tries'] = $p['tries'] + 1;
+            if (!hash_equals($p['hash'], hash('sha256', preg_replace('/\D/', '', (string)$code)))) { Audit::raw('2fa_failed', $p['user']['username']); return t('2fa.wrong'); }
+        } elseif (!Totp::verify($this->totpSecret($p['user']['id']), $code)) { Audit::raw('2fa_failed', $p['user']['username']); return t('2fa.wrong'); }
         unset($_SESSION['mc_2fa_pending']);
         $this->startUserSession($p['user']);
         return '';

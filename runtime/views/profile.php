@@ -23,6 +23,11 @@
   <p class="small text-secondary"><?= h(t('2fa.help')) ?></p>
   <form method="post"><?= $app->csrfField() ?><button class="btn btn-primary" name="totp_start" value="1"><?= h(t('2fa.setup')) ?></button></form>
 <?php endif ?>
+<?php if ($sec->twoFactorChannel() === 'sms'): $myPhone = \MiB\Sms::phone($user); ?>
+  <form method="post" class="mt-3 border-top pt-3"><?= $app->csrfField() ?><label class="form-label small"><?= h(t('2fa.phone')) ?></label>
+    <div class="d-flex gap-2"><input class="form-control" name="phone" type="tel" value="<?= h($myPhone) ?>" placeholder="+39 333 1234567"><button class="btn btn-outline-primary text-nowrap" name="phone_save" value="1"><?= h(t('btn.save')) ?></button></div>
+    <div class="form-text"><?= h(t('2fa.phone_help')) ?></div></form>
+<?php endif ?>
 </div></div></div>
 <?php endif ?>
 <?php if ($app->setting('api') && !empty($app->setting('api')['enabled'])): ?>

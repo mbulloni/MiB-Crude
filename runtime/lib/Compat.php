@@ -292,6 +292,13 @@ namespace {
         return ['mailed' => (bool)$ok, 'message' => $ok ? '' : 'mail error'];
     }
 
+    /** phpr runner_sms($number, $message): through the project's SMS settings. */
+    function runner_sms($number, $message, $parameters = [])
+    {
+        $err = \MiB\Sms::send($number, $message);
+        return ['success' => $err === '', 'error' => $err];
+    }
+
     // PHP 7.4 semantics for code imported from phpr: in PHP 8 these calls throw a TypeError on
     // empty/NULL/non-numeric values coming from the database, in 7.4 they returned null/0 with a warning.
     function mc74_num($v)

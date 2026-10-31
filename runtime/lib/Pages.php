@@ -592,7 +592,7 @@ class Pages
             else $msg = $sec->login(isset($_POST['username']) ? $_POST['username'] : '', isset($_POST['password']) ? $_POST['password'] : '');
             if ($msg === '2fa') redirect($this->app->url('twofactor'));
             if ($msg === '') {
-                if ($sec->twoFactorRequired() && !$sec->totpSecret($sec->user()['id'])) { $this->app->flash('warning', t('2fa.setup_required')); redirect($this->app->url('profile')); }
+                if ($sec->twoFactorRequired() && $sec->twoFactorChannel() === '' && !$sec->totpSecret($sec->user()['id'])) { $this->app->flash('warning', t('2fa.setup_required')); redirect($this->app->url('profile')); }
                 $ret = isset($_SESSION['mc_return']) ? $_SESSION['mc_return'] : '';
                 unset($_SESSION['mc_return']);
                 redirect($ret !== '' && strpos($ret, '//') === false ? $ret : $this->app->url('home'));
@@ -607,6 +607,15 @@ class Pages
         $sec = $this->app->security;
         if (empty($_SESSION['mc_2fa_pending'])) redirect($this->app->url('login'));
         $msg = '';
+        // a new code by email/SMS, at most one every 30 seconds
+        if ($this->post() && isset($_POST['resend'])) {
+            $p = $_SESSION['mc_2fa_pending'];
+            if (isset($p['mode']) && $p['mode'] === 'code' && time() - (isset($p['sent']) ? $p['sent'] : 0) >= 30) {
+                $err = $sec->sendTwoFactorCode();
+                $this->app->flash($err === '' ? 'success' : 'danger', $err === '' ? t('2fa.resent') : $err);
+            }
+            redirect($this->app->url('twofactor'));
+        }
         if ($this->post()) {
             $msg = $sec->completeTwoFactor(isset($_POST['code']) ? $_POST['code'] : '');
             if ($msg === '') {
@@ -616,7 +625,8 @@ class Pages
             }
         }
         $this->app->title = t('2fa.title');
-        $this->app->render('twofactor', ['msg' => $msg], 'layout_bare');
+        $p = isset($_SESSION['mc_2fa_pending']) ? $_SESSION['mc_2fa_pending'] : [];
+        $this->app->render('twofactor', ['msg' => $msg, 'mode' => isset($p['mode']) ? $p['mode'] : 'totp', 'to' => isset($p['to']) ? $p['to'] : '', 'channel' => $sec->twoFactorChannel()], 'layout_bare');
     }
 
     public function page_logout()
@@ -795,6 +805,11 @@ class Pages
                     $this->app->flash('success', t('2fa.disabled'));
                 } else $this->app->flash('danger', t('2fa.wrong'));
                 redirect($this->app->url('profile'));
+            }
+            if (isset($_POST['phone_save'])) {
+                Sms::setPhone($u['username'], isset($_POST['phone']) ? $_POST['phone'] : '');
+                $this->app->flash('success', t('msg.saved'));
+                redirect($this->app->url('profile') . '#twofactor');
             }
             if (isset($_POST['apikey'])) {
                 $db->update(Schema::t('users'), ['api_key' => hash('sha256', $key = bin2hex(random_bytes(20)))], ['id' => $u['id']]);

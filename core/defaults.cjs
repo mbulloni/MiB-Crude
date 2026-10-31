@@ -182,6 +182,7 @@ const GLOBAL_EVENTS = {
   BeforeLogin: { args: '&$username, &$password, &$message', help: 'Prima del login. return false per bloccarlo.' },
   AfterSuccessfulLogin: { args: '$username, $user', help: 'Dopo un login riuscito.' },
   AfterUnsuccessfulLogin: { args: '$username, $message', help: 'Dopo un login fallito.' },
+  TwoFactorPhone: { args: '&$phone, $user', help: 'Numero a cui inviare il codice SMS della verifica in due passaggi (es. da una tabella anagrafica); $phone arriva con quello del profilo.' },
   BeforeRegister: { args: '&$values, &$message', help: 'Prima della registrazione di un utente. return false per annullare.' },
   AfterRegister: { args: '$values', help: 'Dopo la registrazione.' },
   AfterLogout: { args: '$username', help: 'Dopo il logout.' },

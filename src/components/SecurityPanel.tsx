@@ -77,6 +77,8 @@ export default function SecurityPanel() {
             {sec.users.managed && sec.mode === 'database' && <Row label="Verifica in due passaggi" hint="Codice TOTP da Google/Microsoft Authenticator, configurato dall'utente nel profilo">
               <span className="chips"><Check label="Attiva" value={(sec as any).twoFactor?.enabled} onChange={(v) => set((s) => { (s as any).twoFactor = { ...((s as any).twoFactor || {}), enabled: v }; })} />
                 <Check label="Obbligatoria per tutti" value={(sec as any).twoFactor?.required} onChange={(v) => set((s) => { (s as any).twoFactor = { ...((s as any).twoFactor || {}), required: v }; })} /></span></Row>}
+            {sec.users.managed && sec.mode === 'database' && (sec as any).twoFactor?.enabled && <Row label="Codice per chi non ha l'app" hint="Senza app di autenticazione l'utente riceve a ogni accesso un codice a 6 cifre (valido 5 minuti). SMS: numero dal profilo dell'utente o dall'evento globale TwoFactorPhone; servizio SMS in Progetto › SMS">
+              <Select value={(sec as any).twoFactor?.channel || ''} options={[['', 'Nessuno: solo app di autenticazione'], ['email', 'Codice via email'], ['sms', 'Codice via SMS']]} onChange={(v) => set((s) => { (s as any).twoFactor = { ...((s as any).twoFactor || {}), channel: v }; })} /></Row>}
             <Row label="Tentativi prima del blocco" hint="Blocco di 15 minuti; 0 = mai"><Num value={sec.maxLoginAttempts} onChange={(v) => set((s) => { s.maxLoginAttempts = Number(v) || 0; })} /></Row>
             <Row label="Scadenza sessione (minuti di inattività)"><Num value={sec.sessionMinutes} onChange={(v) => set((s) => { s.sessionMinutes = Number(v) || 0; })} /></Row>
           </Section>

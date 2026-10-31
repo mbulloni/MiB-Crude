@@ -71,6 +71,14 @@ function sendTemplate($name, $to, array $values = [])
     return \MiB\MailTemplates::send($name, $to, $values);
 }
 
+/** Text message through the project's SMS settings: true when sent (errors in the PHP log). */
+function sendSms($to, $text)
+{
+    $err = \MiB\Sms::send($to, $text);
+    if ($err !== '') error_log('[MiB-Crude] sms: ' . $err);
+    return $err === '';
+}
+
 function appUrl($page, $params = [])
 {
     return \MiB\App::$i->url($page, $params);

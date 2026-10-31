@@ -9,6 +9,7 @@ interface Tpl { subject?: L; body?: L }
 
 const BUILTIN: Record<string, [string, string, L, L]> = {
   register: ['Conferma della registrazione', '{username}, {fullname}, {email}, {link}', { it: 'Conferma la registrazione a {app}' }, { it: '<p>Ciao {username},</p>\n<p>conferma la registrazione aprendo <a href="{link}">questo link</a>.</p>' }],
+  twofactor: ['Codice di accesso (verifica in due passaggi)', '{username}, {code}', { it: 'Codice di accesso a {app}' }, { it: '<p>Il tuo codice di accesso è <b>{code}</b> (valido 5 minuti).</p>' }],
   forgot: ['Recupero della password', '{username}, {fullname}, {email}, {link} (valido 1 ora)', { it: 'Reimposta la password di {app}' }, { it: '<p>Ciao {username},</p>\n<p>per reimpostare la password apri <a href="{link}">questo link</a> (valido 1 ora).</p>' }],
 };
 const okName = (s: string) => s.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');

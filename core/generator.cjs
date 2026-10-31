@@ -314,6 +314,7 @@ function generate(proj, opts = {}) {
   for (const c of proj.connections) sc.connections[c.id] = { password: (secrets.connections || {})[c.id] || '' };
   for (const p of proj.security.providers.oidc || []) sc.oidc[p.id] = (secrets.oidc || {})[p.id] || '';
   sc.mail.password = secrets.mailPassword || '';
+  sc.sms = { password: secrets.smsPassword || '' };
   w('config/secrets.php', phpFile(sc, 'Passwords. Keep this file out of version control and readable only by the web server.'));
 
   for (const [code, dict] of Object.entries(buildLang(proj))) w(`lang/${code}.php`, phpFile(dict, `Strings (${code})`));
