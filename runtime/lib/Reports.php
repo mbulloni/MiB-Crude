@@ -51,6 +51,32 @@ class Reports
         return [is_numeric($v) ? sprintf('%020.4f', $v) : mb_strtolower(Format::plain($t, $f, $v, $row)), Format::plain($t, $f, $v, $row)];
     }
 
+    /**
+     * List filter of a chart bucket (click on a bar or slice): exact value, or the date range of the
+     * interval; null when there is no equivalent (initial letter).
+     */
+    public static function bucketFilter(Table $t, $field, $interval, $raw)
+    {
+        if ($raw === null || $raw === '') return ['s' => [$field => ['op' => 'empty']]];
+        $ts = strtotime((string)$raw);
+        $range = function ($a, $b) use ($field) { return ['s' => [$field => ['op' => 'between', 'v' => $a, 'v2' => $b]]]; };
+        switch ($interval) {
+            case 'year': return $range(date('Y-01-01', $ts), date('Y-12-31', $ts));
+            case 'quarter':
+                $q = (int)ceil(date('n', $ts) / 3);
+                $start = mktime(0, 0, 0, ($q - 1) * 3 + 1, 1, (int)date('Y', $ts));
+                return $range(date('Y-m-d', $start), date('Y-m-t', strtotime('+2 months', $start)));
+            case 'month': return $range(date('Y-m-01', $ts), date('Y-m-t', $ts));
+            case 'week':
+                $mon = strtotime('monday this week', $ts);
+                return $range(date('Y-m-d', $mon), date('Y-m-d', strtotime('+6 days', $mon)));
+            case 'day': return $range(date('Y-m-d', $ts), date('Y-m-d', $ts));
+            case 'tens': $b = floor($raw / 10) * 10; return $range((string)$b, (string)($b + 9.999999));
+            case 'letter': return null;
+        }
+        return ['f' => [$field => [(string)$raw]]];
+    }
+
     public static function aggregate($fn, array $values)
     {
         $nums = array_values(array_filter($values, 'is_numeric'));
@@ -141,10 +167,17 @@ class Reports
         $buckets = [];
         foreach ($rows as $r) {
             list($k, $label) = self::bucket($t, $def['labelField'], isset($def['labelInterval']) ? $def['labelInterval'] : '', $r);
-            if (!isset($buckets[$k])) $buckets[$k] = ['label' => $label, 'rows' => []];
+            if (!isset($buckets[$k])) $buckets[$k] = ['label' => $label, 'rows' => [], 'raw' => isset($r[$def['labelField']]) ? $r[$def['labelField']] : null];
             $buckets[$k]['rows'][] = $r;
         }
         ksort($buckets, SORT_STRING);
+        // Click on a bar or slice: the list of the table filtered on that bucket (when the user can see it).
+        $canList = $t->enabled('list') && $this->app->security->can($t->name, 'S');
+        $links = [];
+        foreach ($buckets as $b) {
+            $flt = $canList ? self::bucketFilter($t, $def['labelField'], isset($def['labelInterval']) ? $def['labelInterval'] : '', $b['raw']) : null;
+            $links[] = $flt === null ? null : $this->app->url('list', array_merge(['t' => $t->name], $flt));
+        }
         $series = isset($def['series']) && $def['series'] ? $def['series'] : [['field' => $def['labelField'], 'fn' => 'count']];
         $labels = [];
         $values = [];
@@ -158,6 +191,7 @@ class Reports
             if (!empty($def['sortByValue'])) usort($idx, function ($a, $b) use ($values) { return $values[0][$b] <=> $values[0][$a]; });
             if (!empty($def['limit'])) $idx = array_slice($idx, 0, (int)$def['limit']);
             $labels = array_map(function ($i) use ($labels) { return $labels[$i]; }, $idx);
+            $links = array_map(function ($i) use ($links) { return $links[$i]; }, $idx);
             foreach ($values as $s => $vals) $values[$s] = array_map(function ($i) use ($vals) { return $vals[$i]; }, $idx);
         }
         $datasets = [];
@@ -165,7 +199,7 @@ class Reports
             $datasets[] = ['label' => !empty($s['label']) ? $this->app->label($s['label']) : t('agg.' . $s['fn']) . ' ' . $t->fieldLabel($s['field']),
                 'data' => isset($values[$i]) ? $values[$i] : [], 'color' => isset($s['color']) ? $s['color'] : ''];
         }
-        $out = ['type' => $def['type'], 'labels' => $labels, 'datasets' => $datasets, 'stacked' => !empty($def['stacked'])];
+        $out = ['type' => $def['type'], 'labels' => $labels, 'datasets' => $datasets, 'stacked' => !empty($def['stacked']), 'links' => $links];
         // JS_ModifyChart (phpr chart event, AnyChart API) applied in the browser by anychart-compat.js.
         if (!empty($def['modifyJs'])) $out['js'] = $def['modifyJs'];
         $this->app->json($out);

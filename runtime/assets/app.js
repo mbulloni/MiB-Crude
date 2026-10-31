@@ -295,9 +295,16 @@
     $$('.mc-chart').forEach(function (el) {
       fetchJson(el.getAttribute('data-src')).then(function (d) {
         var chart = echarts.init(el, dark() ? 'dark' : null, { renderer: 'canvas' });
+        // click on a bar, point or slice: the list filtered on it
+        var drill = function (c) {
+          if (!d.links || !d.links.some(Boolean)) return;
+          c.on('click', function (p) { var u = d.links[p.dataIndex]; if (u) window.location.href = u; });
+          c.getZr().on('mousemove', function (e) { c.getZr().setCursorStyle(e.target ? 'pointer' : 'default'); });
+        };
         chart.setOption(full(d));
+        drill(chart);
         if (window.ResizeObserver) new ResizeObserver(function () { chart.resize(); }).observe(el);
-        new MutationObserver(function () { chart.dispose(); chart = echarts.init(el, dark() ? 'dark' : null); chart.setOption(full(d)); }).observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
+        new MutationObserver(function () { chart.dispose(); chart = echarts.init(el, dark() ? 'dark' : null); chart.setOption(full(d)); drill(chart); }).observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
       });
     });
   }

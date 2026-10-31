@@ -103,6 +103,7 @@ test.before(async () => {
   proj.project.settings.webBuilder = { enabled: true };
   proj.reports.push({ name: 'sales', title: { it: 'Vendite', en: 'Sales' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'customer_id', 'total'], showDetails: true });
   proj.charts.push({ name: 'bystatus', title: { it: 'Per stato' }, table: 'orders', type: 'bar', labelField: 'status', series: [{ field: 'total', fn: 'sum' }] });
+  proj.charts.push({ name: 'bymonth', title: { it: 'Per mese' }, table: 'orders', type: 'line', labelField: 'order_date', labelInterval: 'month', series: [{ field: 'total', fn: 'sum' }] });
   proj.dashboards.push({ name: 'main', title: { it: 'Cruscotto' }, items: [{ type: 'count', table: 'orders', width: 4 }, { type: 'chart', ref: 'bystatus', width: 8 }, { type: 'report', ref: 'sales', width: 12 }] });
   P.saveProject(proj);
   const reloaded = P.loadProject(dir);
@@ -424,4 +425,33 @@ test('notifications: from events and from the admin page, per user and for every
   // without the token the POST is refused
   const bad = await u.req('?p=notifications', { method: 'POST', headers: { Accept: 'application/json' } });
   assert.strictEqual(bad.status, 400);
+});
+
+test('chart drill-down: each bar links to the list filtered on it', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=chartdata&c=bystatus');
+  const chart = JSON.parse(r.text);
+  assert.strictEqual(chart.links.length, chart.labels.length);
+  for (const link of chart.links) {
+    const status = new URLSearchParams(link.split('?')[1]).get('f[status][0]');
+    assert.ok(status, link);
+    // the same filter through the grid endpoint: only that status
+    const qs = link.split('?')[1].replace(/^p=list&/, '');
+    const d = JSON.parse((await c.req(`?p=dt&draw=1&start=0&length=100&${qs}`)).text);
+    assert.ok(d.recordsFiltered > 0, link);
+    const db = await require('../core/db.cjs').connect(CONN, PW);
+    try {
+      const q = (sql) => sql.replace(/\b(orders|status)\b/g, (m) => require('../core/ddl.cjs').quote(CONN.driver, m));
+      const n = Object.values((await db.query(q(`SELECT COUNT(*) AS n FROM orders WHERE status = '${status}'`)))[0])[0];
+      assert.strictEqual(Number(d.recordsFiltered), Number(n), status);
+    } finally { await db.close(); }
+  }
+  // date buckets: a month becomes a between filter on that month
+  const m = JSON.parse((await c.req('?p=chartdata&c=bymonth')).text);
+  const p = new URLSearchParams(m.links[0].split('?')[1]);
+  assert.strictEqual(p.get('s[order_date][op]'), 'between');
+  assert.match(p.get('s[order_date][v]'), /^\d{4}-\d{2}-01$/);
+  assert.match(p.get('s[order_date][v2]'), /^\d{4}-\d{2}-(28|29|30|31)$/);
 });
