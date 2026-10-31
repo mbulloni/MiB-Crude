@@ -1,6 +1,6 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.7.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1), filtri REST all'API e strato AnyChart completo (v0.6.0), modifica selezionati, notifiche, clic sui grafici e PDF (v0.7.0); restano i limiti sotto.
+Stato v0.8.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1), filtri REST all'API e strato AnyChart completo (v0.6.0), modifica selezionati, notifiche, clic sui grafici e PDF (v0.7.0), intestazione/piè/menu del progetto, accesso Windows NTLM e Docker di progetto (v0.8.0); restano i limiti sotto.
 
 ## Fatto (v0.2.0, 2026-10-30)
 1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
@@ -50,7 +50,7 @@ Stato v0.7.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 - **Grafici con clic**: barra, punto o fetta aprono la lista filtrata (valore esatto o intervallo di date di anno, trimestre, mese, settimana, giorno).
 - **PDF**: formato di esportazione della lista (A4, orizzontale se servono più colonne, intestazione su ogni pagina) e pulsante PDF nella vista del record; generatore PHP senza dipendenze, caratteri Windows-1252 (accenti italiani, €).
 
-## Dopo v0.7.0
+## Fatto (v0.8.0, 2026-10-31)
 - **Intestazione, piè di pagina e menu** del progetto: file della cartella public/ (come gli include di phpr, es. k-nav-bar-top.php) o codice HTML/PHP scritto nel designer, in tutti i layout; intestazione/piè standard nascondibili, menu che sostituisce o affianca quello generato. I layout dei temi vengono ora presi dall'adattatore attuale, non dalla copia fatta all'importazione del template.
 - **Accesso Windows (NTLM)** come R-LAB (security.mode = ntlm): REMOTE_USER normalizzato (DOMINIO\utente → UTENTE@suffisso), gruppi e area da rlab_profilazione_gruppo, nome da rlab_venditori, permessi R:W:L per pagina da rlab_profilazione_permission, registro in r_lab_statistiche.rlab_accessi, variabili di sessione R-LAB; pagine di gestione Utenti Windows e Permessi pagine sulle stesse tabelle.
 - **Docker di progetto**: Apache (Debian 12/13, Ubuntu 22.04/24.04), PHP-FPM 7.4–8.5, MariaDB 10.4–11.8, script SQL iniziale, app generata con la connessione verso il contenitore; NTLM come il httpd.conf di produzione (utente valido, anonimi esclusi, X_ISRW_PROXY_AUTH_USER, percorsi esclusi) con mod_auth_gssapi + gss-ntlmssp + winbind e utente simulato senza dominio; frammento httpd-ntlm.conf per Apache24 su Windows con mod_authn_ntlm. Provato con docker compose: Apache 2.4.68 + PHP 8.3 + MariaDB 11.4 e PHP 7.4 + MariaDB 10.6.
