@@ -161,6 +161,7 @@ function suggestDetails(masterName, described) {
 const TABLE_EVENTS = {
   BeforeSelect: { args: '&$where, &$orderBy, $page', help: 'Modifica WHERE/ORDER BY prima di leggere i record. $where è una stringa SQL (vuota = nessun filtro).' },
   ProcParams: { args: '&$params', help: 'Solo origini stored procedure: parametri della chiamata (nome => valore), modificabili prima di eseguirla, es. $params[\'anno\'] = date(\'Y\').' },
+  ProcRows: { args: '&$rows', help: 'Solo origini stored procedure: righe restituite dalla procedura, da filtrare o modificare in PHP prima di lista, ricerca e totali (vale per tutti i database).' },
   BeforeShowList: { args: '&$rows, $page', help: 'Prima di mostrare la lista: puoi modificare $rows (array di record).' },
   ProcessValues: { args: '&$values, $page', help: 'Prima di mostrare un record in visualizza/modifica.' },
   BeforeAdd: { args: '&$values, &$message, $page', help: 'Prima di inserire. return false per annullare (con $message).' },

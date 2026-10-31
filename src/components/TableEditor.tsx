@@ -86,7 +86,7 @@ export default function TableEditor({ name }: { name: string }) {
               if ('cacheSeconds' in patch) { if (patch.cacheSeconds) x.source.cacheSeconds = patch.cacheSeconds; else delete x.source.cacheSeconds; }
             })} />
           </> : <Row label="Tabella"><Text value={t.source.table} onChange={(v) => set((x) => { x.source.table = v; })} mono /></Row>}
-          {t.source.type !== 'rest' && t.source.type !== 'proc' && <Row label="Filtro fisso (WHERE)" hint="SQL sempre applicato, es. src.cancellato = 0"><Text value={t.where} onChange={(v) => set((x) => { x.where = v; })} mono /></Row>}
+          {t.source.type !== 'rest' && <Row label="Filtro fisso (WHERE)" hint={t.source.type === 'proc' ? 'Per le procedure vale con PostgreSQL e Oracle (risultato letto con SELECT, colonne come src.nome); con MariaDB e SQL Server usa l\'evento ProcRows per filtrare in PHP' : 'SQL sempre applicato, es. src.cancellato = 0'}><Text value={t.where} onChange={(v) => set((x) => { x.where = v; })} mono /></Row>}
         </Section>
         <Section title="Opzioni">
           <Row label="Sola lettura"><Check value={t.readOnly} onChange={(v) => set((x) => { x.readOnly = v; })} /></Row>

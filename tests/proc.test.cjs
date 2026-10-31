@@ -86,6 +86,8 @@ test.before(async () => {
   if (SKIP) return;
   await sql(SETUP[KIND]);
   await sql(WRITE[KIND]);
+  // rows the filters must hide (the counts below stay those of the five rows above)
+  await sql(["INSERT INTO mc_proc_sales VALUES (6, 'NORD', 2026, 'Escluso', 1000)", ...(['pgsql', 'oracle'].includes(KIND) ? ["INSERT INTO mc_proc_sales VALUES (7, 'NORD', 2026, 'NascostoSQL', 500)"] : [])]);
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mibcrude-proc-'));
 });
 test.after(async () => {
@@ -119,7 +121,9 @@ test('stored procedure: designer list and fields, app with parameters, search, s
   t.pages.list.pageSize = 2;
   t.pages.list.totals = true;
   proj.menu.items.push({ type: 'table', table: 'vendite' });
-  proj.events.vendite = { ProcParams: "<?php\n$params['p_anno'] = 2026;\n" };
+  // ProcRows (all databases) drops seller "Escluso"; on PostgreSQL / Oracle the fixed WHERE drops "NascostoSQL" in SQL
+  proj.events.vendite = { ProcParams: "<?php\n$params['p_anno'] = 2026;\n", ProcRows: `<?php\n$rows = array_filter($rows, function ($r) { return $r['${F.venditore}'] !== 'Escluso'; });\n` };
+  if (KIND === 'pgsql' || KIND === 'oracle') t.where = "src.venditore <> 'NascostoSQL'";
   // writing through procedures
   const pre = KIND === 'sqlsrv' ? 'dbo.' : '';
   t.source.write = {

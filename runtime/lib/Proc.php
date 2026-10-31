@@ -118,7 +118,19 @@ class Proc
     {
         $db = $t->db;
         $params = array_values(self::params($t));
-        $st = $db->pdo->prepare(self::sql($db, $t->def['source']['procedure'], count($params)));
+        $sql = self::sql($db, $t->def['source']['procedure'], count($params));
+        // PostgreSQL and Oracle read the result with a SELECT: the fixed WHERE of the table and the condition of
+        // BeforeSelect apply there (columns as src.name); CALL / EXEC (MariaDB, SQL Server) cannot be filtered in SQL
+        if (in_array($db->driver, ['pgsql', 'oracle'], true)) {
+            $w = [];
+            if (!empty($t->def['where'])) $w[] = '(' . $t->def['where'] . ')';
+            $extra = '';
+            $order = '';
+            $t->app->event($t->name, 'BeforeSelect', [&$extra, &$order, $t->app->page]);
+            if (trim($extra) !== '') $w[] = '(' . $extra . ')';
+            if ($w) $sql = 'SELECT * FROM (' . $sql . ') src WHERE ' . implode(' AND ', $w);
+        }
+        $st = $db->pdo->prepare($sql);
         foreach ($params as $i => $v) $st->bindValue($i + 1, $v, $v === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
         $st->execute();
         // SQL Server and MySQL may return empty results (counts, messages) before the data
@@ -133,7 +145,9 @@ class Proc
         // the rest of the results must be read before the connection can run other statements
         try { while ($st->nextRowset()) { /* skip */ } } catch (\PDOException $e) { /* driver without more results */ }
         $st->closeCursor();
-        return $rows;
+        // PHP filter for every database: function ProcRows(&$rows) { $rows = array_filter(...); }
+        $t->app->event($t->name, 'ProcRows', [&$rows]);
+        return array_values($rows);
     }
 
     /** Column names as declared in the fields (Oracle returns them in upper case). */

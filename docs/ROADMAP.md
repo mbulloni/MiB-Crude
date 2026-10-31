@@ -81,6 +81,7 @@ Stato v0.11.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST com
 
 ## Dopo v0.11.0 (in corso)
 - **Scrittura tramite stored procedure**: procedure di inserimento, modifica ed eliminazione per le origini da procedura (parametri da campo, chiave, valore fisso, sessione, utente), nuova chiave restituita dalla procedura di inserimento; MariaDB/MySQL e SQL Server `CALL`/`EXEC`, PostgreSQL `CALL`, Oracle blocco anonimo. Provato su tutti e quattro i database.
+- **Filtri delle stored procedure**: con PostgreSQL e Oracle il filtro fisso WHERE e la condizione di BeforeSelect si applicano nella SELECT che legge il risultato; nuovo evento `ProcRows(&$rows)` per filtrare in PHP con tutti i database. Provato su tutti e quattro i database.
 
 ## Limiti aperti
 - App installabile: nessun funzionamento offline dei dati (solo il messaggio); i browser la propongono solo su https o localhost.
@@ -89,7 +90,7 @@ Stato v0.11.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST com
 - Geocodifica: Google non provato con una chiave reale; il pulsante della mappa elabora 20 record per clic (con Nominatim pubblico circa 20 secondi), per molti record conviene un'attività pianificata.
 - SMS: Twilio non provato con un account reale (stessa chiamata documentata da Twilio); il codice via email è provato solo nell'invio del modello, non in un accesso completo.
 - Attività pianificate: servono un cron di sistema (o l'Utilità di pianificazione) che lanci cron.php ogni minuto; nessun avvio da pagina web; un'attività molto lunga fa attendere le altre del minuto successivo (una alla volta).
-- Stored procedure: al massimo 50.000 righe lette a ogni pagina, il filtro fisso WHERE e l'evento BeforeSelect non si applicano; SQLite non ha procedure.
+- Stored procedure: al massimo 50.000 righe lette a ogni pagina; con MariaDB/MySQL e SQL Server (CALL/EXEC) il filtro fisso WHERE e BeforeSelect non si possono applicare in SQL (c'è l'evento ProcRows); SQLite non ha procedure.
 - Origini REST: le condizioni che la sintassi scelta non esprime esattamente (per esempio «contiene» con caratteri speciali in json-server, intervalli di sole date, più condizioni sullo stesso campo) e i totali, report e grafici senza filtri leggono tutte le pagine (massimo 50.000 record), con la cache delle risposte facoltativa per non rileggerle a ogni richiesta. Le condizioni SQL dei lookup (`where`) non si applicano ai lookup verso tabelle REST; l'importazione su REST non può essere annullata in blocco (ogni record è una chiamata all'API).
 - PDF: caratteri limitati a quelli di DejaVu Sans (niente cinese, giapponese, coreano, arabo legato; emoji in bianco e nero), testi troppo lunghi per la colonna troncati con «…» nella lista; immagini solo nel PDF del record (al massimo 6 per campo).
 - Strato AnyChart: copre tutte le chiamate dei 55 eventi grafico del progetto reale di prova e in più formati `{%Value}{...}`, impilamento e marcatori; altre chiamate AnyChart vengono ignorate senza errori.
