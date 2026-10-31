@@ -21,7 +21,7 @@ const channels = [
   'themes:list', 'themes:scan', 'themes:install', 'themes:remove',
   'ddl:build', 'db:columns', 'db:exec', 'ddl:script', 'file:save', 'file:read', 'tables:exportZip', 'tables:importFile',
   'db:drivers', 'db:test', 'db:tables', 'db:describe', 'db:preview', 'wizard:import', 'wizard:sqlview', 'wizard:refresh', 'rest:sample', 'rest:add', 'templates:list', 'templates:apply', 'ai:status', 'ai:setKey', 'ai:event', 'update:check', 'update:install', 'update:restart',
-  'gen:check', 'gen:generate', 'gen:hash', 'php:info', 'php:lintEvent', 'preview:start', 'preview:stop', 'preview:status', 'preview:open',
+  'gen:check', 'gen:generate', 'gen:hash', 'php:info', 'php:lintEvent', 'preview:start', 'preview:stop', 'preview:status', 'preview:open', 'docker:options', 'docker:generate', 'docker:status', 'docker:up', 'docker:down', 'docker:logs', 'docker:joinPassword',
   'deploy:run', 'deploy:test',
   'git:status', 'git:log', 'git:diff', 'git:commit', 'git:pull', 'git:push', 'git:init', 'git:setRemote', 'git:resolve', 'git:clone',
   'team:connect', 'team:disconnect', 'team:lock', 'team:unlock', 'team:state', 'team:chat', 'team:checkout', 'team:publish',

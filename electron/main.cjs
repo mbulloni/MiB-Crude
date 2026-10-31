@@ -275,6 +275,22 @@ handle('gen:generate', (proj, opts = {}) => {
   return res;
 });
 handle('gen:hash', (pw) => G.hashPassword(pw));
+// Docker environment of the project (core/dockerenv.cjs): files in <project>/docker, app in docker/app.
+const DK = require('../core/dockerenv.cjs');
+handle('docker:options', () => ({ apache: DK.APACHE, php: DK.PHP, mariadb: DK.MARIADB, defaults: DK.DEFAULTS }));
+handle('docker:generate', (proj) => DK.generate({ ...proj, dir: need().dir }, secrets(), G));
+handle('docker:status', () => DK.status(path.join(need().dir, 'docker')));
+handle('docker:up', () => DK.compose(path.join(need().dir, 'docker'), ['up', '-d', '--build']).then((o) => o.split('\n').slice(-15).join('\n')));
+handle('docker:down', () => DK.compose(path.join(need().dir, 'docker'), ['down']).then(() => true));
+handle('docker:logs', () => DK.compose(path.join(need().dir, 'docker'), ['logs', '--tail', '60', '--no-color']));
+// the domain join password lives only in docker/.env on this computer
+handle('docker:joinPassword', (pw) => {
+  const f = path.join(need().dir, 'docker', '.env');
+  const text = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+  const line = `NTLM_JOIN_PASSWORD=${String(pw).replace(/\n/g, '')}`;
+  fs.writeFileSync(f, /^NTLM_JOIN_PASSWORD=.*$/m.test(text) ? text.replace(/^NTLM_JOIN_PASSWORD=.*$/m, line) : `${text}${line}\n`, { mode: 0o600 });
+  return true;
+});
 handle('php:info', () => preview.phpInfo(true));
 // --- AI assistant: API key encrypted with the OS keyring (safeStorage), never in the project ---
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { call, mc } from '../api';
 import { run, save, saveSecrets, toast, useStore } from '../store';
 import { Btn, Check, I, Modal, Row, Section, Select, Text } from './ui';
+import DockerSection from './DockerSection';
 
 interface Profile { id: string; name: string; type: 'folder' | 'sftp' | 'ftp'; host?: string; port?: number; user?: string; remoteDir: string; keyFile?: string; secure?: boolean; insecure?: boolean; uploadSecrets?: boolean; full?: boolean }
 
@@ -73,6 +74,7 @@ export default function OutputPanel() {
             {prev?.log && <pre className="log">{prev.log.split('\n').slice(-12).join('\n')}</pre>}
           </Section>
         </div>
+        <DockerSection />
         <Section title="Pubblicazione" actions={<Btn icon="plus-lg" onClick={() => setEdit({ id: `p${Date.now().toString(36)}`, name: 'Produzione', type: 'sftp', port: 22, remoteDir: '/var/www/html/app' })}>Destinazione</Btn>}
           help="Caricamento incrementale: solo i file cambiati. La cartella dei file caricati dagli utenti non viene mai sovrascritta. Le destinazioni e le password restano su questo computer.">
           {!profiles.length && <p className="help">Nessuna destinazione.</p>}
