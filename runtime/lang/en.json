@@ -153,6 +153,7 @@
  "login.locked": "Too many attempts: account locked for 15 minutes",
  "login.logout": "Log out",
  "login.password": "Password",
+ "login.remember": "Remember me on this device ({0} days)",
  "login.submit": "Log in",
  "login.title": "Login",
  "login.unverified": "Please confirm your email address first",

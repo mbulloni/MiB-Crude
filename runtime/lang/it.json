@@ -153,6 +153,7 @@
  "login.locked": "Troppi tentativi: account bloccato per 15 minuti",
  "login.logout": "Esci",
  "login.password": "Password",
+ "login.remember": "Ricordami su questo dispositivo ({0} giorni)",
  "login.submit": "Accedi",
  "login.title": "Accesso",
  "login.unverified": "Conferma prima l'indirizzo email",

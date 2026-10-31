@@ -26,6 +26,8 @@ class Security
             if ($idle > 0 && isset($_SESSION['mc_seen']) && time() - $_SESSION['mc_seen'] > $idle) $this->logout();
             $_SESSION['mc_seen'] = time();
         }
+        // "Remember me": a new session from the browser's cookie
+        if ($this->enabled() && empty($_SESSION['mc_user']) && $this->managed()) Remember::restore($this);
     }
 
     public function enabled()
@@ -166,11 +168,11 @@ class Security
         // sends codes) with one sent by email or SMS.
         if ($this->twoFactorEnabled() && !empty($user['id'])) {
             if ($this->totpSecret($user['id'])) {
-                $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time(), 'mode' => 'totp'];
+                $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time(), 'mode' => 'totp', 'remember' => $this->rememberAsked];
                 return '2fa';
             }
             if ($this->twoFactorChannel() !== '') {
-                $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time(), 'mode' => 'code'];
+                $_SESSION['mc_2fa_pending'] = ['user' => $user, 'at' => time(), 'mode' => 'code', 'remember' => $this->rememberAsked];
                 $err = $this->sendTwoFactorCode();
                 if ($err === '') return '2fa';
                 unset($_SESSION['mc_2fa_pending']);
@@ -178,8 +180,12 @@ class Security
             }
         }
         $this->startUserSession($user);
+        if ($this->rememberAsked) Remember::issue($user['username']);
         return '';
     }
+
+    /** Set by the login page when "Ricordami" is ticked. */
+    public $rememberAsked = false;
 
     public function startUserSession(array $user)
     {
@@ -427,6 +433,7 @@ class Security
         } elseif (!Totp::verify($this->totpSecret($p['user']['id']), $code)) { Audit::raw('2fa_failed', $p['user']['username']); return t('2fa.wrong'); }
         unset($_SESSION['mc_2fa_pending']);
         $this->startUserSession($p['user']);
+        if (!empty($p['remember'])) Remember::issue($p['user']['username']);
         return '';
     }
 

@@ -81,6 +81,8 @@ export default function SecurityPanel() {
               <Select value={(sec as any).twoFactor?.channel || ''} options={[['', 'Nessuno: solo app di autenticazione'], ['email', 'Codice via email'], ['sms', 'Codice via SMS']]} onChange={(v) => set((s) => { (s as any).twoFactor = { ...((s as any).twoFactor || {}), channel: v }; })} /></Row>}
             <Row label="Tentativi prima del blocco" hint="Blocco di 15 minuti; 0 = mai"><Num value={sec.maxLoginAttempts} onChange={(v) => set((s) => { s.maxLoginAttempts = Number(v) || 0; })} /></Row>
             <Row label="Scadenza sessione (minuti di inattività)"><Num value={sec.sessionMinutes} onChange={(v) => set((s) => { s.sessionMinutes = Number(v) || 0; })} /></Row>
+            {sec.users.managed && sec.mode === 'database' && <Row label="«Ricordami» (giorni)" hint="Casella nella pagina di accesso: il browser resta collegato per questi giorni anche dopo la chiusura (cookie rinnovato a ogni uso, cancellato da «Esci»); 0 = nessuna casella">
+              <Num value={(sec as { rememberDays?: number }).rememberDays || 0} min={0} onChange={(v) => set((s) => { (s as { rememberDays?: number }).rememberDays = Number(v) || 0; })} /></Row>}
           </Section>
         </div>}
         {tab === 'groups' && <Section title="Gruppi" actions={<Btn icon="plus-lg" onClick={() => set((s) => { s.groups.push({ id: `gruppo${s.groups.length + 1}`, label: { it: 'Nuovo gruppo' } }); })}>Nuovo gruppo</Btn>}

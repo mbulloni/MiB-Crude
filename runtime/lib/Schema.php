@@ -4,7 +4,7 @@ namespace MiB;
 /** System tables (users, groups, rights, audit, locks, notifications) created on first run in the main database. */
 class Schema
 {
-    const VERSION = 6;
+    const VERSION = 7;
 
     public static function prefix()
     {
@@ -84,6 +84,7 @@ class Schema
             'tasks' => 'CREATE TABLE ' . $q('tasks') . " ({$c('name')} {$vc(100)} NOT NULL PRIMARY KEY, {$c('last_run')} $ts, {$c('ok')} $int DEFAULT 0, "
                 . "{$c('message')} $text, {$c('duration')} " . ['mysql' => 'DECIMAL(12,3)', 'pgsql' => 'NUMERIC(12,3)', 'sqlsrv' => 'DECIMAL(12,3)', 'oracle' => 'NUMBER(12,3)', 'sqlite' => 'REAL'][$d] . ")$engine",
             'phones' => 'CREATE TABLE ' . $q('phones') . " ({$c('username')} {$vc(150)} NOT NULL PRIMARY KEY, {$c('phone')} {$vc(50)})$engine",
+            'remember' => 'CREATE TABLE ' . $q('remember') . " ({$c('selector')} {$vc(24)} NOT NULL PRIMARY KEY, {$c('username')} {$vc(150)}, {$c('hash')} {$vc(64)}, {$c('expires')} $ts)$engine",
             'notif_seen' => 'CREATE TABLE ' . $q('notif_seen') . " ({$c('username')} {$vc(150)} NOT NULL PRIMARY KEY, {$c('last_id')} $int DEFAULT 0)$engine",
         ];
     }

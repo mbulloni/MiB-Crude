@@ -636,7 +636,10 @@ class Pages
         $useCaptcha = !empty($sec->cfg['captcha']['login']);
         if ($this->post()) {
             if ($useCaptcha && !$sec->captchaOk('login', isset($_POST['captcha']) ? $_POST['captcha'] : '')) $msg = t('captcha.wrong');
-            else $msg = $sec->login(isset($_POST['username']) ? $_POST['username'] : '', isset($_POST['password']) ? $_POST['password'] : '');
+            else {
+                $sec->rememberAsked = !empty($_POST['remember']) && Remember::enabled();
+                $msg = $sec->login(isset($_POST['username']) ? $_POST['username'] : '', isset($_POST['password']) ? $_POST['password'] : '');
+            }
             if ($msg === '2fa') redirect($this->app->url('twofactor'));
             if ($msg === '') {
                 if ($sec->twoFactorRequired() && $sec->twoFactorChannel() === '' && !$sec->totpSecret($sec->user()['id'])) { $this->app->flash('warning', t('2fa.setup_required')); redirect($this->app->url('profile')); }
@@ -678,6 +681,7 @@ class Pages
 
     public function page_logout()
     {
+        Remember::forget();
         $this->app->security->logout();
         redirect($this->app->url('login'));
     }
