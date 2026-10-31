@@ -1,6 +1,6 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.4.2 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2); restano i limiti sotto.
+Stato v0.5.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0); restano i limiti sotto.
 
 ## Fatto (v0.2.0, 2026-10-30)
 1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
@@ -31,7 +31,7 @@ Stato v0.4.2 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 ## Fatto (v0.4.2, 2026-10-31)
 - Skin scura per Webarch (il template non ne ha una): intestazione, menu laterale, contenuti, tabelle, controlli e menu a tendina seguono la modalità scura dell'app con tutti e quattro i colori; corretto anche il colore del testo dei pulsanti outline e link, nascosto da webarch.css (2026-10-31).
 
-## Dopo v0.4.2
+## Fatto (v0.5.0, 2026-10-31)
 - Adattatore Material Design Admin (AngularJS 1 + Angular Material + Bootstrap 3): intestazione e menu laterale riscritti in PHP senza AngularJS, dal main.css del template restano solo ui.css e app.css; combinazioni di colori del personalizzatore (barra scura, logo blu, intestazione blu con barra chiara, menu orizzontale), menu ridotto alle icone, menu a scomparsa su mobile, skin scura aggiunta (2026-10-31).
 
 ## Limiti aperti
