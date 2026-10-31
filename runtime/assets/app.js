@@ -523,3 +523,16 @@
   load();
   setInterval(load, 60000);
 })();
+
+// Saved searches: the quick search typed in the list (DataTables) is part of the saved search.
+document.addEventListener('submit', function (e) {
+  var f = e.target;
+  if (!f.classList || !f.classList.contains('mc-save-search')) return;
+  try {
+    var input = f.elements['query'];
+    var q = JSON.parse(input.value || '{}');
+    var dt = window.jQuery && jQuery.fn.dataTable ? jQuery.fn.dataTable.tables({ api: true }) : null;
+    if (dt && dt.context.length) { var s = dt.search(); if (s) q.q = s; else delete q.q; }
+    input.value = JSON.stringify(q);
+  } catch (x) { /* keep the search from the address */ }
+}, true);

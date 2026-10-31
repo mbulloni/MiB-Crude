@@ -358,6 +358,24 @@ class Pages
         $this->app->json(Notifications::forUser());
     }
 
+    // --- saved searches -----------------------------------------------------------
+
+    /** Save (name, current search of the list) or delete a saved search, then back to the list. */
+    public function page_savedsearch()
+    {
+        $t = $this->table();
+        if (!$this->post() || !Searches::enabled() || !$this->app->security->can($t->name, 'S')) throw new HttpError(t('error.notfound'), 404);
+        $back = isset($_POST['_back']) && strpos($_POST['_back'], 'index.php?') === 0 ? $_POST['_back'] : $this->app->url('list', ['t' => $t->name]);
+        if (isset($_POST['action']) && $_POST['action'] === 'delete') {
+            Searches::delete(isset($_POST['id']) ? $_POST['id'] : 0);
+            redirect($back);
+        }
+        $query = json_decode(isset($_POST['query']) ? (string)$_POST['query'] : '', true);
+        Searches::save($t, isset($_POST['title']) ? $_POST['title'] : '', is_array($query) ? $query : [], !empty($_POST['shared']));
+        $this->app->flash('success', t('search.saved'));
+        redirect($back);
+    }
+
     // --- update selected --------------------------------------------------------
 
     /** "Update selected" (phpr): the same values on every selected record, through the normal edit path. */

@@ -75,6 +75,29 @@ if ($viewDef && in_array($curView, ['calendar', 'map'], true)) $needLibs = [$cur
     <a class="btn btn-outline-secondary btn-sm" href="<?= h($app->url('import', ['t' => $t->name])) ?>"><i class="bi bi-upload"></i> <?= h(t('btn.import')) ?></a>
   <?php endif ?>
   <?php if (!\MiB\Compat::hidden('advsearch_link') && $t->enabled('search')): ?><a class="btn btn-sm btn-outline-secondary ms-auto" href="<?= h($app->url('search', ['t' => $t->name, 's' => $req['s']])) ?>"><i class="bi bi-funnel"></i> <?= h(t('list.advanced')) ?></a><?php endif ?>
+  <?php if (\MiB\Searches::enabled()): $saved = \MiB\Searches::forTable($t->name); $curQuery = array_filter(['q' => $req['q'], 's' => $req['s'], 'f' => $req['f']]); ?>
+    <div class="dropdown mc-saved-searches<?= !\MiB\Compat::hidden('advsearch_link') && $t->enabled('search') ? '' : ' ms-auto' ?>">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="bi bi-bookmark-star"></i> <?= h(t('search.saved_menu')) ?><?= $saved ? ' <span class="badge text-bg-secondary">' . count($saved) . '</span>' : '' ?></button>
+      <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:18rem">
+        <?php foreach ($saved as $sv): $qs = array_merge($base, array_filter(['s' => isset($sv['query']['s']) ? $sv['query']['s'] : [], 'f' => isset($sv['query']['f']) ? $sv['query']['f'] : [], 'q' => isset($sv['query']['q']) ? $sv['query']['q'] : ''])); ?>
+          <div class="d-flex align-items-center gap-1 mc-saved-item">
+            <a class="dropdown-item rounded flex-grow-1 text-truncate" href="<?= h($app->url('list', $qs)) ?>"><i class="bi bi-<?= $sv['shared'] ? 'people' : 'bookmark' ?> me-1"></i><?= h($sv['title']) ?></a>
+            <?php if ($sv['mine'] || ($sv['shared'] && isAdmin())): ?>
+            <form method="post" action="<?= h($app->url('savedsearch', ['t' => $t->name])) ?>" class="m-0"><?= $app->csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$sv['id'] ?>"><input type="hidden" name="_back" value="<?= h($app->url('list', $base)) ?>">
+              <button class="btn btn-sm btn-link text-danger p-0 px-1" title="<?= h(t('btn.delete')) ?>"><i class="bi bi-x-lg"></i></button></form>
+            <?php endif ?>
+          </div>
+        <?php endforeach ?>
+        <?php if (!$saved): ?><div class="text-secondary small px-2 pb-2"><?= h(t('search.none')) ?></div><?php endif ?>
+        <form method="post" action="<?= h($app->url('savedsearch', ['t' => $t->name])) ?>" class="border-top pt-2 mt-1 mc-save-search">
+          <?= $app->csrfField() ?><input type="hidden" name="query" value="<?= h(json_encode((object)$curQuery, JSON_UNESCAPED_UNICODE)) ?>"><input type="hidden" name="_back" value="<?= h($curUrl) ?>">
+          <div class="small fw-semibold mb-1"><?= h(t('search.save_current')) ?></div>
+          <div class="input-group input-group-sm"><input class="form-control" name="title" required maxlength="200" placeholder="<?= h(t('search.title')) ?>"><button class="btn btn-primary" title="<?= h(t('btn.save')) ?>"><i class="bi bi-floppy"></i></button></div>
+          <?php if (isAdmin()): ?><div class="form-check small mt-1"><input class="form-check-input" type="checkbox" name="shared" value="1" id="mcSearchShared"><label class="form-check-label" for="mcSearchShared"><?= h(t('search.shared')) ?></label></div><?php endif ?>
+        </form>
+      </div>
+    </div>
+  <?php endif ?>
 </div>
 <?php if ($req['s'] || $req['f']): ?>
 <div class="mb-2 small"><span class="badge text-bg-info"><i class="bi bi-funnel-fill"></i> <?= h(t('list.filtered')) ?></span>

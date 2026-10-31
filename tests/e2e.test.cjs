@@ -500,3 +500,48 @@ test('project header, footer and menu (code and file)', async () => {
   const direct = await fetch(BASE.replace('index.php', 'custom/regions/header.php'));
   assert.strictEqual(direct.status, 404);
 });
+
+test('saved searches: per user, shared by an administrator, applied from the list menu', async () => {
+  const a = client();
+  let r = await a.req('?p=login');
+  await a.post('?p=login', { _csrf: a.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  // system tables survive between runs: start from no saved searches
+  await dbExec(`DELETE FROM ${require('../core/ddl.cjs').quote(CONN.driver, 'mc_searches')}`);
+  r = await a.req('?p=list&t=orders&s[status][op]=equals&s[status][v]=shipped');
+  assert.match(r.text, /mc-saved-searches/);
+  const csrf = a.csrf(r.text);
+  const query = JSON.stringify({ s: { status: { op: 'equals', v: 'shipped' } }, q: 'x', bogus: 1 });
+  r = await a.post('?p=savedsearch&t=orders', { _csrf: csrf, title: 'Spediti', query, shared: '1', _back: 'index.php?p=list&t=orders' });
+  assert.strictEqual(r.status, 302);
+  await a.post('?p=savedsearch&t=orders', { _csrf: csrf, title: 'Solo mia', query: JSON.stringify({ f: { status: ['new'] } }), _back: 'index.php?p=list&t=orders' });
+  r = await a.req('?p=list&t=orders');
+  assert.match(r.text, /Spediti/);
+  assert.match(r.text, /Solo mia/);
+  // the link brings back the search; unknown keys are dropped
+  const href = (r.text.match(/href="([^"]*)"><i class="bi bi-people me-1"><\/i>Spediti/) || [])[1].replace(/&amp;/g, '&');
+  assert.match(decodeURIComponent(href), /s\[status\]\[op\]=equals&s\[status\]\[v\]=shipped/);
+  assert.match(href, /q=x/);
+  assert.doesNotMatch(href, /bogus/);
+  // another user sees the shared search only and cannot share
+  const u = client();
+  r = await u.req('?p=login');
+  await u.post('?p=login', { _csrf: u.csrf(r.text), username: 'luca', password: 'Password1' });
+  r = await u.req('?p=list&t=orders');
+  assert.match(r.text, /Spediti/);
+  assert.doesNotMatch(r.text, /Solo mia/);
+  assert.doesNotMatch(r.text, /mcSearchShared/);
+  await u.post('?p=savedsearch&t=orders', { _csrf: u.csrf(r.text), title: 'Di Luca', query: '{}', shared: '1', _back: 'index.php?p=list&t=orders' });
+  // he cannot delete the administrator's shared search
+  const sharedId = (r.text.match(/name="id" value="(\d+)"/) || [])[1];
+  assert.strictEqual(sharedId, undefined, 'no delete button on a shared search of somebody else');
+  r = await a.req('?p=list&t=orders');
+  assert.doesNotMatch(r.text, /Di Luca/, 'private to luca, not shared');
+  // the administrator deletes "Solo mia"
+  const id = [...r.text.matchAll(/name="id" value="(\d+)"[\s\S]*?<\/form>/g)].map((m) => m[1]);
+  assert.strictEqual(id.length, 2);
+  const mine = r.text.match(/Solo mia<\/a>\s*<form[^>]*>[\s\S]*?name="id" value="(\d+)"/)[1];
+  await a.post('?p=savedsearch&t=orders', { _csrf: a.csrf(r.text), action: 'delete', id: mine, _back: 'index.php?p=list&t=orders' });
+  r = await a.req('?p=list&t=orders');
+  assert.doesNotMatch(r.text, /Solo mia/);
+  assert.match(r.text, /Spediti/);
+});

@@ -4,7 +4,7 @@ namespace MiB;
 /** System tables (users, groups, rights, audit, locks, notifications) created on first run in the main database. */
 class Schema
 {
-    const VERSION = 3;
+    const VERSION = 4;
 
     public static function prefix()
     {
@@ -77,6 +77,8 @@ class Schema
                 . "PRIMARY KEY ({$c('table_name')}, {$c('keys_json')}))$engine",
             'notifications' => 'CREATE TABLE ' . $q('notifications') . " ({$c('id')} $id, {$c('username')} {$vc(150)}, {$c('title')} {$vc(255)}, {$c('message')} $text, "
                 . "{$c('icon')} {$vc(50)}, {$c('url')} {$vc(500)}, {$c('new_window')} $int DEFAULT 0, {$c('created_at')} $ts, {$c('expires_at')} $ts)$engine",
+            'searches' => 'CREATE TABLE ' . $q('searches') . " ({$c('id')} $id, {$c('username')} {$vc(150)}, {$c('table_name')} {$vc(150)}, {$c('title')} {$vc(200)}, "
+                . "{$c('query_json')} $text, {$c('shared')} $int DEFAULT 0, {$c('created_at')} $ts)$engine",
             'notif_seen' => 'CREATE TABLE ' . $q('notif_seen') . " ({$c('username')} {$vc(150)} NOT NULL PRIMARY KEY, {$c('last_id')} $int DEFAULT 0)$engine",
         ];
     }

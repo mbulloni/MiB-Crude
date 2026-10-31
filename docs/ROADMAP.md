@@ -59,6 +59,7 @@ Stato v0.9.1 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 
 ## Dopo v0.9.1 (in corso)
 - **Origini da stored procedure**: procedure MariaDB/MySQL (`CALL`) e SQL Server (`EXEC`), funzioni PostgreSQL che restituiscono una tabella, funzioni pipelined Oracle; elenco e parametri letti dal database, campi dal primo risultato (tipi dai metadati del driver), parametri da valore fisso, sessione, utente, indirizzo o evento `ProcParams`; ricerca, filtri, ordinamento, paginazione, totali, report e grafici in memoria come per REST. Provato su MariaDB, PostgreSQL, SQL Server e Oracle (tests/proc.test.cjs, anche in `npm run test:db`).
+- **Ricerche salvate** ("Save search" di phpr): menu nella lista, ricerca rapida + avanzata + filtri salvati per utente, condivisione da parte degli amministratori, eliminazione; tabella di sistema `mc_searches` (schema 4) provata su MariaDB, PostgreSQL, SQLite, SQL Server e Oracle; opzione del progetto per disattivarle. Servono il login.
 
 ## Limiti aperti
 - Stored procedure: sola lettura (niente inserimento/modifica tramite procedure), al massimo 50.000 righe lette a ogni pagina, il filtro fisso WHERE e l'evento BeforeSelect non si applicano; SQLite non ha procedure.
