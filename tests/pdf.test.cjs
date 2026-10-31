@@ -70,3 +70,34 @@ test('PDF without the font files: Helvetica and Windows-1252', () => {
   if (HAS_PDFTOTEXT) assert.match(execFileSync('pdftotext', [path.join(dir, 'rec.pdf'), '-'], { encoding: 'utf8' }), /Città — \?+ \/ \?+/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('PDF: Chinese and Japanese (fallback font), Arabic joined and right to left, Hebrew, Thai', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mibcrude-pdf-'));
+  const script = `<?php
+namespace MiB;
+function t($k) { return $k; }
+require ${JSON.stringify(path.join(LIB, 'PdfFont.php'))};
+require ${JSON.stringify(path.join(LIB, 'Pdf.php'))};
+file_put_contents($argv[1] . '/m.pdf', Pdf::record('Lingue', ['zh' => '订单已发货', 'ja' => 'こんにちは', 'ar' => 'مرحبا', 'he' => 'שלום', 'th' => 'สวัสดี', 'it' => 'solo latino']));
+file_put_contents($argv[1] . '/l.pdf', Pdf::record('Solo latino', ['it' => 'àèìòù €']));
+`;
+  fs.writeFileSync(path.join(dir, 'make.php'), script);
+  execFileSync(PHP, [path.join(dir, 'make.php'), dir]);
+  const m = fs.readFileSync(path.join(dir, 'm.pdf'), 'latin1');
+  assert.match(m, /\/BaseFont \/[A-Z]{6}\+DroidSansFallbackFull/);
+  assert.match(m, /\/BaseFont \/[A-Z]{6}\+NotoSansThai-Regular/);
+  // a Latin-only PDF does not load or embed the fallback fonts
+  const l = fs.readFileSync(path.join(dir, 'l.pdf'), 'latin1');
+  assert.doesNotMatch(l, /DroidSansFallback|NotoSansThai/);
+  if (HAS_PDFTOTEXT) {
+    const text = execFileSync('pdftotext', [path.join(dir, 'm.pdf'), '-'], { encoding: 'utf8' });
+    assert.match(text, /订单已发货/);
+    assert.match(text, /こんにちは/);
+    // joined Arabic letters (presentation forms: meem initial, reh final, hah initial, beh medial, alef final);
+    // pdftotext gives right-to-left text back in reading order
+    assert.match(text, /\u{FEE3}\u{FEAE}\u{FEA3}\u{FE92}\u{FE8E}/u);
+    assert.match(text, /שלום/);
+    assert.match(text, /สวัสดี/);
+  }
+  fs.rmSync(dir, { recursive: true, force: true });
+});

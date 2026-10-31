@@ -30,11 +30,113 @@ class Pdf
         $b = $r ? PdfTtf::load($dir . 'DejaVuSans-Bold.ttf') : null;
         $this->regular = $r ?: new PdfCoreFont(false);
         $this->bold = $b ?: ($r ?: new PdfCoreFont(true));
+        $this->fontDir = $dir;
+    }
+
+    // --- other scripts: fallback fonts, Arabic shaping, right-to-left -------------------------
+
+    private $fontDir;
+    /** @var PdfTtf[]|null fallback fonts (Chinese/Japanese, Thai), loaded at the first character DejaVu lacks */
+    private $fallbacks = null;
+    private $used = ['F1' => true, 'F2' => true];
+
+    private function fallbacks()
+    {
+        if ($this->fallbacks === null) {
+            $this->fallbacks = [];
+            foreach (['F3' => 'DroidSansFallbackFull.ttf', 'F4' => 'NotoSansThai-Regular.ttf'] as $k => $file) {
+                $f = PdfTtf::load($this->fontDir . $file);
+                if ($f) $this->fallbacks[$k] = $f;
+            }
+        }
+        return $this->fallbacks;
+    }
+
+    private function fontByKey($k)
+    {
+        return $k === 'F1' ? $this->regular : ($k === 'F2' ? $this->bold : $this->fallbacks[$k]);
+    }
+
+    /** Text split in [font key, text] runs: DejaVu, or the first fallback font that has the character. */
+    private function runs($s, $bold)
+    {
+        $key = $bold ? 'F2' : 'F1';
+        $main = $this->font($bold);
+        if (!($main instanceof PdfTtf) || $s === '' || !preg_match('/[^\x00-\x{24F}]/u', $s)) return [[$key, $s]];
+        $out = [];
+        $cur = null;
+        $buf = '';
+        foreach (preg_split('//u', $s, -1, PREG_SPLIT_NO_EMPTY) as $ch) {
+            $cp = mb_ord($ch, 'UTF-8');
+            $k = $key;
+            if ($cp > 0x24F && !$main->has($cp)) foreach ($this->fallbacks() as $fk => $f) if ($f->has($cp)) { $k = $fk; break; }
+            if ($k !== $cur && $buf !== '') { $out[] = [$cur, $buf]; $buf = ''; }
+            $cur = $k;
+            $buf .= $ch;
+        }
+        if ($buf !== '') $out[] = [$cur, $buf];
+        return $out;
+    }
+
+    // Arabic letters: [isolated, final, initial, medial] presentation forms (0 = none: joins on the right only)
+    const ARABIC = [0x621 => [0xFE80, 0, 0, 0], 0x622 => [0xFE81, 0xFE82, 0, 0], 0x623 => [0xFE83, 0xFE84, 0, 0], 0x624 => [0xFE85, 0xFE86, 0, 0],
+        0x625 => [0xFE87, 0xFE88, 0, 0], 0x626 => [0xFE89, 0xFE8A, 0xFE8B, 0xFE8C], 0x627 => [0xFE8D, 0xFE8E, 0, 0], 0x628 => [0xFE8F, 0xFE90, 0xFE91, 0xFE92],
+        0x629 => [0xFE93, 0xFE94, 0, 0], 0x62A => [0xFE95, 0xFE96, 0xFE97, 0xFE98], 0x62B => [0xFE99, 0xFE9A, 0xFE9B, 0xFE9C], 0x62C => [0xFE9D, 0xFE9E, 0xFE9F, 0xFEA0],
+        0x62D => [0xFEA1, 0xFEA2, 0xFEA3, 0xFEA4], 0x62E => [0xFEA5, 0xFEA6, 0xFEA7, 0xFEA8], 0x62F => [0xFEA9, 0xFEAA, 0, 0], 0x630 => [0xFEAB, 0xFEAC, 0, 0],
+        0x631 => [0xFEAD, 0xFEAE, 0, 0], 0x632 => [0xFEAF, 0xFEB0, 0, 0], 0x633 => [0xFEB1, 0xFEB2, 0xFEB3, 0xFEB4], 0x634 => [0xFEB5, 0xFEB6, 0xFEB7, 0xFEB8],
+        0x635 => [0xFEB9, 0xFEBA, 0xFEBB, 0xFEBC], 0x636 => [0xFEBD, 0xFEBE, 0xFEBF, 0xFEC0], 0x637 => [0xFEC1, 0xFEC2, 0xFEC3, 0xFEC4], 0x638 => [0xFEC5, 0xFEC6, 0xFEC7, 0xFEC8],
+        0x639 => [0xFEC9, 0xFECA, 0xFECB, 0xFECC], 0x63A => [0xFECD, 0xFECE, 0xFECF, 0xFED0], 0x641 => [0xFED1, 0xFED2, 0xFED3, 0xFED4], 0x642 => [0xFED5, 0xFED6, 0xFED7, 0xFED8],
+        0x643 => [0xFED9, 0xFEDA, 0xFEDB, 0xFEDC], 0x644 => [0xFEDD, 0xFEDE, 0xFEDF, 0xFEE0], 0x645 => [0xFEE1, 0xFEE2, 0xFEE3, 0xFEE4], 0x646 => [0xFEE5, 0xFEE6, 0xFEE7, 0xFEE8],
+        0x647 => [0xFEE9, 0xFEEA, 0xFEEB, 0xFEEC], 0x648 => [0xFEED, 0xFEEE, 0, 0], 0x649 => [0xFEEF, 0xFEF0, 0, 0], 0x64A => [0xFEF1, 0xFEF2, 0xFEF3, 0xFEF4]];
+    // lam + alef: [isolated, final] ligatures
+    const LAM_ALEF = [0x622 => [0xFEF5, 0xFEF6], 0x623 => [0xFEF7, 0xFEF8], 0x625 => [0xFEF9, 0xFEFA], 0x627 => [0xFEFB, 0xFEFC]];
+
+    /** Arabic letters in their joined forms (DejaVu has the presentation forms; PDF readers have no shaping). */
+    private static function shape($s)
+    {
+        if (!preg_match('/[\x{600}-\x{6FF}]/u', $s)) return $s;
+        $cps = array_map(function ($c) { return mb_ord($c, 'UTF-8'); }, preg_split('//u', $s, -1, PREG_SPLIT_NO_EMPTY));
+        $transparent = function ($c) { return ($c >= 0x64B && $c <= 0x65F) || $c === 0x670; };
+        $dual = function ($c) { return $c === 0x640 || (isset(self::ARABIC[$c]) && self::ARABIC[$c][2] !== 0); };
+        $joins = function ($c) { return $c === 0x640 || isset(self::ARABIC[$c]); };
+        $n = count($cps);
+        $neighbour = function ($i, $step) use ($cps, $n, $transparent) { for ($j = $i + $step; $j >= 0 && $j < $n; $j += $step) if (!$transparent($cps[$j])) return $cps[$j]; return null; };
+        $out = [];
+        for ($i = 0; $i < $n; $i++) {
+            $c = $cps[$i];
+            if (!isset(self::ARABIC[$c])) { $out[] = $c; continue; }
+            $prev = $neighbour($i, -1);
+            $next = $neighbour($i, 1);
+            $fromRight = $prev !== null && $dual($prev);
+            // lam followed by alef: one ligature
+            if ($c === 0x644 && $next !== null && isset(self::LAM_ALEF[$next])) {
+                $out[] = self::LAM_ALEF[$next][$fromRight ? 1 : 0];
+                for ($j = $i + 1; $j < $n; $j++) { if ($cps[$j] === $next) { $i = $j; break; } $out[] = $cps[$j]; }
+                continue;
+            }
+            $toLeft = $dual($c) && $next !== null && $joins($next);
+            $f = self::ARABIC[$c];
+            $form = $fromRight && $toLeft ? $f[3] : ($fromRight ? $f[1] : ($toLeft ? $f[2] : $f[0]));
+            $out[] = $form ?: $f[0];
+        }
+        return implode('', array_map(function ($c) { return mb_chr($c, 'UTF-8'); }, $out));
+    }
+
+    /** Right-to-left words (Arabic, Hebrew) in visual order: each right-to-left stretch is reversed. */
+    private static function visual($s)
+    {
+        $rtl = '\x{590}-\x{5FF}\x{600}-\x{6FF}\x{FB1D}-\x{FDFF}\x{FE70}-\x{FEFF}';
+        if (!preg_match("/[$rtl]/u", $s)) return $s;
+        return preg_replace_callback("/[$rtl](?:[$rtl\\s.,:;!?()\\-]*[$rtl])?/u", function ($m) {
+            $chars = preg_split('//u', $m[0], -1, PREG_SPLIT_NO_EMPTY);
+            $mirror = ['(' => ')', ')' => '('];
+            return implode('', array_map(function ($c) use ($mirror) { return isset($mirror[$c]) ? $mirror[$c] : $c; }, array_reverse($chars)));
+        }, $s);
     }
 
     private static function clean($s)
     {
-        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', str_replace(["\r\n", "\r", "\t"], ["\n", "\n", ' '], (string)$s));
+        return self::shape(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', str_replace(["\r\n", "\r", "\t"], ["\n", "\n", ' '], (string)$s)));
     }
 
     private function font($bold)
@@ -44,7 +146,9 @@ class Pdf
 
     private function width($s, $size, $bold = false)
     {
-        return $this->font($bold)->width($s, $size);
+        $w = 0;
+        foreach ($this->runs($s, $bold) as $r) $w += $this->fontByKey($r[0])->width($r[1], $size);
+        return $w;
     }
 
     /** Text cut to fit `max` points, with an ellipsis. */
@@ -83,7 +187,12 @@ class Pdf
 
     private function text($x, $y, $s, $size, $bold = false, $gray = 0)
     {
-        $this->cur .= sprintf("BT /%s %.1F Tf %.3F g %.2F %.2F Td %s Tj ET\n", $bold ? 'F2' : 'F1', $size, $gray, $x, $this->ph - $y, $this->font($bold)->encode($s));
+        $ops = '';
+        foreach ($this->runs(self::visual($s), $bold) as $r) {
+            $this->used[$r[0]] = true;
+            $ops .= sprintf('/%s %.1F Tf %s Tj ', $r[0], $size, $this->fontByKey($r[0])->encode($r[1]));
+        }
+        $this->cur .= sprintf("BT %.3F g %.2F %.2F Td %sET\n", $gray, $x, $this->ph - $y, $ops);
     }
 
     private function rect($x, $y, $w, $h, $gray)
@@ -298,13 +407,15 @@ class Pdf
         $id = 3;
         $f1 = $this->regular->objects($objs, $id);
         $f2 = $this->bold === $this->regular ? $f1 : $this->bold->objects($objs, $id);
+        $fontRes = "/F1 $f1 0 R /F2 $f2 0 R";
+        foreach (is_array($this->fallbacks) ? $this->fallbacks : [] as $k => $f) if (!empty($this->used[$k])) $fontRes .= " /$k " . $f->objects($objs, $id) . ' 0 R';
         $xobj = '';
         foreach ($this->images as $name => $img) {
             $objs[$id] = "<< /Type /XObject /Subtype /Image /Width {$img['w']} /Height {$img['h']} {$img['dict']} /Length " . strlen($img['data']) . " >>\nstream\n{$img['data']}\nendstream";
             $xobj .= "/$name $id 0 R ";
             $id++;
         }
-        $res = "/Resources << /Font << /F1 $f1 0 R /F2 $f2 0 R >>" . ($xobj !== '' ? " /XObject << $xobj>>" : '') . ' >>';
+        $res = "/Resources << /Font << $fontRes >>" . ($xobj !== '' ? " /XObject << $xobj>>" : '') . ' >>';
         $kids = [];
         foreach ($this->pages as $content) {
             $stream = function_exists('gzcompress') ? gzcompress($content) : $content;

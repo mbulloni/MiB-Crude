@@ -168,6 +168,12 @@ class PdfTtf implements PdfFontLike
         return $out;
     }
 
+    /** Does the font have the character? */
+    public function has($cp)
+    {
+        return isset($this->cmap[$cp]);
+    }
+
     private function gid($cp)
     {
         return isset($this->cmap[$cp]) ? $this->cmap[$cp] : (isset($this->cmap[0xFFFD]) ? $this->cmap[0xFFFD] : 0);
