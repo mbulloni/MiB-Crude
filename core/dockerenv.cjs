@@ -688,6 +688,18 @@ function compose(dir, args, onLine) {
   });
 }
 
+/** Linux or Windows containers: the Docker of this computer must match the generated environment. */
+function hostCheck(dir) {
+  const win = fs.readFileSync(path.join(dir, 'docker-compose.yml'), 'utf8').includes('./windows/web');
+  return new Promise((resolve, reject) => execFile('docker', ['info', '--format', '{{.OSType}}'], { timeout: 15000 }, (e, so) => {
+    if (e) return reject(new Error('Docker non risponde su questo computer: è installato e avviato?'));
+    const host = so.trim();
+    if (win && host !== 'windows') return reject(new Error(`L'ambiente è per contenitori Windows, ma il Docker di questo computer esegue contenitori ${host}: avvialo su un host Windows (Docker Desktop in modalità «contenitori Windows» o Windows Server) copiando la cartella docker/, oppure scegli Linux come sistema operativo per provarlo qui.`));
+    if (!win && host === 'windows') return reject(new Error('L\'ambiente è per contenitori Linux, ma Docker è in modalità «contenitori Windows»: passa ai contenitori Linux o scegli Windows come sistema operativo.'));
+    resolve(host);
+  }));
+}
+
 /** Containers of the environment with their state, and the versions really installed. */
 async function status(dir) {
   if (!fs.existsSync(path.join(dir, 'docker-compose.yml'))) return { generated: false, services: [] };
@@ -715,4 +727,4 @@ async function status(dir) {
   return { generated: true, services, versions };
 }
 
-module.exports = { APACHE, PHP, MARIADB, OS, WINDOWS, PHP_WINDOWS, winFiles, productionModules, DEFAULTS, settings, generate, compose, status, files, phpExtensions };
+module.exports = { hostCheck, APACHE, PHP, MARIADB, OS, WINDOWS, PHP_WINDOWS, winFiles, productionModules, DEFAULTS, settings, generate, compose, status, files, phpExtensions };

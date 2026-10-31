@@ -280,7 +280,7 @@ const DK = require('../core/dockerenv.cjs');
 handle('docker:options', () => ({ apache: DK.APACHE, php: DK.PHP, mariadb: DK.MARIADB, os: DK.OS, windows: DK.WINDOWS, phpWindows: DK.PHP_WINDOWS, defaults: DK.DEFAULTS }));
 handle('docker:generate', (proj) => DK.generate({ ...proj, dir: need().dir }, secrets(), G));
 handle('docker:status', () => DK.status(path.join(need().dir, 'docker')));
-handle('docker:up', () => DK.compose(path.join(need().dir, 'docker'), ['up', '-d', '--build']).then((o) => o.split('\n').slice(-15).join('\n')));
+handle('docker:up', async () => (await DK.hostCheck(path.join(need().dir, 'docker')), DK.compose(path.join(need().dir, 'docker'), ['up', '-d', '--build']).then((o) => o.split('\n').slice(-15).join('\n'))));
 handle('docker:down', () => DK.compose(path.join(need().dir, 'docker'), ['down']).then(() => true));
 handle('docker:logs', () => DK.compose(path.join(need().dir, 'docker'), ['logs', '--tail', '60', '--no-color']));
 // the domain join password lives only in docker/.env on this computer
