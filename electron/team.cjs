@@ -60,6 +60,9 @@ function attach(sock) {
     else if (msg.type === 'changed') onRemoteChange(msg).catch((e) => emit({ type: 'error', error: e.message }));
   });
   ws.on('close', () => {
+    // A socket replaced by a reconnection closes asynchronously: it must not fail the requests
+    // of the new socket nor mark the new connection as down.
+    if (ws !== sock && ws !== null) return;
     live.connected = false;
     for (const cb of pending.values()) cb({ type: 'error', error: 'Connessione chiusa' });
     pending.clear();
