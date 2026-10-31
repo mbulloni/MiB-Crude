@@ -99,6 +99,14 @@ test.before(async () => {
   proj.security.twoFactor = { enabled: true, required: false };
   proj.security.permissions = { users: { orders: 'SV', customers: 'SVAE' } };
   proj.project.settings.audit = true;
+  // project header (code, standard one hidden), footer (file of public/) and menu (code after the generated one)
+  proj.project.settings.regions = {
+    header: { source: 'code', code: '<div class="mc-test-header">Testata <?= h(userName()) ?></div>', hideStandard: true },
+    footer: { source: 'file', file: 'inc/footer.php' },
+    menu: { source: 'code', position: 'after', code: '<li class="nav-item mc-test-menu"><a class="nav-link" href="#">Voce extra</a></li>' },
+  };
+  fs.mkdirSync(path.join(dir, 'public', 'inc'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'public', 'inc', 'footer.php'), '<div class="mc-test-footer">Piede <?= date("Y") ?></div>');
   proj.project.settings.api = { enabled: true };
   proj.project.settings.webBuilder = { enabled: true };
   proj.reports.push({ name: 'sales', title: { it: 'Vendite', en: 'Sales' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'customer_id', 'total'], showDetails: true });
@@ -475,4 +483,20 @@ test('PDF: list export and a single record', async () => {
   // a table without the PDF format has no button and no page
   r = await c.req('?p=pdf&t=no_such_table&k[id]=1');
   assert.notStrictEqual(r.status, 200);
+});
+
+test('project header, footer and menu (code and file)', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=list&t=orders');
+  assert.match(r.text, /<div class="mc-test-header">Testata admin<\/div>/);
+  assert.match(r.text, /mc-hide-header/);
+  assert.match(r.text, new RegExp(`mc-test-footer">Piede ${new Date().getFullYear()}`));
+  // the generated menu is kept, the project's item comes after it
+  const menu = r.text.indexOf('mc-test-menu');
+  assert.ok(menu > 0 && r.text.indexOf('t=orders') < menu);
+  // the code is not reachable directly
+  const direct = await fetch(BASE.replace('index.php', 'custom/regions/header.php'));
+  assert.strictEqual(direct.status, 404);
 });

@@ -182,8 +182,14 @@ function generate(proj, opts = {}) {
     const th = Themes.load(opts.themesDir, packId);
     if (!th) throw new Error(`Il tema grafico "${packId}" non è installato su questo computer: importalo da Impostazioni e stile → Temi grafici`);
     copied += copyDir(path.join(th.dir, 'assets'), path.join(out, 'theme', packId, 'assets'));
-    copied += copyDir(path.join(th.dir, 'layouts'), path.join(out, 'theme', packId, 'layouts'), (s) => !s.endsWith('.php'));
-    copied += copyDir(path.join(th.dir, 'layouts'), path.join(out, 'runtime', 'themes', packId), (s) => s.endsWith('.php'));
+    // Layouts, theme.css and theme.js are MiB-Crude code: taken from the current adapter, so a theme imported
+    // with an older version gets every fix without importing the template again (library copy as fallback).
+    const adapter = Themes.ADAPTERS.find((a) => a.id === th.manifest.adapter);
+    const own = adapter ? path.join(__dirname, 'themes', adapter.dir) : null;
+    const layouts = own && fs.existsSync(own) ? own : path.join(th.dir, 'layouts');
+    const mine = (s) => /\.(php|css|js)$/.test(s) && !/adapter\.cjs$/.test(s);
+    copied += copyDir(layouts, path.join(out, 'theme', packId, 'layouts'), (s) => mine(s) && !s.endsWith('.php'));
+    copied += copyDir(layouts, path.join(out, 'runtime', 'themes', packId), (s) => s.endsWith('.php'));
     const m = th.manifest;
     return { id: packId, kind: m.kind || 'app', css: m.css, js: m.js, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {} };
   };
@@ -270,6 +276,15 @@ function generate(proj, opts = {}) {
   }
   const byName = (list) => Object.fromEntries((list || []).map((x) => [x.name, x]));
   const settings = { ...proj.project.settings };
+  // Header / footer / menu of the project: code goes to custom/regions/<name>.php, the config keeps the rest.
+  if (settings.regions) {
+    settings.regions = Object.fromEntries(Object.entries(settings.regions).map(([name, r]) => {
+      const { code, ...rest } = r || {};
+      // the guard stops a direct request when the web server does not apply custom/.htaccess
+      if (rest.source === 'code') w(`custom/regions/${name}.php`, `<?php if (!class_exists('MiB\\\\Regions', false)) { http_response_code(404); exit; } ?>\n${code || ''}`);
+      return [name, rest];
+    }));
+  }
   const app = {
     generator: 'MiB-Crude',
     generatedAt: new Date().toISOString(),

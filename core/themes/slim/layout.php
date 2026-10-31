@@ -68,7 +68,8 @@ $container = $horizontal ? 'container' : 'container-fluid';
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body class="mc-themed mc-slim<?= $horizontal ? ' mc-slim-horizontal' : ' mc-slim-sidebar' ?>">
+<body class="mc-themed mc-slim<?= $horizontal ? ' mc-slim-horizontal' : ' mc-slim-sidebar' ?><?= \MiB\Regions::bodyClass($app) ?>">
+<?= \MiB\Regions::html($app, 'header') ?>
 <div class="slim-header<?= $horizontal ? '' : ' with-sidebar' ?>">
  <div class="<?= $container ?>">
   <div class="slim-header-left">
@@ -82,7 +83,7 @@ $container = $horizontal ? 'container' : 'container-fluid';
 <div class="slim-navbar">
  <div class="container">
   <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none mb-2" id="mcSlimNav"><i class="bi bi-list"></i> Menu</button>
-  <ul class="nav" id="mcSlimNavList"><?= $topMenu($items) ?></ul>
+  <ul class="nav" id="mcSlimNavList"><?= \MiB\Regions::menu($app, $topMenu($items)) ?></ul>
  </div>
 </div>
 <div class="slim-mainpanel">
@@ -95,7 +96,7 @@ $container = $horizontal ? 'container' : 'container-fluid';
 <?php else: ?>
 <div class="slim-body">
  <div class="slim-sidebar">
-  <ul class="nav nav-sidebar"><?= $sideMenu($items) ?></ul>
+  <ul class="nav nav-sidebar"><?= \MiB\Regions::menu($app, $sideMenu($items)) ?></ul>
  </div>
  <div class="slim-mainpanel">
   <div class="container-fluid pd-t-30 pb-4">
@@ -106,6 +107,7 @@ $container = $horizontal ? 'container' : 'container-fluid';
  </div>
 </div>
 <?php endif ?>
+<?php if (($mcFooter = \MiB\Regions::html($app, 'footer')) !== ''): ?><footer class="mc-region-footer"><?= $mcFooter ?></footer><?php endif ?>
 <?php include $app->root . '/runtime/views/partials/modal.php' ?>
 <?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>

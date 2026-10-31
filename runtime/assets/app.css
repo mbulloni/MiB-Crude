@@ -98,3 +98,9 @@ td.mc-saved { background: color-mix(in srgb, var(--bs-success) 18%, transparent)
 .mc-notif-item.mc-notif-unread { background: var(--bs-primary-bg-subtle); }
 .mc-notif-text { white-space: pre-line; }
 
+
+/* Project header / footer / menu (Regions): the standard ones hidden when the project's replace them */
+.mc-hide-header .mc-navbar, .mc-hide-header #kt_app_header, .mc-hide-header .header-container,
+.mc-hide-header .slim-header, .mc-hide-header .header.navbar, .mc-hide-header #header { display: none !important; }
+.mc-hide-footer .footer-wrapper, .mc-hide-footer .slim-footer, .mc-hide-footer #kt_app_footer { display: none !important; }
+.mc-region-footer { clear: both; }

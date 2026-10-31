@@ -253,3 +253,5 @@ progress { width: 100%; }
 .release-notes p { margin: 4px 0; } .release-notes .rn-h { display: block; margin-top: 6px; }
 .alert { padding: 8px 12px; border-radius: 6px; margin: 6px 0; } .alert.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); } .alert.err { background: color-mix(in srgb, var(--err) 15%, transparent); }
 .preview-table { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+
+.region-box { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }

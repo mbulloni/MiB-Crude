@@ -35,7 +35,8 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body class="mc-themed mc-webarch<?= in_array($color, ['corporate', 'simple'], true) ? ' mc-wa-light' : '' ?>">
+<body class="mc-themed mc-webarch<?= in_array($color, ['corporate', 'simple'], true) ? ' mc-wa-light' : '' ?><?= \MiB\Regions::bodyClass($app) ?>">
+<?= \MiB\Regions::html($app, 'header') ?>
 <div class="header navbar navbar-inverse">
  <div class="navbar-inner">
   <div class="header-seperation">
@@ -57,7 +58,7 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
 <div class="page-container row-fluid">
  <div class="page-sidebar" id="main-menu">
   <div class="page-sidebar-wrapper" id="main-menu-wrapper">
-   <ul><?= $menuHtml($items) ?></ul>
+   <ul><?= \MiB\Regions::menu($app, $menuHtml($items)) ?></ul>
   </div>
  </div>
  <div class="page-content">
@@ -67,6 +68,7 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
   </div>
  </div>
 </div>
+<?php if (($mcFooter = \MiB\Regions::html($app, 'footer')) !== ''): ?><footer class="mc-region-footer"><?= $mcFooter ?></footer><?php endif ?>
 <?php include $app->root . '/runtime/views/partials/modal.php' ?>
 <?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>

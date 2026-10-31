@@ -29,7 +29,7 @@ $menuHtml = function ($items) use ($horizontal) {
     return $out;
 };
 $home = [['kind' => 'link', 'label' => t('menu.home'), 'icon' => 'house', 'url' => $app->url('home', ['menu' => 1]), 'active' => $app->page === 'home']];
-$menu = $menuHtml(array_merge($home, \MiB\Menu::tree($app)));
+$menu = \MiB\Regions::menu($app, $menuHtml(array_merge($home, \MiB\Menu::tree($app))));
 $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" class="navbar-logo" alt="">' : '';
 ?><!doctype html>
 <html lang="<?= h($app->lang) ?>"<?= \MiB\Theme::htmlAttrs($app) ?>>
@@ -41,7 +41,8 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body class="mc-themed mc-designreset<?= $horizontal ? ' mc-dr-horizontal' : '' ?>">
+<body class="mc-themed mc-designreset<?= $horizontal ? ' mc-dr-horizontal' : '' ?><?= \MiB\Regions::bodyClass($app) ?>">
+<?= \MiB\Regions::html($app, 'header') ?>
 <div class="header-container">
  <header class="header navbar navbar-expand-sm expand-header<?= $horizontal ? ' container-xxl' : '' ?>">
   <a href="javascript:void(0);" class="sidebarCollapse" title="Menu"><i class="bi bi-list fs-4"></i></a>
@@ -85,6 +86,7 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
   </div>
  </div>
 </div>
+<?php if (($mcFooter = \MiB\Regions::html($app, 'footer')) !== ''): ?><footer class="mc-region-footer"><?= $mcFooter ?></footer><?php endif ?>
 <?php include $app->root . '/runtime/views/partials/modal.php' ?>
 <?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>

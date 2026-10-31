@@ -35,7 +35,8 @@ $c = function ($k, $def) use ($o) { return isset($o[$k]) ? $o[$k] : $def; };
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body id="app" class="app mc-themed mc-material">
+<body id="app" class="app mc-themed mc-material<?= \MiB\Regions::bodyClass($app) ?>">
+<?= \MiB\Regions::html($app, 'header') ?>
 <header id="header" class="header-container header-fixed <?= h($c('header', 'bg-white')) ?>">
  <div class="top-header clearfix">
   <div class="logo <?= h($c('logo', 'bg-dark')) ?>">
@@ -54,7 +55,7 @@ $c = function ($k, $def) use ($o) { return isset($o[$k]) ? $o[$k] : $def; };
 <div class="main-container<?= $horizontal ? ' app-nav-horizontal' : '' ?>">
  <aside id="nav-container" class="nav-container nav-fixed <?= $horizontal ? 'nav-horizontal' : 'nav-vertical' ?> <?= h($c('nav', 'bg-dark')) ?>">
   <div class="nav-wrapper">
-   <ul id="nav" class="nav"><?= $menuHtml($items) ?></ul>
+   <ul id="nav" class="nav"><?= \MiB\Regions::menu($app, $menuHtml($items)) ?></ul>
   </div>
  </aside>
  <div id="content" class="content-container">
@@ -66,6 +67,7 @@ $c = function ($k, $def) use ($o) { return isset($o[$k]) ? $o[$k] : $def; };
   </section>
  </div>
 </div>
+<?php if (($mcFooter = \MiB\Regions::html($app, 'footer')) !== ''): ?><footer class="mc-region-footer"><?= $mcFooter ?></footer><?php endif ?>
 <?php include $app->root . '/runtime/views/partials/modal.php' ?>
 <?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>

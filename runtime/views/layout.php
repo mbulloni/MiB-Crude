@@ -18,7 +18,7 @@ $menuHtml = function ($items) use (&$menuHtml) {
     }
     return $out;
 };
-$menu = $menuHtml(\MiB\Menu::tree($app));
+$menu = \MiB\Regions::menu($app, $menuHtml(\MiB\Menu::tree($app)));
 $sidebar = $theme['layout'] !== 'topbar';
 ?><!doctype html>
 <html lang="<?= h($app->lang) ?>"<?= \MiB\Theme::htmlAttrs($app) ?>>
@@ -30,7 +30,8 @@ $sidebar = $theme['layout'] !== 'topbar';
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body class="mc-<?= h($theme['density']) ?> <?= $sidebar ? 'mc-sidebar-layout' : 'mc-topbar-layout' ?>">
+<body class="mc-<?= h($theme['density']) ?> <?= $sidebar ? 'mc-sidebar-layout' : 'mc-topbar-layout' ?><?= \MiB\Regions::bodyClass($app) ?>">
+<?= \MiB\Regions::html($app, 'header') ?>
 <nav class="navbar navbar-expand-lg mc-navbar">
   <div class="container-fluid">
     <?php if ($sidebar): ?><button class="btn btn-link text-white d-lg-none me-2" data-bs-toggle="offcanvas" data-bs-target="#mcSide"><i class="bi bi-list fs-4"></i></button><?php endif ?>
@@ -57,6 +58,7 @@ $sidebar = $theme['layout'] !== 'topbar';
     <?= $content ?>
   </main>
 </div>
+<?php if (($mcFooter = \MiB\Regions::html($app, 'footer')) !== ''): ?><footer class="mc-region-footer"><?= $mcFooter ?></footer><?php endif ?>
 <?php include __DIR__ . '/partials/modal.php' ?>
 <?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>

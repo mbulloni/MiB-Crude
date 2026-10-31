@@ -186,6 +186,7 @@
  "pw.repeat": "Repeat password",
  "pw.symbol": "Password must contain a symbol",
  "pw.upper": "Password must contain an uppercase letter",
+ "region.error": "Error in {0}: {1}",
  "register.badtoken": "Invalid or expired link",
  "register.check_mail": "Check your email to confirm the registration",
  "register.done": "Registration completed",

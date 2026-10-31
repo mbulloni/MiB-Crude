@@ -186,6 +186,7 @@
  "pw.repeat": "Ripeti password",
  "pw.symbol": "La password deve contenere un simbolo",
  "pw.upper": "La password deve contenere una maiuscola",
+ "region.error": "Errore in {0}: {1}",
  "register.badtoken": "Link non valido o scaduto",
  "register.check_mail": "Controlla la tua email per confermare la registrazione",
  "register.done": "Registrazione completata",

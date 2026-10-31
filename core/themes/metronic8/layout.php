@@ -21,7 +21,7 @@ $menuHtml = function ($items, $sub = false) use (&$menuHtml) {
     return $out;
 };
 $home = [['kind' => 'link', 'label' => t('menu.home'), 'icon' => 'house', 'url' => $app->url('home', ['menu' => 1]), 'active' => $app->page === 'home']];
-$menu = $menuHtml(array_merge($home, \MiB\Menu::tree($app)));
+$menu = \MiB\Regions::menu($app, $menuHtml(array_merge($home, \MiB\Menu::tree($app))));
 $logo = is_file($app->root . '/assets/logo.png') ? '<img alt="" src="assets/logo.png" class="h-30px me-2">' : '';
 ?><!doctype html>
 <html lang="<?= h($app->lang) ?>"<?= \MiB\Theme::htmlAttrs($app) ?>>
@@ -34,7 +34,8 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img alt="" src="assets/logo
 <?= \MiB\Theme::css($app) ?>
 </head>
 <body id="kt_app_body" data-kt-app-layout="<?= h($sidebarMode) ?>" data-kt-app-header-fixed="true" data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-hoverable="true"
-  data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true" data-kt-app-sidebar-push-footer="true" class="app-default mc-themed mc-metronic">
+  data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true" data-kt-app-sidebar-push-footer="true" class="app-default mc-themed mc-metronic<?= \MiB\Regions::bodyClass($app) ?>">
+<?= \MiB\Regions::html($app, 'header') ?>
 <div class="d-flex flex-column flex-root app-root" id="kt_app_root">
  <div class="app-page flex-column flex-column-fluid" id="kt_app_page">
   <div id="kt_app_header" class="app-header">
@@ -82,6 +83,7 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img alt="" src="assets/logo
   </div>
  </div>
 </div>
+<?php if (($mcFooter = \MiB\Regions::html($app, 'footer')) !== ''): ?><footer class="mc-region-footer"><?= $mcFooter ?></footer><?php endif ?>
 <?php include $app->root . '/runtime/views/partials/modal.php' ?>
 <?= \MiB\Theme::js($app, isset($t) ? $t : null, !empty($needCharts), isset($needLibs) ? $needLibs : []) ?>
 </body>
