@@ -62,3 +62,47 @@ test('without Windows sign-in no NTLM, without MariaDB no db service', () => {
   assert.match(fs.readFileSync(path.join(d, 'php', 'Dockerfile'), 'utf8'), /pdo_sqlite/);
   fs.rmSync(path.dirname(dir), { recursive: true, force: true });
 });
+
+test('Windows containers: production Apache24 copied, PHP 8 module, mod_authn_ntlm with gMSA', () => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mc-docker-')), 'p');
+  // a small Apache24 like the production one
+  const a24 = path.join(path.dirname(dir), 'Apache24');
+  for (const d of ['bin', 'modules', 'conf', 'htdocs', 'php', 'logs']) fs.mkdirSync(path.join(a24, d), { recursive: true });
+  fs.writeFileSync(path.join(a24, 'bin', 'httpd.exe'), '');
+  fs.writeFileSync(path.join(a24, 'modules', 'mod_authn_ntlm.so'), '');
+  fs.writeFileSync(path.join(a24, 'htdocs', 'segreto.php'), '');
+  fs.writeFileSync(path.join(a24, 'conf', 'httpd.conf'), 'LoadModule auth_ntlm_module modules/mod_authn_ntlm.so\r\nLoadModule rewrite_module modules/mod_rewrite.so\r\n#LoadModule xml2enc_module modules/mod_xml2enc.so\r\nLoadModule php7_module "php/php7apache2_4.dll"\r\n');
+  const proj = P.createProject(dir, 'Prova Win');
+  proj.connections.push({ id: 'main', name: 'Main', driver: 'mysql', host: 'prod-db', port: 3306, database: 'prod', user: 'produser' });
+  proj.security.enabled = true;
+  proj.security.mode = 'ntlm';
+  proj.project.docker = { os: 'windows', apache24Dir: a24, php: '7.4', mariadb: '11.4', ntlm: { mode: 'domain', gmsa: 'gmsa-prova', excludePaths: ['/genera'] } };
+  P.saveProject(proj);
+  DK.generate(P.loadProject(dir), {}, G);
+  const d = path.join(dir, 'docker');
+  const read = (f) => fs.readFileSync(path.join(d, f), 'utf8');
+  // copy without htdocs, logs content or PHP 7
+  assert.ok(fs.existsSync(path.join(d, 'windows/web/Apache24/modules/mod_authn_ntlm.so')));
+  assert.ok(!fs.existsSync(path.join(d, 'windows/web/Apache24/htdocs')) && !fs.existsSync(path.join(d, 'windows/web/Apache24/php')));
+  // only PHP 8 on Windows: 7.4 becomes the latest
+  assert.match(read('.env'), new RegExp(`^PHP_VERSION=${DK.PHP_WINDOWS[DK.PHP_WINDOWS.length - 1].replace('.', '\\.')}$`, 'm'));
+  const conf = read('windows/web/httpd.conf');
+  for (const s of ['LoadModule rewrite_module modules/mod_rewrite.so', 'LoadModule php_module "C:/php/php8apache2_4.dll"', 'LoadModule auth_ntlm_module modules/mod_authn_ntlm.so',
+    'AuthType SSPI', 'NTLMAuth On', 'Require user "ANONYMOUS LOGON"', 'RequestHeader set X_ISRW_PROXY_AUTH_USER %{RU}e', '<Location ~ "(?i)^/genera">', 'DocumentRoot "C:/app"']) assert.ok(conf.includes(s), s);
+  assert.doesNotMatch(conf, /php7|xml2enc/);
+  assert.strictEqual((conf.match(/auth_ntlm_module/g) || []).length, 1, 'mod_authn_ntlm only inside NTLM_DOMAIN');
+  const compose = read('docker-compose.yml');
+  for (const s of ['context: ./windows/web', 'context: ./windows/db', 'credential_spec:', 'file: ${NTLM_GMSA}.json', 'hostname: ${NTLM_GMSA}', './app:C:/app']) assert.ok(compose.includes(s), s);
+  assert.doesNotMatch(compose, /php-fpm|image: mariadb/);
+  assert.match(read('windows/web/Dockerfile'), /^# escape=`\n#[^\n]*\nARG WIN_BASE=mcr\.microsoft\.com\/windows\/servercore:ltsc2022/);
+  assert.match(read('windows/web/php.ini'), /^extension=mbstring$/m);
+  assert.match(read('windows/setup-gmsa.ps1'), /New-CredentialSpec -AccountName gmsa-prova/);
+  assert.match(read('.env'), /^NTLM_GMSA=gmsa-prova$/m);
+  assert.match(read('.gitignore'), /^windows\/web\/Apache24\/$/m);
+  assert.match(fs.readFileSync(path.join(d, 'app', 'config', 'app.php'), 'utf8'), /'host' => 'db'/);
+  // a missing Apache24 is a clear error
+  proj.project.docker.apache24Dir = path.join(a24, 'manca');
+  P.saveProject(proj);
+  assert.throws(() => DK.generate(P.loadProject(dir), {}, G), /Apache24 non trovato/);
+  fs.rmSync(path.dirname(dir), { recursive: true, force: true });
+});

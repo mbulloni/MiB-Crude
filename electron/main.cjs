@@ -277,7 +277,7 @@ handle('gen:generate', (proj, opts = {}) => {
 handle('gen:hash', (pw) => G.hashPassword(pw));
 // Docker environment of the project (core/dockerenv.cjs): files in <project>/docker, app in docker/app.
 const DK = require('../core/dockerenv.cjs');
-handle('docker:options', () => ({ apache: DK.APACHE, php: DK.PHP, mariadb: DK.MARIADB, defaults: DK.DEFAULTS }));
+handle('docker:options', () => ({ apache: DK.APACHE, php: DK.PHP, mariadb: DK.MARIADB, os: DK.OS, windows: DK.WINDOWS, phpWindows: DK.PHP_WINDOWS, defaults: DK.DEFAULTS }));
 handle('docker:generate', (proj) => DK.generate({ ...proj, dir: need().dir }, secrets(), G));
 handle('docker:status', () => DK.status(path.join(need().dir, 'docker')));
 handle('docker:up', () => DK.compose(path.join(need().dir, 'docker'), ['up', '-d', '--build']).then((o) => o.split('\n').slice(-15).join('\n')));
