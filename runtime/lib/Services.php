@@ -259,8 +259,13 @@ class Layout
             if ($list || $blocks) $out[] = ['title' => $t->app->label(isset($s['title']) ? $s['title'] : '', ''), 'fields' => $list, 'blocks' => $blocks,
                 'style' => isset($s['style']) ? $s['style'] : 'card', 'columns' => isset($s['columns']) ? (int)$s['columns'] : 0];
         }
-        // Fields not placed by the designer go to the end.
-        if ($byName) $out[] = ['title' => '', 'fields' => array_values($byName), 'blocks' => [], 'style' => 'card', 'columns' => 0];
+        // Fields not placed by the designer go to the end: in the last step when the page is in steps
+        if ($byName) {
+            $last = null;
+            foreach ($out as $i => $sec) if ($sec['style'] === 'step') $last = $i;
+            if ($last !== null) $out[$last]['fields'] = array_merge($out[$last]['fields'], array_values($byName));
+            else $out[] = ['title' => '', 'fields' => array_values($byName), 'blocks' => [], 'style' => 'card', 'columns' => 0];
+        }
         return $out;
     }
 

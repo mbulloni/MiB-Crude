@@ -84,6 +84,8 @@ Stato v0.11.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST com
 - **Filtri delle stored procedure**: con PostgreSQL e Oracle il filtro fisso WHERE e la condizione di BeforeSelect si applicano nella SELECT che legge il risultato; nuovo evento `ProcRows(&$rows)` per filtrare in PHP con tutti i database. Provato su tutti e quattro i database.
 - **Colore di Webarch scelto dall'utente**: tutti i colori del template installati accanto a webarch.css (anche nei temi importati prima, dalla cartella del template), scelta dalla tavolozza dell'intestazione che sostituisce il foglio di stile. Provato (tests/themes.test.cjs).
 - **PDF in altre scritture**: caratteri che DejaVu non ha presi da Droid Sans Fallback (cinese, giapponese) e Noto Sans Thai, caricati solo se servono; arabo con le forme unite (alif-lam incluso) e da destra a sinistra, ebraico da destra a sinistra. Provato con pdftotext su PHP 8.5 e 7.4.
+- Pagine a passi: i campi non assegnati a una sezione vanno nell'ultimo passo (prima restavano in un riquadro sempre visibile); niente spazio vuoto al posto di «Indietro» nel primo passo.
+- **Documentazione**: [GUIDA.md](GUIDA.md) (tutte le funzioni e dove si trovano), [RIFERIMENTO.md](RIFERIMENTO.md) (eventi, funzioni PHP, compatibilità phpr, tabelle di sistema), [APP-GENERATA.md](APP-GENERATA.md) (struttura, server, pubblicazione, cron, PWA, API), README riorganizzato con nuovi screenshot.
 
 ## Limiti aperti
 - App installabile: nessun funzionamento offline dei dati (solo il messaggio); i browser la propongono solo su https o localhost.

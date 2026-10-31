@@ -6,43 +6,65 @@ Generatore visuale di applicazioni web PHP per Linux, per Linux, con lavoro **mu
 
 ## Cosa fa
 
-Parti da un database esistente (MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, SQLite) o da un **servizio REST JSON**, scegli le tabelle — oppure crea tabelle e dati da un **modello pronto** (CRM, helpdesk, prenotazioni risorse, archivio documenti) — e ottieni un'applicazione web completa:
+Parti da un database esistente (**MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, SQLite**), da un **servizio REST JSON** o da una **stored procedure**, oppure crea tabelle e dati da un **modello pronto** (CRM, helpdesk, prenotazioni, archivio documenti). MiB-Crude genera un'applicazione web PHP completa (PHP 7.4 – 8.5), la mostra in anteprima e la pubblica.
 
-- **Pagine**: lista (ricerca rapida, ricerca avanzata, pannello filtri, ordinamento, paginazione, totali, selezione multipla), nuovo, modifica, visualizza, copia, elimina, **modifica selezionati** (stessi valori su tutte le righe spuntate), stampa, esporta (CSV/XLSX/JSON/**PDF** con i caratteri di quasi tutte le lingue (DejaVu Sans, più Droid Sans Fallback per cinese e giapponese e Noto Sans Thai; arabo ed ebraico da destra a sinistra), anche il singolo record dalla vista con le immagini dei campi), importa (CSV/XLSX con aggiornamento e "tutto o niente")
-- **Campi**: 17 formati di visualizzazione e 19 controlli di modifica — lookup da tabella o elenco fisso, a cascata, completamento automatico, selezione multipla, "aggiungi nuovo" in finestra; upload file/immagini con miniature e ridimensionamento (cartella o BLOB); testo formattato; validazioni (obbligatorio, unico, email, min/max, regex)
-- **Master-dettaglio** ricavato dalle chiavi esterne (schede nella vista/modifica, icone nella lista)
-- **Viste della lista**: calendario, kanban, galleria, mappa; modifica in linea; nuovo/modifica in finestra; campi QR code e firma
-- **Page designer** a sezioni (riquadri o schede, colonne, larghezze per campo) con blocchi HTML e snippet PHP
-- **Eventi PHP** (BeforeAdd, AfterEdit, BeforeSelect, CustomValidate…) con editor Monaco, controllo sintassi, azioni predefinite e **Assistente AI** (Claude: scrive o modifica l'evento conoscendo tabelle e campi del progetto, controlla la sintassi con `php -l`; chiave API cifrata nel portachiavi di sistema)
-- **Accedi come**: dalla pagina Utenti l'amministratore usa l'app con i permessi di un utente per controllare cosa vede, poi «Torna a…» dall'intestazione; tutto nel registro attività
-- **App installabile (PWA)**: opzione del progetto; manifest, icona (logo o iniziali sul colore principale) e service worker, l'app si installa su telefoni e computer e si apre a schermo pieno
-- **«Ricordami»** nella pagina di accesso (giorni configurabili): il browser resta collegato, cookie rinnovato a ogni uso, un cookie copiato e riusato scollega l'utente ovunque
-- **Campi cifrati**: opzione «Cifrato nel database» del campo (AES-256-GCM con la chiave del progetto): nel database solo il valore cifrato, nell'app il valore in chiaro; mascherati nel registro attività
-- **Pagine a passi**: nel designer delle pagine una sezione può essere un «Passo»; Nuovo e Modifica mostrano un passo alla volta con Avanti/Indietro, controllo dei campi obbligatori del passo e salvataggio all'ultimo
-- **Aggiunta in linea**: pulsante «Aggiungi riga» nella lista per inserire record senza aprire la pagina Nuovo (eventi, validazione e valori predefiniti come la pagina Nuovo)
-- **Report a campi incrociati (crosstab)**: righe = raggruppamenti, colonne = valori di un campo (anche per anno, trimestre, mese…), totali di riga e di colonna, clic su una cella per aprire la lista filtrata, esportazione XLSX
-- **Aspetto scelto dall'utente**: con i temi Material Admin, Webarch e Slim ogni utente cambia colori o posizione del menu dal pulsante con la tavolozza nell'intestazione
-- **Cerca nel progetto** (pulsante Cerca o Ctrl+Maiusc+F): tabelle, campi, lookup, SQL, codice degli eventi (con il numero di riga), menu, report, grafici, dashboard, traduzioni, intestazione/piè/menu, attività pianificate e modelli email; un clic apre il pannello del risultato
-- **Annulla / ripeti** nel designer: pulsanti nella barra in alto, Ctrl+Z e Ctrl+Y (o Ctrl+Maiusc+Z), fino a 100 passi; la digitazione continua in un campo conta come un passo
-- **Geocodifica** della vista mappa: coordinate calcolate dall'indirizzo (campo o modello `{via}, {cap} {citta}`) con OpenStreetMap Nominatim (anche un server aziendale) o Google, al salvataggio, con il pulsante «Geocodifica» sopra la mappa o con `Geocode::fill('tabella')` in un'attività pianificata
-- **SMS**: `sendSms($numero, $testo)` e `runner_sms()` di phpr tramite Twilio, un gateway HTTP qualsiasi (indirizzo e corpo con segnaposto, GET/POST, modulo o JSON) o un file di prova (Progetto › SMS); **codice di accesso via email o SMS** per chi non usa l'app di autenticazione (Sicurezza › Verifica in due passaggi), numero di telefono dal profilo o dall'evento `TwoFactorPhone`
-- **Modelli email**: oggetto e testo HTML in ogni lingua per conferma della registrazione e recupero della password, più modelli propri da inviare da eventi e attività con `sendTemplate('nome', $destinatario, ['campo' => valore])`; segnaposto `{campo}`, `{app}`, `{date}`, `{user}` (Progetto › Modelli email)
-- **Attività pianificate**: codice PHP a orari fissi (espressioni cron con scelte pronte: ogni 5 minuti, ogni giorno, dal lunedì al venerdì…) scritto nel designer (Progetto › Attività pianificate); l'app generata ha `cron.php` da lanciare ogni minuto (crontab o Utilità di pianificazione di Windows), con esito, messaggio, durata ed «Esegui ora» in Amministrazione
-- **Ricerche salvate**: menu «Ricerche salvate» in ogni lista per salvare con un nome ricerca rapida, ricerca avanzata e filtri, e richiamarli con un clic; gli amministratori possono condividerle con tutti (tabella di sistema `mc_searches`)
-- **Origini da stored procedure** (come phpr): pulsante «Da stored procedure» in Tabelle e query, procedura scelta dall'elenco del database (MariaDB/MySQL e SQL Server: procedure; PostgreSQL: funzioni che restituiscono una tabella; Oracle: funzioni pipelined), parametri da valore fisso, variabile di sessione, utente collegato, indirizzo della pagina o evento `ProcParams`; lista, ricerca, filtri, ordinamento, totali, report e grafici sul risultato; inserimento, modifica ed eliminazione tramite altre procedure (facoltativi)
-- **Origini dati REST**: una risorsa di un'API JSON (autenticazione Bearer, Basic, chiave in header o URL) diventa una tabella con lista, ricerca, filtri, ordinamento, totali, visualizza/modifica/elimina tramite l'API; paginazione lato API (pagina o scostamento, ricerca, ordinamento e filtri delegati nella sintassi dell'API: `?campo=valore`, json-server, Strapi o modelli personalizzati per operatore), cache delle risposte, lookup verso risorse REST, report e grafici
-- **Sicurezza**: utenti gestiti o tabella esistente o utente fisso, gruppi, permessi per tabella (A/E/D/S/V/P/I), **permessi dinamici** gestibili dall'app, record per utente, registrazione con conferma email, recupero password, CAPTCHA, regole password, blocco dopo tentativi falliti, **LDAP/Active Directory**, **OpenID Connect** (Okta, Entra ID, Google, Keycloak) con mappatura gruppi, **SAML 2.0** (firma XML verificata), **autenticazione a due fattori** (TOTP)
-- **Accesso Windows (NTLM)** come nei progetti R-LAB: il server web autentica, l'app legge `REMOTE_USER`, gruppi e area da `rlab_profilazione_gruppo`, permessi per pagina `R:W:L` da `rlab_profilazione_permission`, registro accessi in `rlab_accessi`; gestione di utenti e permessi in Amministrazione › Utenti Windows / Permessi pagine
-- **Intestazione, piè di pagina e menu** del progetto (file della cartella public/ o codice scritto nel designer), in tutti i temi
-- **Docker di progetto** (Output › Docker di progetto): Apache, PHP e MariaDB nelle versioni scelte per replicare la produzione; con l'accesso Windows Apache è configurato come il httpd.conf di produzione (NTLM/Kerberos in Linux con mod_auth_gssapi, più il frammento per Apache24 su Windows con mod_authn_ntlm)
-- **Registro attività** (audit) e **blocco record** durante la modifica
-- **Notifiche**: campanella nell'intestazione con le non lette; messaggi dalla sezione Amministrazione › Notifiche (a tutti o a un utente, con collegamento e scadenza) o dagli eventi con `addNotification()` come in phpr
-- **Report** con raggruppamenti e totali, **grafici** (Apache ECharts; un clic su barra, punto o fetta apre la lista filtrata su quel valore o periodo), **dashboard**; **Report & Chart Builder** web per gli utenti finali
+Documentazione completa:
+
+- **[Guida](docs/GUIDA.md)**: ogni funzione del designer e dell'applicazione, e dove si trova
+- **[Riferimento tecnico](docs/RIFERIMENTO.md)**: eventi, funzioni PHP, compatibilità phpr, tabelle di sistema, formato del progetto
+- **[L'applicazione generata](docs/APP-GENERATA.md)**: struttura, requisiti del server, pubblicazione, Docker, attività pianificate, API
+- [Test](docs/TESTING.md) · [Versioni e limiti noti](docs/ROADMAP.md)
+
+### Dati
+
+- **Origini dati**: tabelle, query SQL (anche modificabili), risorse **REST** (paginazione e filtri nella sintassi dell'API: `?campo=valore`, json-server, Strapi o personalizzata; cache), **stored procedure** (parametri da valori, sessione, utente o indirizzo; scrittura tramite procedure di inserimento, modifica ed eliminazione; filtri)
+- **Campi**: 17 formati di visualizzazione e 19 controlli di modifica; lookup da tabella o elenco, a cascata, completamento automatico, selezione multipla, «aggiungi nuovo»; file e immagini (cartella o BLOB, miniature); testo formattato; QR code; firma; validazioni; **campi cifrati** nel database (AES-256)
+- **Master-dettaglio** dalle chiavi esterne; creazione e modifica di tabelle; script SQL in ogni dialetto; sincronizzazione con il database
+
+### Pagine
+
+- **Lista**: ricerca rapida e avanzata, pannello filtri, **ricerche salvate**, ordinamento, totali, colonne visibili, **modifica e aggiunta in linea**, **modifica selezionati**, viste **calendario, kanban, galleria, mappa** (con **geocodifica** degli indirizzi)
+- **Nuovo / modifica / visualizza**: designer delle pagine a sezioni (riquadri, schede o **passi** con Avanti/Indietro), blocchi HTML e PHP, finestre popup, copia, blocco del record durante la modifica
+- **Esportazione** CSV, XLSX, JSON e **PDF** in quasi tutte le lingue (anche cinese, giapponese, arabo, ebraico, tailandese) con le immagini dei campi; **stampa**; **importazione** CSV/XLSX
+- **Report** con raggruppamenti e totali, report **a campi incrociati (crosstab)**; **grafici** Apache ECharts con clic che apre la lista filtrata; **dashboard**; **Report & Chart Builder** per gli utenti
 - **API REST** per tabella con chiave API e descrizione **OpenAPI**
-- Menu ad albero, temi (colore, barra laterale/alta, chiaro/scuro), **multilingua** con traduzioni
-- **Anteprima** integrata (PHP locale o Docker) e **pubblicazione** incrementale via SFTP, FTP/FTPS o cartella
+
+### Utenti e sicurezza
+
+- Utenti gestiti dall'app, tabella utenti esistente, utente fisso o **accesso Windows (NTLM)** come nei progetti R-LAB
+- Gruppi e permessi per tabella (anche gestibili dall'app), record per utente, ospiti, registrazione con conferma email, recupero password, CAPTCHA, regole password, blocco dopo tentativi falliti, **«Ricordami»**
+- **Verifica in due passaggi** con app di autenticazione o **codice via email o SMS**
+- **LDAP / Active Directory**, **OpenID Connect**, **SAML 2.0**
+- **Accedi come** un altro utente per l'amministratore, **registro attività**, **notifiche**
+
+### Automazione e comunicazione
+
+- **Eventi PHP** e JavaScript con editor Monaco e **assistente AI** (Claude)
+- **Attività pianificate** (cron) con esito in amministrazione
+- **Modelli email** per lingua, **SMS** (Twilio o qualunque gateway HTTP)
+
+### Aspetto
+
+- Colori, menu laterale o in alto, chiaro/scuro, multilingua
+- **Temi grafici da template acquistati** (Metronic 8, Cork/Equation, Satria, Slim, Webarch, Material Admin), con **aspetto scelto dall'utente** per Material, Webarch e Slim
+- Intestazione, piè di pagina e menu del progetto (file o codice)
+- **App installabile (PWA)** su telefoni e computer
+
+### Designer
+
+- **Annulla/ripeti**, **cerca nel progetto**, anteprima integrata (PHP locale o Docker)
+- Pubblicazione incrementale via SFTP, FTP/FTPS o cartella
+- **Docker di progetto** che replica la produzione (Linux, o Windows Server Core con l'Apache24 di produzione)
+- **Multisviluppatore**: Git o server del team in tempo reale
+- **Importazione di progetti .phpr** con strato di compatibilità per gli eventi
 
 ![App generata](docs/screenshots/app-list.png)
+
+| | |
+|---|---|
+| ![Report crosstab](docs/screenshots/app-crosstab.png) Report a campi incrociati | ![Aggiunta in linea](docs/screenshots/app-inline-add.png) Aggiunta in linea |
+| ![Pagina a passi](docs/screenshots/app-steps.png) Pagina Nuovo a passi | ![Aspetto scelto dall'utente](docs/screenshots/app-theme-customizer.png) Aspetto scelto dall'utente (Material Admin) |
+| ![Cerca nel progetto](docs/screenshots/designer-search.png) Cerca nel progetto | ![PDF multilingue](docs/screenshots/pdf-lingue.png) PDF in più scritture |
 
 ## Importazione di progetti .phpr
 

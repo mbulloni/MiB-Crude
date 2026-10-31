@@ -603,7 +603,7 @@ document.querySelectorAll('form.mc-form').forEach(function (form) {
     cur = Math.max(0, Math.min(steps.length - 1, i));
     steps.forEach(function (s, n) { s.classList.toggle('d-none', n !== cur); });
     dots.forEach(function (d, n) { d.classList.toggle('active', n === cur); d.classList.toggle('done', n < cur); });
-    prev.classList.toggle('invisible', cur === 0);
+    prev.classList.toggle('d-none', cur === 0);
     next.classList.toggle('d-none', cur === steps.length - 1);
     save.classList.toggle('d-none', cur !== steps.length - 1);
   };
