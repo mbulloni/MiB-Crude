@@ -5,6 +5,7 @@ import RegionsSection from './RegionsSection';
 import TasksSection from './TasksSection';
 import MailTemplatesSection from './MailTemplatesSection';
 import SmsSection from './SmsSection';
+import GeocodeSection from './GeocodeSection';
 
 const LANGS: [string, string][] = [['it', 'Italiano'], ['en', 'English'], ['fr', 'Français'], ['de', 'Deutsch'], ['es', 'Español'], ['pt', 'Português'], ['nl', 'Nederlands'], ['ro', 'Română'], ['pl', 'Polski']];
 const COLORS = ['#0d6efd', '#2f6fd6', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#198754', '#20c997', '#0dcaf0', '#343a40', '#ffc107'];
@@ -86,6 +87,7 @@ export default function ProjectPanel() {
           </Section>
           <MailTemplatesSection />
           <SmsSection />
+          <GeocodeSection />
           <Section title="Note"><Area value={st.notes} onChange={(v) => set((x) => { x.settings.notes = v; })} rows={3} placeholder="Appunti per il team…" /></Section>
         </div>
       </div>

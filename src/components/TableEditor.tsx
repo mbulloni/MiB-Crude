@@ -120,7 +120,8 @@ export default function TableEditor({ name }: { name: string }) {
               {v.type === 'calendar' && <><Row label="Data inizio"><Select value={v.dateField} options={fo} onChange={sv('dateField')} /></Row><Row label="Data fine"><Select value={v.endField} options={fo} onChange={sv('endField')} /></Row></>}
               {v.type === 'gallery' && <><Row label="Immagine"><Select value={v.imageField} options={fo} onChange={sv('imageField')} /></Row><Row label="Sottotitolo"><Select value={v.subtitleField} options={fo} onChange={sv('subtitleField')} /></Row></>}
               {v.type === 'kanban' && <><Row label="Colonne (campo)"><Select value={v.statusField} options={fo} onChange={sv('statusField')} /></Row><Row label="Sottotitolo"><Select value={v.subtitleField} options={fo} onChange={sv('subtitleField')} /></Row></>}
-              {v.type === 'map' && <><Row label="Latitudine"><Select value={v.latField} options={fo} onChange={sv('latField')} /></Row><Row label="Longitudine"><Select value={v.lngField} options={fo} onChange={sv('lngField')} /></Row></>}
+              {v.type === 'map' && <><Row label="Latitudine"><Select value={v.latField} options={fo} onChange={sv('latField')} /></Row><Row label="Longitudine"><Select value={v.lngField} options={fo} onChange={sv('lngField')} /></Row>
+                <Row label="Indirizzo per la geocodifica" hint="Campo o modello, es. {via}, {cap} {citta}: coordinate calcolate al salvataggio e con il pulsante Geocodifica della mappa (servizio in Progetto › Geocodifica)"><Text value={v.addressField} onChange={sv('addressField')} mono placeholder="{indirizzo}, {citta}" /></Row></>}
             </div>;
           })}
         </Section>

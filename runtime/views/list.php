@@ -133,6 +133,10 @@ if ($viewDef && in_array($curView, ['calendar', 'map'], true)) $needLibs = [$cur
 </ul>
 <?php endif ?>
 <?php if ($curView !== 'table'): ?>
+<?php if ($curView === 'map' && !empty($viewDef['addressField']) && \MiB\Geocode::views($t) && $t->writeTable() && $sec->can($t->name, 'E')): ?>
+<form method="post" action="<?= h($app->url('geocode', ['t' => $t->name])) ?>" class="mb-2 d-flex align-items-center gap-2 small mc-geocode"><?= $app->csrfField() ?><input type="hidden" name="_back" value="<?= h($curUrl) ?>">
+  <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-geo"></i> <?= h(t('geo.fill')) ?></button><span class="text-secondary"><?= h(t('geo.fill_help')) ?></span></form>
+<?php endif ?>
 <div class="card"><div class="card-body"><div id="mcView" class="mc-view-<?= h($curView) ?>" data-view="<?= h($curView) ?>" data-feed="<?= h($app->url('feed', $keep)) ?>"
   data-inline="<?= h($app->url('inline', ['t' => $t->name])) ?>" data-cfg="<?= h(json_encode($viewDef, JSON_UNESCAPED_UNICODE)) ?>"></div></div></div>
 <?php else: ?>

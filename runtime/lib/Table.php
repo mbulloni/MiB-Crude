@@ -613,6 +613,7 @@ class Table
         if ($own) $vals[$own['field']] = userId();
         $msg = '';
         if ($this->app->event($this->name, 'BeforeAdd', [&$vals, &$msg, $page]) === false) return [false, null, $msg ?: t('msg.cancelled')];
+        Geocode::apply($this, $vals);
         $vals = $this->onlyWritable($vals);
         $auto = $this->autoField();
         if ($this->rest) $keys = Rest::insert($this, $vals);
@@ -634,6 +635,7 @@ class Table
         if (!$old) return [false, t('error.notfound')];
         $msg = '';
         if ($this->app->event($this->name, 'BeforeEdit', [&$vals, $old, &$msg, $page]) === false) return [false, $msg ?: t('msg.cancelled')];
+        Geocode::apply($this, $vals, $old);
         $vals = $this->onlyWritable($vals);
         if ($this->rest) Rest::update($this, $keys, $vals, $old);
         else $this->db->update($wt, $this->blobs($vals), $keys);

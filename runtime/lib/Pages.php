@@ -376,6 +376,18 @@ class Pages
         redirect($back);
     }
 
+    /** Map view: coordinates for the records without them, from their address (20 per click). */
+    public function page_geocode()
+    {
+        $t = $this->table();
+        if (!$this->post() || !Geocode::views($t) || !$t->writeTable() || !$this->app->security->can($t->name, 'E')) throw new HttpError(t('error.notfound'), 404);
+        @set_time_limit(120);
+        list($done, $missing) = Geocode::fill($t, 20);
+        $this->app->flash($done || !$missing ? 'success' : 'warning', t('geo.filled', $done, $missing));
+        $back = isset($_POST['_back']) && strpos($_POST['_back'], 'index.php?') === 0 ? $_POST['_back'] : $this->app->url('list', ['t' => $t->name, 'v' => 'map']);
+        redirect($back);
+    }
+
     // --- update selected --------------------------------------------------------
 
     /** "Update selected" (phpr): the same values on every selected record, through the normal edit path. */
