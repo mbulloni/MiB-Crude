@@ -693,6 +693,14 @@ class Pages
         $this->app->render('twofactor', ['msg' => $msg, 'mode' => isset($p['mode']) ? $p['mode'] : 'totp', 'to' => isset($p['to']) ? $p['to'] : '', 'channel' => $sec->twoFactorChannel()], 'layout_bare');
     }
 
+    /** "Torna a te" after "Accedi come". */
+    public function page_unimpersonate()
+    {
+        if (!$this->post() || !$this->app->security->impersonator()) redirect($this->app->url('home'));
+        $this->app->security->stopImpersonating();
+        redirect($this->app->url('admin', ['s' => 'users']));
+    }
+
     public function page_logout()
     {
         Remember::forget();

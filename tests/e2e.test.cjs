@@ -669,3 +669,29 @@ test('installable app: manifest, icons and service worker without login', async 
   let r = await c.req('?p=login');
   assert.match(r.text, /<link rel="manifest" href="index\.php\?p=manifest">/);
 });
+
+test('sign in as another user: his rights, banner to go back, both moments in the log', async () => {
+  const a = client();
+  let r = await a.req('?p=login');
+  await a.post('?p=login', { _csrf: a.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await a.req('?p=admin&s=users');
+  const row = r.text.split('<tr').find((x) => /<td>luca\s/.test(x));
+  const id = (row.match(/name="action" value="impersonate"><input type="hidden" name="id" value="(\d+)"/) || [])[1];
+  assert.ok(id, 'button on the users page');
+  r = await a.post('?p=admin&s=users', { _csrf: a.csrf(r.text), action: 'impersonate', id });
+  assert.strictEqual(r.status, 302);
+  r = await a.req('?p=list&t=orders');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /mc-impersonating/);
+  assert.match(r.text, /Torna a admin/);
+  assert.strictEqual((await a.req('?p=admin')).status, 403, 'the rights of luca');
+  assert.strictEqual((await a.req('?p=list&t=products')).status, 403);
+  r = await a.post('?p=unimpersonate', { _csrf: a.csrf(r.text) });
+  assert.strictEqual(r.status, 302);
+  r = await a.req('?p=admin&s=users');
+  assert.strictEqual(r.status, 200, 'administrator again');
+  assert.doesNotMatch(r.text, /mc-impersonating/);
+  r = await a.req('?p=admin&s=audit');
+  assert.match(r.text, /impersonate luca/);
+  assert.match(r.text, /impersonate_end luca/);
+});

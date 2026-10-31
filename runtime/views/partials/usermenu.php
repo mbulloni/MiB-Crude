@@ -27,6 +27,10 @@
     <div class="dropdown-menu dropdown-menu-end mc-notif-menu"><div class="px-3 py-2 small text-secondary"><?= h(t('notif.none')) ?></div></div>
   </li>
   <?php endif ?>
+  <?php if ($u && ($mcImp = $app->security->impersonator())): ?>
+  <li class="nav-item mc-impersonating"><form method="post" action="<?= h($app->url('unimpersonate')) ?>" class="m-0"><?= $app->csrfField() ?>
+    <button class="btn btn-sm btn-warning text-nowrap" title="<?= h(t('admin.impersonating', $u['username'])) ?>"><i class="bi bi-incognito"></i> <?= h(t('admin.back_to', $mcImp['username'])) ?></button></form></li>
+  <?php endif ?>
   <?php if ($u): ?>
   <li class="nav-item dropdown">
     <a class="<?= h($mcNavClass) ?> dropdown-toggle" href="#" data-bs-toggle="dropdown"><i class="bi bi-person-circle"></i> <?= h($u['fullname'] ?: $u['username']) ?></a>

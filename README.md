@@ -14,6 +14,7 @@ Parti da un database esistente (MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, S
 - **Viste della lista**: calendario, kanban, galleria, mappa; modifica in linea; nuovo/modifica in finestra; campi QR code e firma
 - **Page designer** a sezioni (riquadri o schede, colonne, larghezze per campo) con blocchi HTML e snippet PHP
 - **Eventi PHP** (BeforeAdd, AfterEdit, BeforeSelect, CustomValidate…) con editor Monaco, controllo sintassi, azioni predefinite e **Assistente AI** (Claude: scrive o modifica l'evento conoscendo tabelle e campi del progetto, controlla la sintassi con `php -l`; chiave API cifrata nel portachiavi di sistema)
+- **Accedi come**: dalla pagina Utenti l'amministratore usa l'app con i permessi di un utente per controllare cosa vede, poi «Torna a…» dall'intestazione; tutto nel registro attività
 - **App installabile (PWA)**: opzione del progetto; manifest, icona (logo o iniziali sul colore principale) e service worker, l'app si installa su telefoni e computer e si apre a schermo pieno
 - **«Ricordami»** nella pagina di accesso (giorni configurabili): il browser resta collegato, cookie rinnovato a ogni uso, un cookie copiato e riusato scollega l'utente ovunque
 - **Campi cifrati**: opzione «Cifrato nel database» del campo (AES-256-GCM con la chiave del progetto): nel database solo il valore cifrato, nell'app il valore in chiaro; mascherati nel registro attività

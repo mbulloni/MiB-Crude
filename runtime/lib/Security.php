@@ -187,7 +187,34 @@ class Security
     /** Set by the login page when "Ricordami" is ticked. */
     public $rememberAsked = false;
 
-    public function startUserSession(array $user)
+    /** "Accedi come": the administrator uses the app as $target until "Torna"; both moments go to the log. */
+    public function impersonate(array $target)
+    {
+        $admin = $this->user();
+        if (!$admin || !$this->isAdmin() || $this->impersonator()) throw new HttpError(t('error.denied'), 403);
+        $this->startUserSession($target, true);
+        $_SESSION['mc_impersonator'] = $admin;
+        Audit::raw('impersonate ' . $target['username'], $admin['username']);
+    }
+
+    /** The administrator behind "Accedi come", or null. */
+    public function impersonator()
+    {
+        return isset($_SESSION['mc_impersonator']) ? $_SESSION['mc_impersonator'] : null;
+    }
+
+    public function stopImpersonating()
+    {
+        $admin = $this->impersonator();
+        if (!$admin) return;
+        $as = $this->user();
+        unset($_SESSION['mc_impersonator']);
+        $this->startUserSession($admin, true);
+        Audit::raw('impersonate_end ' . ($as ? $as['username'] : ''), $admin['username']);
+    }
+
+    /** $quiet: no last-login update, login log or AfterSuccessfulLogin event (switching user with "Accedi come"). */
+    public function startUserSession(array $user, $quiet = false)
     {
         session_regenerate_id(true);
         $_SESSION['mc_user'] = $user;
@@ -198,6 +225,8 @@ class Security
         $_SESSION['GroupID'] = $user['groups'] ? $user['groups'][0] : '';
         $_SESSION['AccessLevel'] = !empty($user['admin']) ? 'Admin' : 'User';
         $this->rightsCache = null;
+        unset($_SESSION['mc_impersonator']);
+        if ($quiet) return;
         if ($this->managed() && !empty($user['id'])) {
             $db = $this->app->db();
             $db->update(Schema::t('users'), ['last_login' => $db->now(), 'failed' => 0, 'locked_until' => null], ['id' => $user['id']]);

@@ -85,6 +85,13 @@ class Admin
             } elseif ($a === 'reset2fa' && $id) {
                 $this->db->update($tu, ['totp_secret' => null], ['id' => $id]);
                 $this->app->flash('success', t('2fa.reset_done'));
+            } elseif ($a === 'impersonate' && $id) {
+                $row = $this->db->row('SELECT * FROM ' . $this->db->table($tu) . ' WHERE ' . $this->db->q('id') . ' = ?', [$id]);
+                if ($row && ($row = array_change_key_case($row, CASE_LOWER)) && $row['username'] !== userName()) {
+                    $this->app->security->impersonate($this->app->security->userFromRow($row));
+                    $this->app->flash('info', t('admin.impersonating', $row['username']));
+                    redirect($this->app->url('home'));
+                }
             } elseif ($a === 'unlock' && $id) {
                 $this->db->update($tu, ['failed' => 0, 'locked_until' => null], ['id' => $id]);
                 $this->app->flash('success', t('msg.saved'));
