@@ -1,0 +1,29 @@
+/* MiB-Crude pages inside Slim (Bootstrap 4 template on the pages' Bootstrap 5) */
+.mc-slim .slim-logo a { display: inline-flex; align-items: center; gap: 8px; }
+.mc-slim .mc-slim-logo { height: 28px; }
+.mc-slim .slim-header-right .mc-usermenu { flex-direction: row; align-items: center; }
+.mc-slim .slim-header-right .mc-usermenu .nav-link { padding: 6px 10px; color: inherit; }
+.mc-slim .mc-usermenu .dropdown-menu { z-index: 1060; }
+.mc-slim #mcTheme { background: transparent; border: 0; box-shadow: none; }
+.mc-slim .sidebar-nav-link .bi { font-size: 18px; width: 24px; margin-right: 8px; display: inline-block; text-align: center; }
+.mc-slim .slim-navbar .nav-link .bi { font-size: 18px; margin-right: 4px; }
+.mc-slim .mc-slim-sep { border-top: 1px solid var(--bs-border-color); margin: 8px 15px; }
+.mc-slim .mc-slim-subhead { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #868ba1; padding: 8px 0 4px; }
+.mc-slim .slim-navbar .nav-item.mc-open > .sub-item { display: block; }
+@media (max-width: 991.98px) {
+  .mc-slim-horizontal .slim-navbar .nav { display: none; flex-direction: column; }
+  .mc-slim-horizontal.mc-slim-nav-open .slim-navbar .nav { display: flex; }
+  .mc-slim-horizontal .slim-navbar .sub-item { position: static; box-shadow: none; }
+}
+/* Bootstrap 5 rules the Bootstrap 4 overrides do not know */
+.mc-slim .btn-close { box-sizing: content-box; }
+.mc-slim .form-select { border-radius: 0; }
+.mc-slim .card { border-radius: 0; }
+.mc-slim table.mc-grid a { color: var(--bs-primary, #1b84e7); }
+[data-bs-theme=dark] .mc-slim .slim-sidebar, [data-bs-theme=dark] .mc-slim .slim-navbar { background-color: #212529; }
+/* Bootstrap 4 reboot did not underline links; Slim relies on it */
+.mc-slim a { text-decoration: none; }
+.mc-slim .slim-logo { font-size: 22px; letter-spacing: -.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+.mc-slim .slim-header.with-sidebar .slim-logo { max-width: 205px; }
+/* Group arrows: Ionicons/FontAwesome are not loaded, Bootstrap Icons are */
+.mc-slim .sidebar-nav-item.with-sub > .sidebar-nav-link::after, .mc-slim .slim-navbar .nav-item.with-sub > a::after { content: '\F282'; font-family: 'bootstrap-icons'; font-size: 12px; }

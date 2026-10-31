@@ -22,10 +22,13 @@ Stato v0.3.0 (2026-10-31): roadmap iniziale completa (v0.2.0) e origini REST com
 ## Fatto (v0.3.0, 2026-10-31)
 - Origini REST complete (2026-10-31): paginazione dell'API (numero di pagina o scostamento, totale, ricerca e ordinamento delegati all'API), lookup verso tabelle REST da tabelle SQL e REST (anche a cascata, modello `{campo} ({campo})`), pannello filtri, controllo valori unici, importazione, report, grafici e dashboard su origini REST; paginazione modificabile anche dopo la creazione (scheda Generale della tabella).
 
+## Dopo v0.3.0
+- Adattatori temi Slim (Bootstrap 4: tolto il Bootstrap incluso in slim.css, skin scura limitata a `[data-bs-theme=dark]`, menu laterale o orizzontale) e Webarch (Bootstrap 3: quattro temi colore, menu compatto, menu utente anche su mobile), con JavaScript proprio al posto di jQuery/Bootstrap 3-4 dei template (2026-10-31).
+
 ## Limiti aperti
 - Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto (non raggiungibili dall'ambiente di sviluppo).
 - Progetto reale di prova: un evento `BeforeMoveNext` ha un errore di sintassi già nel progetto originale; resta disattivato.
 - Origini REST: senza paginazione dell'API ogni richiesta legge l'intero elenco; con la paginazione solo lista, ricerca rapida e ordinamento sono eseguiti dall'API, mentre ricerca avanzata, pannello filtri, totali, report, grafici e lookup leggono tutte le pagine (massimo 50.000 record). Le condizioni SQL dei lookup (`where`) non si applicano ai lookup verso tabelle REST; l'importazione su REST non può essere annullata in blocco (ogni record è una chiamata all'API).
 - Strato AnyChart: copre le chiamate usate dai progetti reali (etichette, serie, legenda, tooltip, assi e scale, zoom); le altre vengono ignorate senza errori.
-- Temi: adattatori per Metronic 8, DesignReset (Cork/Equation) e Satria; non compatibili Slim (Bootstrap 4), Webarch (Bootstrap 3), Material Admin (AngularJS). Il tema va importato su ogni computer del team.
+- Temi: adattatori per Metronic 8, DesignReset (Cork/Equation), Satria, Slim e Webarch; non compatibile Material Admin (AngularJS). Slim e Webarch girano sul Bootstrap 5 delle pagine: restano gli stili del tema, non i componenti JavaScript del template (grafici demo, chat, pannello impostazioni); Webarch non ha una skin scura (in modalità scura cambia solo l'area dei contenuti). Il tema va importato su ogni computer del team.
 - Aggiornamenti integrati: puntano a `mbulloni/MiB-Crude` su GitHub; senza release pubblicate il controllo segnala l'errore.

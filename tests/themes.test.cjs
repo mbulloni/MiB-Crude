@@ -10,6 +10,20 @@ const T = require('../core/themes/index.cjs');
 const P = require('../core/project.cjs');
 const G = require('../core/generator.cjs');
 
+const C = require('../core/themes/css.cjs');
+
+test('CSS helpers: numbered sections and dark scope', () => {
+  const css = '/* ---- */\n/* ### 1. A ### */\n/* ---- */\n.a{x:1}\n/* ---- */\n/* ### 2. B ### */\n/* ---- */\n.b{x:2}\n';
+  assert.deepStrictEqual(C.sections(css).map((s) => s.num), [0, 1, 2]);
+  const k = C.keepSections(css, [2]);
+  assert.ok(k.includes('.b{x:2}') && !k.includes('.a{'));
+  const d = C.scope('body{c:1}\n.x, .y > a{c:2}\n@media (max-width:9px){.z{c:3}}\n@keyframes k{from{o:0}to{o:1}}', '[t=d]');
+  assert.match(d, /\[t=d\] body \{c:1\}/);
+  assert.match(d, /\[t=d\] \.x, \[t=d\] \.y > a \{/);
+  assert.match(d, /@media \(max-width:9px\) \{\n\[t=d\] \.z \{c:3\}/);
+  assert.match(d, /@keyframes k \{from\{o:0\}to\{o:1\}\}/);
+});
+
 const SRC = path.join(os.homedir(), 'Documenti/SVILUPPO/Progetti/Template');
 
 test('templates are recognised, installed and used by the generator', { skip: !fs.existsSync(SRC) && 'cartella Template non presente' }, () => {
@@ -17,6 +31,9 @@ test('templates are recognised, installed and used by the generator', { skip: !f
   assert.ok(found.some((f) => f.adapter === 'metronic8'));
   assert.ok(found.filter((f) => f.adapter === 'designreset').length >= 1);
   assert.ok(found.some((f) => f.adapter === 'satria' && f.kind === 'auth'));
+  assert.deepStrictEqual(found.find((f) => f.adapter === 'slim').variants.map((v) => v.id), ['sidebar', 'horizontal']);
+  assert.strictEqual(found.filter((f) => f.adapter === 'webarch').length, 1, 'Webarch barebone only, not demo/HTML');
+  assert.ok(unsupported.every((u) => /angular/i.test(u.name)), unsupported.map((u) => u.name).join(', '));
   assert.ok(found.some((f) => f.variants.some((v) => v.id.startsWith('horizontal'))));
   assert.ok(unsupported.every((u) => u.reason));
   const lib = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lib-'));
@@ -31,6 +48,12 @@ test('templates are recognised, installed and used by the generator', { skip: !f
     const layout = path.join(out, 'runtime', 'themes', m.id, m.kind === 'auth' ? 'layout_bare.php' : 'layout.php');
     assert.ok(fs.existsSync(layout));
     execFileSync('php', ['-l', layout], { stdio: 'pipe' });
+    if (m.adapter === 'slim') {
+      const css = fs.readFileSync(path.join(out, 'theme', m.id, 'assets', 'css', 'slim.mc.css'), 'utf8');
+      assert.ok(!/Bootstrap v4/.test(css) && !/\.col-md-6\s*\{/.test(css), 'Bootstrap 4 removed from slim.css');
+      assert.match(css, /\.slim-header/);
+      assert.match(fs.readFileSync(path.join(out, 'theme', m.id, 'assets', 'css', 'slim.dark.css'), 'utf8'), /^\[data-bs-theme=dark\] \.slim-header \{/m);
+    }
     assert.ok(!fs.existsSync(path.join(out, 'theme', m.id, 'layouts', 'layout.php')), 'PHP layouts must not be web-accessible');
   }
   fs.rmSync(lib, { recursive: true, force: true });

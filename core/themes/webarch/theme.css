@@ -1,0 +1,64 @@
+/* MiB-Crude pages inside Webarch (Bootstrap 3 template on the pages' Bootstrap 5) */
+/* Bootstrap 3 helpers used by the shell */
+.mc-webarch .pull-left { float: left !important; }
+.mc-webarch .pull-right { float: right !important; }
+.mc-webarch .row-fluid::after, .mc-webarch .navbar-inner::after { content: ""; display: table; clear: both; }
+/* Bootstrap 5 .navbar/.nav are flex containers: the template expects block + floats */
+.mc-webarch .header.navbar { display: block; padding: 0; flex-wrap: nowrap; }
+.mc-webarch .header .nav { display: block; padding: 0; margin: 0; }
+.mc-webarch .header .nav > li { display: inline-block; float: left; }
+.mc-webarch .header-seperation { display: flex; align-items: center; gap: 10px; padding: 0 15px; }
+.mc-webarch .mc-wa-brand { color: #fff; font-weight: 600; font-size: 16px; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-webarch .mc-wa-logo { max-height: 30px; width: auto; margin: 0; }
+.mc-webarch .mc-wa-mobile { color: #fff; font-size: 22px; display: none; }
+.mc-webarch .mc-wa-title { line-height: 60px; font-weight: 600; padding: 0 10px; }
+.mc-webarch .header-quick-nav .quicklinks > a { font-size: 22px; line-height: 60px; padding: 0 10px; color: inherit; }
+.mc-webarch .header-quick-nav .pull-right { height: 60px; display: flex; align-items: center; padding-right: 10px; }
+.mc-webarch .mc-usermenu { flex-direction: row; }
+.mc-webarch .mc-usermenu .nav-link { padding: 6px 10px; color: inherit; }
+.mc-webarch .mc-usermenu .dropdown-menu { z-index: 1060; }
+.mc-webarch #mcTheme { background: transparent; border: 0; box-shadow: none; }
+.mc-webarch .page-sidebar .bi { font-size: 18px; width: 24px; display: inline-block; text-align: center; margin-right: 6px; vertical-align: middle; }
+.mc-webarch .page-sidebar .mc-wa-sep { border-top: 1px solid rgba(255, 255, 255, .08); margin: 8px 15px; }
+.mc-webarch .page-sidebar .mc-wa-head .menu-title { margin: 15px 0 5px; }
+.mc-webarch .page-sidebar.mini .mc-wa-head, .mc-webarch .page-sidebar.mini .mc-wa-sep { display: none; }
+.mc-webarch .page-content .content { padding-bottom: 30px; }
+.mc-webarch table.mc-grid a { color: var(--bs-primary, #0aa699); }
+@media (max-width: 991.98px) {
+  .mc-webarch .mc-wa-mobile { display: inline-block; }
+  .mc-webarch #layout-condensed-toggle, .mc-webarch .mc-wa-title { display: none; }
+}
+/* Dark mode: the template has no dark skin, the content area follows Bootstrap 5 */
+[data-bs-theme=dark] .mc-webarch .page-content, [data-bs-theme=dark] body.mc-webarch { background-color: #1e2125; }
+[data-bs-theme=dark] .mc-webarch .header-quick-nav { background-color: #2b3035; color: #dee2e6; }
+/* Webarch element rules that break Bootstrap 5 controls (select width, fixed input heights, .small width) */
+.mc-webarch .small { width: auto !important; }
+.mc-webarch select.form-select { width: auto; min-height: 0; background-image: var(--bs-form-select-bg-img), var(--bs-form-select-bg-icon, none) !important; border-color: var(--bs-border-color); }
+.mc-webarch .page-content .form-control, .mc-webarch .page-content .form-select, .mc-webarch .modal .form-control, .mc-webarch .modal .form-select { height: auto !important; line-height: 1.5; }
+.mc-webarch .form-check-input { margin-top: .25em; }
+.mc-webarch label.form-check-label, .mc-webarch .dt-length label, .mc-webarch .dt-search label { display: inline; margin-bottom: 0; }
+.mc-webarch .dt-length, .mc-webarch .dt-search { display: flex; align-items: center; gap: .4rem; }
+.mc-webarch table.dataTable td { vertical-align: middle; }
+.mc-webarch input, .mc-webarch button, .mc-webarch select, .mc-webarch textarea { font-family: inherit; }
+.mc-webarch table.dataTable td .btn, .mc-webarch .mc-col-actions .btn { padding: 0 .25rem; }
+.mc-webarch table.dataTable td .form-check-input { margin-top: 0; vertical-align: middle; }
+.mc-webarch .table td { padding: 8px 12px !important; }
+.mc-webarch .btn-sm { padding: 5px 10px; }
+.mc-webarch .btn[class*="btn-outline-"] { background-color: transparent; border: 1px solid currentColor; }
+.mc-webarch .btn-outline-secondary { border-color: var(--bs-border-color); }
+[data-bs-theme=dark] .mc-webarch .table td { color: var(--bs-body-color); }
+[data-bs-theme=dark] .mc-webarch input, [data-bs-theme=dark] .mc-webarch select, [data-bs-theme=dark] .mc-webarch textarea { background-color: var(--bs-body-bg); color: var(--bs-body-color); border-color: var(--bs-border-color); }
+[data-bs-theme=dark] .mc-webarch .btn-outline-secondary { color: var(--bs-body-color); }
+/* Colour themes with a white logo area (Corporate, Simple) */
+.mc-wa-light .mc-wa-brand, .mc-wa-light .mc-wa-mobile { color: #22262e; }
+/* Small screens: the logo area is the whole header */
+@media (max-width: 991.98px) {
+  .mc-webarch .header .header-seperation { justify-content: center; line-height: 60px; }
+  .mc-webarch .mc-wa-mobile { position: absolute; left: 15px; top: 0; }
+  /* The template hides the quick nav: keep the user menu (logout, language, dark mode) on the right */
+  .mc-webarch .header .header-quick-nav { display: block !important; position: fixed; top: 0; right: 0; z-index: 1000; height: 60px; padding: 0; background: transparent !important; }
+  .mc-webarch .header-quick-nav .pull-left { display: none; }
+  .mc-webarch .header-quick-nav .mc-usermenu .nav-link { color: #fff; }
+  .mc-wa-light .header-quick-nav .mc-usermenu .nav-link { color: #22262e; }
+  .mc-webarch .mc-wa-brand { max-width: calc(100vw - 200px); }
+}
