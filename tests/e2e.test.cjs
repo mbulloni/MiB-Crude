@@ -115,6 +115,7 @@ test.before(async () => {
   // scheduled task, run from the administration
   proj.project.settings.tasks = [{ name: 'conta_ordini', title: { it: 'Conta ordini' }, cron: '0 3 * * *', enabled: true }];
   proj.events._global = { ...(proj.events._global || {}), Task_conta_ordini: "<?php\n$message = 'ordini: ' . db()->value('SELECT COUNT(*) FROM ' . db()->table('orders'));\n" };
+  proj.project.settings.pwa = true;
   proj.project.settings.api = { enabled: true };
   proj.project.settings.webBuilder = { enabled: true };
   proj.reports.push({ name: 'sales', title: { it: 'Vendite', en: 'Sales' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'customer_id', 'total'], showDetails: true });
@@ -650,4 +651,21 @@ test('add page in steps: indicator, one section per step, save buttons on the la
   assert.match(r.text, /mc-form-buttons mc-steps-save/);
   // the edit page keeps the normal layout
   assert.doesNotMatch((await c.req('?p=edit&t=products&k[id]=1')).text, /mc-step-next/);
+});
+
+test('installable app: manifest, icons and service worker without login', async () => {
+  const c = client();
+  const m = await c.req('?p=manifest');
+  assert.strictEqual(m.status, 200);
+  const j = JSON.parse(m.text);
+  assert.strictEqual(j.display, 'standalone');
+  assert.deepStrictEqual(j.icons.map((i) => i.sizes), ['192x192', '512x512']);
+  const icon = await fetch(BASE + '?p=appicon&s=192');
+  assert.strictEqual(icon.headers.get('content-type'), 'image/png');
+  assert.ok((await icon.arrayBuffer()).byteLength > 100);
+  const sw = await fetch(BASE.replace('index.php', 'sw.js'));
+  assert.strictEqual(sw.status, 200);
+  assert.match(await sw.text(), /addEventListener\('fetch'/);
+  let r = await c.req('?p=login');
+  assert.match(r.text, /<link rel="manifest" href="index\.php\?p=manifest">/);
 });

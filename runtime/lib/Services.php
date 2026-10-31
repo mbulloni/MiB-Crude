@@ -382,6 +382,7 @@ class Theme
         foreach (['bootstrap-icons.min.css', 'dataTables.bootstrap5.min.css', 'responsive.bootstrap5.min.css', 'buttons.bootstrap5.min.css'] as $c) $h .= '<link rel="stylesheet" href="' . h($app->asset('vendor/' . $c)) . '">' . "\n";
         $h .= '<link rel="stylesheet" href="' . h($app->asset('app.css')) . '">' . "\n";
         if (!$pack || !empty($app->config['theme']['primaryOverride'])) $h .= '<style>:root{--mc-primary:' . h($app->config['theme']['primary']) . ';}</style>' . "\n";
+        $h .= Pwa::head($app);
         if (is_file($app->root . '/custom/custom.css')) $h .= '<link rel="stylesheet" href="custom/custom.css?v=' . filemtime($app->root . '/custom/custom.css') . '">' . "\n";
         // jQuery early: page snippets imported from phpr may load jQuery plugins.
         if (!$pack || empty($pack['providesJquery'])) $h .= '<script src="' . h($app->asset('vendor/jquery.min.js')) . '"></script>' . "\n";

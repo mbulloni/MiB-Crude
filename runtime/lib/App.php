@@ -147,7 +147,7 @@ class App
         $p = isset($_GET['p']) ? (string)$_GET['p'] : (!empty($landing['enabled']) ? 'welcome' : 'home');
         if (!preg_match('/^[a-z_]+$/', $p)) throw new HttpError(t('error.notfound'), 404);
         $this->page = $p;
-        $public = ['login', 'logout', 'register', 'forgot', 'reset', 'verify', 'setup', 'asset', 'oidc', 'saml', 'api', 'welcome', 'twofactor'];
+        $public = ['login', 'logout', 'register', 'forgot', 'reset', 'verify', 'setup', 'asset', 'oidc', 'saml', 'api', 'welcome', 'twofactor', 'manifest', 'appicon'];
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $p !== 'api' && $p !== 'saml') $this->checkCsrf();
         if ($p !== 'setup' && $this->security->needsSetup()) redirect($this->url('setup'));
         if (!in_array($p, $public, true)) {

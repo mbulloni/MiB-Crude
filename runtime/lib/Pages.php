@@ -387,6 +387,20 @@ class Pages
         $this->app->json(Notifications::forUser());
     }
 
+    // --- installable app (PWA) ----------------------------------------------------------
+
+    public function page_manifest()
+    {
+        if (!Pwa::enabled()) throw new HttpError(t('error.notfound'), 404);
+        Pwa::manifest($this->app);
+    }
+
+    public function page_appicon()
+    {
+        if (!Pwa::enabled()) throw new HttpError(t('error.notfound'), 404);
+        Pwa::icon($this->app, isset($_GET['s']) ? (int)$_GET['s'] : 192);
+    }
+
     // --- saved searches -----------------------------------------------------------
 
     /** Save (name, current search of the list) or delete a saved search, then back to the list. */

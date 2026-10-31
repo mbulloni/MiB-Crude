@@ -621,3 +621,8 @@ document.querySelectorAll('form.mc-form').forEach(function (form) {
   form.addEventListener('input', function (e) { if (e.target.classList && e.target.checkValidity && e.target.checkValidity()) e.target.classList.remove('is-invalid'); });
   show(cur);
 });
+
+// Installable app: the service worker (sw.js at the root of the app) when the project turns it on.
+if ('serviceWorker' in navigator && document.querySelector('link[rel="manifest"]') && window.isSecureContext) {
+  navigator.serviceWorker.register('sw.js').catch(function () { /* not installable here */ });
+}
