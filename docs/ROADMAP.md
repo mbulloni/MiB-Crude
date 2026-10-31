@@ -1,6 +1,6 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.5.1 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1); restano i limiti sotto.
+Stato v0.6.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1), filtri REST all'API e strato AnyChart completo (v0.6.0); restano i limiti sotto.
 
 ## Fatto (v0.2.0, 2026-10-30)
 1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
@@ -37,7 +37,7 @@ Stato v0.5.1 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 ## Fatto (v0.5.1, 2026-10-31)
 - Server del team: dopo una riconnessione la chiusura asincrona del vecchio socket non annulla più le richieste della nuova connessione né segna il designer come disconnesso (era anche il test instabile della suite).
 
-## Dopo v0.5.1
+## Fatto (v0.6.0, 2026-10-31)
 - Origini REST: filtri inviati all'API (`?campo=valore`, più valori ripetendo il parametro) per master-dettaglio, pannello filtri, ricerche "uguale a" e record per utente, anche per totali, report e grafici; cache delle risposte per N secondi, svuotata dalle modifiche (2026-10-31).
 - Strato AnyChart: impilamento dei valori e al 100% (`stackMode`), marcatori delle linee, etichette esterne delle torte (`outsideLabelsCriticalAngle`), stringhe di formato AnyChart (`{%Value}{decimalsCount:2,groupsSeparator:.}`, `{%PercentValue}`, `{%SeriesName}`) in etichette, tooltip e assi, `anychart.format.number` con opzioni; nessuna chiamata dei progetti reali resta ignorata (2026-10-31).
 
