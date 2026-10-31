@@ -490,15 +490,21 @@ class Pages
         $this->app->security->check($t->name, 'V');
         $this->app->security->check($t->name, 'P');
         $keys = $t->keysFromRequest();
-        $row = $t->fetchOne($keys);
+        $row = $t->fetchOne($keys, true);
         if (!$row) throw new HttpError(t('error.notfound'), 404);
         $rows = [$row];
         $fields = $t->fields('view');
+        // images of the image fields, read before the values are formatted
+        $imgs = [];
+        foreach ($fields as $f) if ($f['editAs']['type'] === 'image' || (isset($f['viewAs']['type']) && $f['viewAs']['type'] === 'image')) $imgs[$f['name']] = Upload::imageBytes($t, $f, $row);
         $t->resolveLookups($rows, $fields);
         $row = $rows[0];
         $this->app->event($t->name, 'ProcessValues', [&$row, 'view']);
         $pairs = [];
-        foreach ($fields as $f) $pairs[$t->fieldLabel($f)] = Format::plain($t, $f, isset($row[$f['name']]) ? $row[$f['name']] : null, $row);
+        foreach ($fields as $f) {
+            $text = !empty($imgs[$f['name']]) ? '' : Format::plain($t, $f, isset($row[$f['name']]) ? $row[$f['name']] : null, $row);
+            $pairs[$t->fieldLabel($f)] = !empty($imgs[$f['name']]) ? ['text' => $text, 'images' => $imgs[$f['name']]] : $text;
+        }
         Audit::raw('export ' . $t->name, (string)userName());
         $pdf = Pdf::record($t->caption() . ' — ' . implode(' / ', array_map('strval', $keys)), $pairs);
         header('Content-Type: application/pdf');

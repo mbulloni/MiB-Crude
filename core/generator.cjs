@@ -172,6 +172,8 @@ function generate(proj, opts = {}) {
   // Runtime and assets.
   let copied = copyDir(path.join(RUNTIME, 'lib'), path.join(out, 'runtime', 'lib'));
   copied += copyDir(path.join(RUNTIME, 'views'), path.join(out, 'runtime', 'views'));
+  // DejaVu Sans for the PDF exports (Unicode); without it the PDFs fall back to Helvetica / Windows-1252
+  copied += copyDir(path.join(RUNTIME, 'fonts'), path.join(out, 'runtime', 'fonts'));
   w('runtime/bootstrap.php', fs.readFileSync(path.join(RUNTIME, 'bootstrap.php'), 'utf8'));
   w('runtime/classic-route.php', fs.readFileSync(path.join(RUNTIME, 'classic-route.php'), 'utf8'));
   copied += copyDir(path.join(RUNTIME, 'assets'), path.join(out, 'assets'));

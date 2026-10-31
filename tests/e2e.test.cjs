@@ -478,6 +478,9 @@ test('PDF: list export and a single record', async () => {
   assert.match(pdf.text, /^%PDF-1\.4/);
   assert.match(pdf.text, /\/Type \/Pages \/Kids \[[^\]]+\] \/Count [1-9]/);
   assert.match(pdf.text, /startxref\n\d+\n%%EOF\n$/);
+  // DejaVu Sans embedded (subset, Unicode)
+  assert.match(pdf.text, /\/Subtype \/CIDFontType2 \/BaseFont \/[A-Z]{6}\+DejaVuSans/);
+  assert.match(pdf.text, /\/ToUnicode \d+ 0 R/);
   r = await c.req('?p=view&t=orders&k[id]=1');
   assert.match(r.text, /p=pdf&amp;t=orders/);
   const one = await c.req('?p=pdf&t=orders&k[id]=1');

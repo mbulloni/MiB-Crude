@@ -137,6 +137,21 @@ class Upload
     }
 
     /** Stream a stored file after permission checks done by the caller. */
+    /** Bytes of the images of a field (database or upload folder), at most $max, for the PDF of the record. */
+    public static function imageBytes(Table $t, array $f, array $row, $max = 6)
+    {
+        $v = isset($row[$f['name']]) ? $row[$f['name']] : null;
+        if ($v === null || $v === '') return [];
+        if ($t->isDbFile($f)) return [is_resource($v) ? stream_get_contents($v) : (string)$v];
+        $out = [];
+        $base = realpath(self::dir());
+        foreach (array_slice(self::files($v), 0, $max) as $file) {
+            $p = realpath(self::dir() . '/' . $file['path']);
+            if ($p && $base && strpos($p, $base . DIRECTORY_SEPARATOR) === 0 && self::isImage($p)) $out[] = (string)file_get_contents($p);
+        }
+        return $out;
+    }
+
     public static function serve(Table $t, array $f, array $row, $index, $thumb)
     {
         if ($t->isDbFile($f)) {
