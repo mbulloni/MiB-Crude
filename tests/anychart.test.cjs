@@ -34,3 +34,32 @@ test('anychart-compat translates the common customizations', () => {
   window.mcAnyChart({ series: [] }, 'chart.(');
   assert.strictEqual(warnings.length, 1);
 });
+
+test('anychart-compat: stacking, markers, pie outside labels, format strings', () => {
+  global.window = { console: { warn: () => {} } };
+  delete require.cache[require.resolve('../runtime/assets/anychart-compat.js')];
+  require('../runtime/assets/anychart-compat.js');
+  // 100% stacking (phpr: chart.yScale().stackMode("percent")).
+  let o = window.mcAnyChart({ series: [{ type: 'bar', data: [1, 30] }, { type: 'bar', data: [3, { value: 10 }] }], yAxis: { type: 'value' } }, 'var y = chart.yScale(); y.stackMode("percent");');
+  assert.deepStrictEqual([o.series[0].stack, o.series[1].stack], ['mc', 'mc']);
+  assert.deepStrictEqual(o.series[0].data, [25, 75]);
+  assert.deepStrictEqual([o.series[1].data[0], o.series[1].data[1].value], [75, 25]);
+  assert.deepStrictEqual([o.yAxis[0].min, o.yAxis[0].max, o.yAxis[0].axisLabel.formatter], [0, 100, '{value}%']);
+  o = window.mcAnyChart({ series: [{ type: 'bar', data: [1] }, { type: 'bar', data: [2] }] }, 'var s = anychart.scales.linear(); s.stackMode("value"); chart.yScale(s);');
+  assert.deepStrictEqual([o.series[0].stack, o.series[0].data[0]], ['mc', 1]);
+  // Line markers.
+  o = window.mcAnyChart({ series: [{ type: 'line', data: [1] }, { type: 'line', data: [2] }] }, 'chart.getSeriesAt(0).markers(true); var m = chart.getSeriesAt(1).markers(); m.type("square"); m.size(4);');
+  assert.deepStrictEqual([o.series[0].showSymbol, o.series[1].symbol, o.series[1].symbolSize], [true, 'rect', 8]);
+  // Pie: slices under 160 degrees get the label outside.
+  o = window.mcAnyChart({ series: [{ type: 'pie', data: [{ name: 'a', value: 50 }, { name: 'b', value: 10 }] }] }, 'chart.outsideLabelsCriticalAngle(160);');
+  assert.deepStrictEqual(o.series[0].data.map((d) => d.label.position), ['inside', 'outside']);
+  // AnyChart format strings.
+  o = window.mcAnyChart({ series: [{ type: 'bar', data: [1234.5] }], yAxis: { type: 'value' }, tooltip: {} }, `
+    chart.labels().format("{%Value}{decimalsCount:1,groupsSeparator:.,decimalPoint:\\\\,} €");
+    chart.tooltip().format("{%SeriesName}: {%Value}");
+    chart.yAxis().labels().format("{%Value}%");`);
+  assert.strictEqual(o.series[0].label.formatter({ value: 1234.5, name: 'x' }), '1.234,5 €');
+  assert.strictEqual(o.tooltip.formatter([{ value: 3, seriesName: 'Vendite' }]), 'Vendite: 3');
+  assert.strictEqual(o.yAxis[0].axisLabel.formatter(40), '40%');
+  assert.strictEqual(window.mcAnyChart({ series: [] }, 'chart.title(anychart.format.number(1234.5, {decimalsCount: 0, groupsSeparator: "."}));').title.text, '1.235');
+});
