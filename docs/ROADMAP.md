@@ -31,9 +31,12 @@ Stato v0.4.2 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 ## Fatto (v0.4.2, 2026-10-31)
 - Skin scura per Webarch (il template non ne ha una): intestazione, menu laterale, contenuti, tabelle, controlli e menu a tendina seguono la modalità scura dell'app con tutti e quattro i colori; corretto anche il colore del testo dei pulsanti outline e link, nascosto da webarch.css (2026-10-31).
 
+## Dopo v0.4.2
+- Adattatore Material Design Admin (AngularJS 1 + Angular Material + Bootstrap 3): intestazione e menu laterale riscritti in PHP senza AngularJS, dal main.css del template restano solo ui.css e app.css; combinazioni di colori del personalizzatore (barra scura, logo blu, intestazione blu con barra chiara, menu orizzontale), menu ridotto alle icone, menu a scomparsa su mobile, skin scura aggiunta (2026-10-31).
+
 ## Limiti aperti
 - Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto (non raggiungibili dall'ambiente di sviluppo).
 - Origini REST: senza paginazione dell'API ogni richiesta legge l'intero elenco; con la paginazione solo lista, ricerca rapida e ordinamento sono eseguiti dall'API, mentre ricerca avanzata, pannello filtri, totali, report, grafici e lookup leggono tutte le pagine (massimo 50.000 record). Le condizioni SQL dei lookup (`where`) non si applicano ai lookup verso tabelle REST; l'importazione su REST non può essere annullata in blocco (ogni record è una chiamata all'API).
 - Strato AnyChart: copre le chiamate usate dai progetti reali (etichette, serie, legenda, tooltip, assi e scale, zoom); le altre vengono ignorate senza errori.
-- Temi: adattatori per Metronic 8, DesignReset (Cork/Equation), Satria, Slim e Webarch; non compatibile Material Admin (AngularJS). Slim e Webarch girano sul Bootstrap 5 delle pagine: restano gli stili del tema, non i componenti JavaScript del template (grafici demo, chat, pannello impostazioni). Il tema va importato su ogni computer del team.
+- Temi: adattatori per Metronic 8, DesignReset (Cork/Equation), Satria, Slim, Webarch e Material Admin. Slim, Webarch e Material Admin girano sul Bootstrap 5 delle pagine: restano gli stili del tema, non i componenti JavaScript del template (grafici demo, chat, pannello impostazioni; per Material Admin anche i componenti Angular Material, il pannello di personalizzazione e le animazioni a onda dei pulsanti). Il tema va importato su ogni computer del team.
 - Aggiornamenti integrati: puntano a `mbulloni/MiB-Crude` su GitHub; senza release pubblicate il controllo segnala l'errore. Aggiornamento del .deb dall'app provato con successo (0.4.0 → 0.4.1, 2026-10-31).

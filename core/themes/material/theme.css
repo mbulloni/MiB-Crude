@@ -1,0 +1,72 @@
+/* MiB-Crude pages inside Material Design Admin (AngularJS/Bootstrap 3 template on the pages' Bootstrap 5) */
+.mc-material a { text-decoration: none; }
+.mc-material .logo a { display: flex; align-items: center; gap: 10px; color: inherit; }
+.mc-material .logo .logo-icon { font-size: 22px; }
+.mc-material .mc-md-logo { max-height: 30px; width: auto; }
+.mc-material .logo .logo-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-material .top-nav { display: flex; align-items: center; justify-content: space-between; }
+.mc-material .top-nav .nav-left { display: flex; align-items: center; margin: 0; }
+.mc-material .top-nav .nav-left > li { float: none; }
+.mc-material .header-btn { display: inline-flex; align-items: center; justify-content: center; font-size: 22px; color: inherit; padding: 0 14px; }
+.mc-material .mc-md-title { font-size: 16px; font-weight: 500; padding: 0 8px; white-space: nowrap; }
+.mc-material .nav-right { padding-right: 12px; }
+.mc-material .mc-usermenu { flex-direction: row; align-items: center; }
+.mc-material .mc-usermenu .nav-link { font-size: 14px; line-height: normal; padding: 6px 10px; color: inherit; }
+.mc-material .mc-usermenu .dropdown-menu { z-index: 1060; }
+.mc-material #mcTheme { background: transparent; border: 0; box-shadow: none; }
+/* Sidebar: Bootstrap Icons instead of Material Icons / Font Awesome */
+.mc-material .nav-container .nav > li > a > .bi:first-child { font-size: 18px; width: 30px; display: inline-block; text-align: center; margin-right: 8px; vertical-align: middle; }
+.mc-material .nav-container .nav ul .bi-dot { font-size: 18px; margin-right: 4px; vertical-align: middle; }
+.mc-material .nav-container .nav .icon-has-ul { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-size: 12px; transition: transform .2s; }
+.mc-material .nav-container .nav > li.open .icon-has-ul { transform: translateY(-50%) rotate(180deg); }
+.mc-material .nav-container .nav > li > a { position: relative; text-transform: none; }
+.mc-material .nav-container .nav ul { display: none; }
+/* Content */
+.mc-material .mc-md-page { padding: 24px; }
+.mc-material .card { border-radius: 2px; box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 1px 2px rgba(0, 0, 0, .1); }
+.mc-material table.mc-grid a { color: var(--bs-primary, #2196f3); }
+@media (max-width: 767.98px) {
+  .mc-material .mc-md-title { display: none; }
+  .mc-material .top-nav .nav-left { visibility: hidden; }
+}
+/* Bootstrap 5 .nav is a flex container: the template's menus are block lists */
+.mc-material .nav-container .nav { display: block; flex-wrap: nowrap; }
+.mc-material .nav-container.nav-horizontal .nav > li { float: left; }
+.mc-material .nav-vertical .icon-has-ul-h, .mc-material .nav-horizontal .icon-has-ul { display: none; }
+.mc-material .nav-horizontal .icon-has-ul-h { position: absolute; right: 8px; top: 50%; font-size: 10px; }
+/* Header */
+.mc-material .logo { padding: 0 16px; }
+.mc-material .logo a { font-size: 18px; height: 64px; }
+.mc-material .top-nav .nav-left > li, .mc-material .top-nav .nav-right { height: 64px; display: flex; align-items: center; }
+.mc-material .header-container > .top-header .top-nav .nav-left > li > a.header-btn { display: flex; align-items: center; height: 64px; padding: 0 14px; line-height: normal; }
+/* Small screens: logo on the first row (template), top bar on the second */
+@media (max-width: 767.98px) {
+  .mc-material .header-container > .top-header .top-nav { height: auto; padding-top: 64px; }
+  .mc-material .top-header .logo { padding: 0 60px; }
+  .mc-material .top-header .logo a { justify-content: center; }
+}
+.mc-material .header-container.bg-primary, .mc-material .header-container.bg-dark { color: #fff; }
+.mc-material .header-container.bg-white { color: #333; }
+.mc-material .header-container.bg-primary .top-nav a, .mc-material .header-container.bg-primary .top-nav .btn,
+.mc-material .header-container.bg-dark .top-nav a, .mc-material .header-container.bg-dark .top-nav .btn { color: #fff !important; }
+.mc-material .header-btn .bi { font-size: 24px; line-height: 1; }
+
+/* Dark skin (the template has none): follows the app's dark mode in every colour skin */
+[data-bs-theme=dark] .mc-material, [data-bs-theme=dark] .mc-material > .main-container, [data-bs-theme=dark] .mc-material .content-container,
+[data-bs-theme=dark] .mc-material > .main-container::before { background-color: #1e2126; color: var(--bs-body-color); }
+[data-bs-theme=dark] .mc-material .header-container.bg-white { background-color: #262a33 !important; color: #c9d1d9; }
+[data-bs-theme=dark] .mc-material .header-container.bg-white .top-nav a, [data-bs-theme=dark] .mc-material .header-container.bg-white .top-nav .btn { color: #c9d1d9 !important; }
+[data-bs-theme=dark] .mc-material .header-container.bg-primary, [data-bs-theme=dark] .mc-material .logo.bg-primary { background-color: #1c4f8f !important; }
+[data-bs-theme=dark] .mc-material .nav-container.bg-white, [data-bs-theme=dark] .mc-material .nav-container.bg-white::before,
+[data-bs-theme=dark] .mc-material .nav-vertical.bg-white::before { background-color: #1b1e24 !important; }
+[data-bs-theme=dark] .mc-material .nav-container.bg-white .nav a { color: #c9d1d9; }
+[data-bs-theme=dark] .mc-material .nav-container.bg-white .nav > li.open, [data-bs-theme=dark] .mc-material .nav-container.bg-white .nav ul { background-color: #16181d; }
+[data-bs-theme=dark] .mc-material .nav-container.bg-white .nav > li.active > a, [data-bs-theme=dark] .mc-material .nav-container.bg-white .nav li.active > a { color: #4dd0e1; }
+[data-bs-theme=dark] .mc-material .page h1, [data-bs-theme=dark] .mc-material .page h2, [data-bs-theme=dark] .mc-material .page h3,
+[data-bs-theme=dark] .mc-material .page h4, [data-bs-theme=dark] .mc-material .page h5, [data-bs-theme=dark] .mc-material .page h6 { color: #e6e9ed; }
+[data-bs-theme=dark] .mc-material .page a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link) { color: #6ea8fe; }
+[data-bs-theme=dark] .mc-material .btn-link { color: #6ea8fe; }
+[data-bs-theme=dark] .mc-material .btn-outline-primary { color: #6ea8fe; border-color: #6ea8fe; }
+[data-bs-theme=dark] .mc-material .card { box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+[data-bs-theme=dark] .mc-material .nav-container.bg-white .nav > li > a:hover, [data-bs-theme=dark] .mc-material .nav-container.bg-white .nav > li.open > a,
+[data-bs-theme=dark] .mc-material .nav-container.bg-white .nav > li.active > a { background-color: #232730; }

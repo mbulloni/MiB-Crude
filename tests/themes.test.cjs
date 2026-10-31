@@ -33,7 +33,8 @@ test('templates are recognised, installed and used by the generator', { skip: !f
   assert.ok(found.some((f) => f.adapter === 'satria' && f.kind === 'auth'));
   assert.deepStrictEqual(found.find((f) => f.adapter === 'slim').variants.map((v) => v.id), ['sidebar', 'horizontal']);
   assert.strictEqual(found.filter((f) => f.adapter === 'webarch').length, 1, 'Webarch barebone only, not demo/HTML');
-  assert.ok(unsupported.every((u) => /angular/i.test(u.name)), unsupported.map((u) => u.name).join(', '));
+  assert.deepStrictEqual(found.find((f) => f.adapter === 'material').variants.map((v) => v.id), ['dark', 'primary', 'light', 'horizontal']);
+  assert.deepStrictEqual(unsupported.map((u) => u.name), [], 'all the purchased templates have an adapter');
   assert.ok(found.some((f) => f.variants.some((v) => v.id.startsWith('horizontal'))));
   assert.ok(unsupported.every((u) => u.reason));
   const lib = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lib-'));
@@ -48,6 +49,12 @@ test('templates are recognised, installed and used by the generator', { skip: !f
     const layout = path.join(out, 'runtime', 'themes', m.id, m.kind === 'auth' ? 'layout_bare.php' : 'layout.php');
     assert.ok(fs.existsSync(layout));
     execFileSync('php', ['-l', layout], { stdio: 'pipe' });
+    if (m.adapter === 'material') {
+      const css = fs.readFileSync(path.join(out, 'theme', m.id, 'assets', 'css', 'material.mc.css'), 'utf8');
+      assert.ok(!/Bootstrap v3|AngularJS Material|normalize\.css/.test(css), 'Bootstrap 3 and Angular Material removed');
+      assert.match(css, /\.nav-container/);
+      assert.ok(!/ng-include|ng-class|data-ng-/.test(fs.readFileSync(layout, 'utf8')), 'no AngularJS in the layout');
+    }
     if (m.adapter === 'slim') {
       const css = fs.readFileSync(path.join(out, 'theme', m.id, 'assets', 'css', 'slim.mc.css'), 'utf8');
       assert.ok(!/Bootstrap v4/.test(css) && !/\.col-md-6\s*\{/.test(css), 'Bootstrap 4 removed from slim.css');

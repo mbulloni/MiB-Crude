@@ -11,7 +11,7 @@ const path = require('node:path');
 // Local theme library (per developer machine, never inside the MiB-Crude sources).
 const DEFAULT_LIB = process.env.MIBCRUDE_THEMES || path.join(os.homedir(), '.config', 'MiB-Crude', 'themes');
 
-const ADAPTERS = [require('./metronic8/adapter.cjs'), require('./designreset/adapter.cjs'), require('./satria/adapter.cjs'), require('./slim/adapter.cjs'), require('./webarch/adapter.cjs')];
+const ADAPTERS = [require('./metronic8/adapter.cjs'), require('./designreset/adapter.cjs'), require('./satria/adapter.cjs'), require('./slim/adapter.cjs'), require('./webarch/adapter.cjs'), require('./material/adapter.cjs')];
 
 // Directories up to `depth` levels below root.
 function dirs(root, depth, out = []) {

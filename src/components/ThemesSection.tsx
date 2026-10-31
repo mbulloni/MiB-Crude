@@ -25,7 +25,7 @@ function ImportDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
   });
   return (
     <Modal wide title="Importa template grafici" onClose={onClose} footer={<Btn kind="primary" onClick={onClose}>Chiudi</Btn>}>
-      <p className="help">Indica la cartella dei template acquistati. MiB-Crude riconosce i template per cui ha un adattatore (Metronic 8, Cork, Equation, Satria, Slim, Webarch) e copia solo i file necessari nella libreria temi di questo computer (<code>~/.config/MiB-Crude/themes</code>). I file del template non entrano nel progetto né nel codice di MiB-Crude: ogni licenza ThemeForest regolare copre un prodotto finale.</p>
+      <p className="help">Indica la cartella dei template acquistati. MiB-Crude riconosce i template per cui ha un adattatore (Metronic 8, Cork, Equation, Satria, Slim, Webarch, Material Admin) e copia solo i file necessari nella libreria temi di questo computer (<code>~/.config/MiB-Crude/themes</code>). I file del template non entrano nel progetto né nel codice di MiB-Crude: ogni licenza ThemeForest regolare copre un prodotto finale.</p>
       <Row label="Cartella"><span className="inline"><Text value={dir} onChange={setDir} mono /><Btn icon="folder" onClick={async () => { const d = await call<string | null>('dialog:dir', 'Cartella dei template', dir); if (d) setDir(d); }} /><Btn kind="primary" icon="search" onClick={scan}>Analizza</Btn></span></Row>
       {res && <>
         <h4>Compatibili ({res.found.length})</h4>
