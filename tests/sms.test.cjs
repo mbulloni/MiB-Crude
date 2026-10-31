@@ -93,6 +93,14 @@ test('sign-in code by SMS', { skip: !SQLITE && `${PHP} senza pdo_sqlite` }, asyn
   r = await c.req('?p=profile');
   assert.strictEqual(r.status, 200);
   assert.match(r.text, /value="\+39 333 1234567"/);
+  // the administrator sets the phone of a user from the Users page
+  r = await c.req('?p=admin&s=users&id=new');
+  assert.match(r.text, /name="phone"/);
+  await c.post('?p=admin&s=users', { _csrf: c.csrf(r.text), action: 'save', id: '0', username: 'luca', email: 'l@x.it', fullname: 'Luca', password: 'Password1', active: '1', phone: '+39 347 0000001' });
+  const e = client();
+  r = await e.req('?p=login');
+  await e.post('?p=login', { _csrf: e.csrf(r.text), username: 'luca', password: 'Password1' });
+  assert.strictEqual(lastCode()[0], '+393470000001');
   // five wrong codes end the attempt
   const d = client();
   r = await d.req('?p=login');

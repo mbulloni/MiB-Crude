@@ -9,6 +9,7 @@
     <div class="col-md-4"><label class="form-label"><?= h(t('login.username')) ?></label><input class="form-control" name="username" required value="<?= h($edit['username']) ?>"></div>
     <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="<?= h($edit['email']) ?>"></div>
     <div class="col-md-4"><label class="form-label"><?= h(t('register.fullname')) ?></label><input class="form-control" name="fullname" value="<?= h($edit['fullname']) ?>"></div>
+    <?php if (array_key_exists('phone', $edit)): ?><div class="col-md-4"><label class="form-label"><?= h(t('2fa.phone')) ?></label><input class="form-control" name="phone" type="tel" value="<?= h($edit['phone']) ?>" placeholder="+39 333 1234567"></div><?php endif ?>
     <div class="col-md-4"><label class="form-label"><?= h(t('login.password')) ?></label><input class="form-control" type="password" name="password" autocomplete="new-password" placeholder="<?= $edit['id'] ? h(t('form.password_keep')) : '' ?>"></div>
     <div class="col-md-6"><label class="form-label"><?= h(t('admin.groups')) ?></label><div><?php foreach ($groups as $g): ?>
       <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="groups[]" value="<?= h($g['id']) ?>" id="g_<?= h($g['id']) ?>"<?= in_array($g['id'], $mine, true) ? ' checked' : '' ?>><label class="form-check-label" for="g_<?= h($g['id']) ?>"><?= h($g['label'] ?: $g['id']) ?></label></div>

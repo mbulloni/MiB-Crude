@@ -72,6 +72,8 @@ class Admin
                         $this->db->insert($tu, $vals, 'id');
                     }
                     foreach (isset($_POST['groups']) ? (array)$_POST['groups'] : [] as $g) $this->db->insert($tm, ['username' => $vals['username'], 'group_id' => (string)$g]);
+                    // phone for the SMS sign-in codes
+                    if ($this->app->security->twoFactorChannel() === 'sms' && isset($_POST['phone'])) Sms::setPhone($vals['username'], $_POST['phone']);
                     $this->app->flash('success', t('msg.saved'));
                 } catch (\PDOException $e) {
                     $this->app->flash('danger', t('register.exists'));
@@ -97,6 +99,7 @@ class Admin
         if (isset($_GET['id'])) {
             if ($_GET['id'] === 'new') $edit = ['id' => 0, 'username' => '', 'email' => '', 'fullname' => '', 'active' => 1];
             else foreach ($users as $u) if ((string)$u['id'] === (string)$_GET['id']) $edit = $u;
+            if ($edit && $this->app->security->twoFactorChannel() === 'sms') $edit['phone'] = $edit['username'] !== '' ? Sms::phone($edit) : '';
         }
         return ['users' => $users, 'members' => $members, 'groups' => $this->groupsList(), 'edit' => $edit];
     }
