@@ -1,10 +1,10 @@
 <?php
 namespace MiB;
 
-/** System tables (users, groups, rights, audit, locks) created on first run in the main database. */
+/** System tables (users, groups, rights, audit, locks, notifications) created on first run in the main database. */
 class Schema
 {
-    const VERSION = 2;
+    const VERSION = 3;
 
     public static function prefix()
     {
@@ -28,7 +28,8 @@ class Schema
         $c = App::$i->config;
         $s = $c['security'];
         return ($s['enabled'] && $s['mode'] === 'database') || !empty($c['settings']['audit']) || !empty($c['settings']['recordLocking']) || !empty($c['settings']['webBuilder']['enabled'])
-            || (!empty($s['dynamicPermissions']) && $s['enabled']);
+            || (!empty($s['dynamicPermissions']) && $s['enabled'])
+            || ($s['enabled'] && (!isset($c['settings']['notifications']) || $c['settings']['notifications'] !== false));
     }
 
     public static function ensure()
@@ -74,6 +75,9 @@ class Schema
                 . "{$c('def')} $text, {$c('shared')} $int DEFAULT 0, {$c('created_at')} $ts)$engine",
             'locks' => 'CREATE TABLE ' . $q('locks') . " ({$c('table_name')} {$vc(150)} NOT NULL, {$c('keys_json')} {$vc(255)} NOT NULL, {$c('username')} {$vc(150)}, {$c('ts')} $ts, "
                 . "PRIMARY KEY ({$c('table_name')}, {$c('keys_json')}))$engine",
+            'notifications' => 'CREATE TABLE ' . $q('notifications') . " ({$c('id')} $id, {$c('username')} {$vc(150)}, {$c('title')} {$vc(255)}, {$c('message')} $text, "
+                . "{$c('icon')} {$vc(50)}, {$c('url')} {$vc(500)}, {$c('new_window')} $int DEFAULT 0, {$c('created_at')} $ts, {$c('expires_at')} $ts)$engine",
+            'notif_seen' => 'CREATE TABLE ' . $q('notif_seen') . " ({$c('username')} {$vc(150)} NOT NULL PRIMARY KEY, {$c('last_id')} $int DEFAULT 0)$engine",
         ];
     }
 

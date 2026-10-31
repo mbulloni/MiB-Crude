@@ -348,6 +348,16 @@ class Pages
         redirect($back);
     }
 
+    // --- notifications -----------------------------------------------------------
+
+    /** Bell of the header: GET = latest notifications and unread count, POST = mark them seen. */
+    public function page_notifications()
+    {
+        if (!Notifications::enabled() || !$this->app->security->user()) throw new HttpError(t('error.notfound'), 404);
+        if ($this->post()) Notifications::markSeen();
+        $this->app->json(Notifications::forUser());
+    }
+
     // --- update selected --------------------------------------------------------
 
     /** "Update selected" (phpr): the same values on every selected record, through the normal edit path. */

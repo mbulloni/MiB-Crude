@@ -70,4 +70,21 @@
   <?php $pages = max(1, (int)ceil($total / 50)); if ($pages > 1): ?><nav class="mt-2"><ul class="pagination pagination-sm">
     <?php for ($i = max(1, $pg - 4); $i <= min($pages, $pg + 4); $i++): ?><li class="page-item<?= $i === $pg ? ' active' : '' ?>"><a class="page-link" href="<?= h($app->url('admin', ['s' => 'audit', 'pg' => $i])) ?>"><?= $i ?></a></li><?php endfor ?>
   </ul></nav><?php endif ?>
+<?php elseif ($section === 'notifications'): ?>
+  <form method="post" class="card mb-3"><?= $app->csrfField() ?><div class="card-body"><div class="row g-2">
+    <div class="col-md-4"><label class="form-label"><?= h(t('notif.to')) ?></label><select name="user" class="form-select"><option value=""><?= h(t('notif.everybody')) ?></option><?php foreach ($users as $un): ?><option><?= h($un) ?></option><?php endforeach ?></select></div>
+    <div class="col-md-5"><label class="form-label"><?= h(t('notif.titlef')) ?></label><input name="title" class="form-control" maxlength="255"></div>
+    <div class="col-md-3"><label class="form-label"><?= h(t('notif.icon')) ?></label><input name="icon" class="form-control" placeholder="info-circle"></div>
+    <div class="col-12"><label class="form-label"><?= h(t('notif.message')) ?> <span class="text-danger">*</span></label><textarea name="message" class="form-control" rows="2" required></textarea></div>
+    <div class="col-md-6"><label class="form-label"><?= h(t('notif.url')) ?></label><input name="url" class="form-control" placeholder="index.php?p=list&amp;t=…"></div>
+    <div class="col-md-3"><label class="form-label"><?= h(t('notif.expire')) ?></label><input name="expire" type="datetime-local" class="form-control"></div>
+    <div class="col-md-3 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" name="new_window" value="1" id="nw"><label class="form-check-label" for="nw"><?= h(t('notif.newwin')) ?></label></div></div>
+  </div></div><div class="card-footer"><button class="btn btn-primary"><i class="bi bi-send"></i> <?= h(t('notif.send')) ?></button></div></form>
+  <div class="card"><div class="mc-scroll"><table class="table table-sm mb-0 small"><thead><tr><th><?= h(t('audit.when')) ?></th><th><?= h(t('notif.to')) ?></th><th><?= h(t('notif.titlef')) ?></th><th><?= h(t('notif.message')) ?></th><th><?= h(t('notif.expire')) ?></th><th></th></tr></thead><tbody>
+  <?php foreach ($rows as $r): ?>
+    <tr><td class="text-nowrap"><?= h(\MiB\Format::date($r['created_at'], 'dateTimeFormat')) ?></td><td><?= h($r['username'] !== null && $r['username'] !== '' ? $r['username'] : t('notif.everybody')) ?></td>
+    <td><?php if ($r['icon']): ?><i class="bi bi-<?= h($r['icon']) ?>"></i> <?php endif ?><?= h($r['title']) ?></td><td class="text-break"><?= h($r['message']) ?></td>
+    <td class="text-nowrap"><?= $r['expires_at'] ? h(\MiB\Format::date($r['expires_at'], 'dateTimeFormat')) : '' ?></td>
+    <td><form method="post"><?= $app->csrfField() ?><button class="btn btn-sm btn-link text-danger" name="delete" value="<?= (int)$r['id'] ?>" title="<?= h(t('btn.delete')) ?>"><i class="bi bi-trash"></i></button></form></td></tr>
+  <?php endforeach ?></tbody></table></div></div>
 <?php endif ?>

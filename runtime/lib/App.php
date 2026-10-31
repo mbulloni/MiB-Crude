@@ -215,7 +215,7 @@ class App
 
     public function wantsJson()
     {
-        return (isset($_GET['p']) && in_array($_GET['p'], ['api', 'lookup', 'dt', 'chartdata'], true))
+        return (isset($_GET['p']) && in_array($_GET['p'], ['api', 'lookup', 'dt', 'chartdata', 'notifications'], true))
             || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') === 0);
     }
 

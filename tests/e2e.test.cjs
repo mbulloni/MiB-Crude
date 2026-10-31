@@ -93,6 +93,7 @@ test.before(async () => {
   proj.events.categories = {
     BeforeAdd: "<?php\n$values['name'] = strtoupper($values['name']);\nreturn true;\n",
     BeforeDelete: "<?php\nif ((int)$old['id'] === 1) { $message = 'Categoria protetta'; return false; }\nreturn true;\n",
+    AfterAdd: "<?php\naddNotification('Nuova categoria ' . $values['name'], 'Categorie', 'tag', 'index.php?p=list&t=categories');\n",
   };
   proj.security.enabled = true;
   proj.security.twoFactor = { enabled: true, required: false };
@@ -342,13 +343,18 @@ test('update selected: the same values on the chosen records only', async () => 
   r = await c.req('?p=list&t=orders');
   assert.match(r.text, /mc-update-selected/);
   const csrf = c.csrf(r.text);
-  const db = await require('../core/db.cjs').connect(CONN, PW);
   const q = (sql) => sql.replace(/\b(orders|status|id)\b/g, (m) => require('../core/ddl.cjs').quote(CONN.driver, m));
-  const read = async () => Object.fromEntries((await db.query(q('SELECT id, status FROM orders ORDER BY id'))).map((x) => {
-    const o = Object.fromEntries(Object.entries(x).map(([k, v]) => [k.toLowerCase(), v]));
-    return [String(o.id), String(o.status)];
-  }));
-  try {
+  // a new connection for each read: the SQLite driver of the tests (sql.js) works on an in-memory copy
+  const read = async () => {
+    const db = await require('../core/db.cjs').connect(CONN, PW);
+    try {
+      return Object.fromEntries((await db.query(q('SELECT id, status FROM orders ORDER BY id'))).map((x) => {
+        const o = Object.fromEntries(Object.entries(x).map(([k, v]) => [k.toLowerCase(), v]));
+        return [String(o.id), String(o.status)];
+      }));
+    } finally { await db.close(); }
+  };
+  {
     const before = await read();
     const ids = Object.keys(before).slice(0, 3);
     const sel = ids.slice(0, 2).map((id) => ['sel[]', JSON.stringify({ id: Number(id) })]);
@@ -369,7 +375,7 @@ test('update selected: the same values on the chosen records only', async () => 
     assert.match(r.text, /2 record modificati|2 records updated/);
     r = await c.req('?p=admin&s=audit');
     assert.match(r.text, /closed/);
-  } finally { await db.close(); }
+  }
   // a non-admin group without edit permission does not get the button
   const u = client();
   r = await u.req('?p=login');
@@ -378,4 +384,44 @@ test('update selected: the same values on the chosen records only', async () => 
   assert.doesNotMatch(r.text, /mc-update-selected/);
   r = await u.post('?p=updatesel&t=orders', [['_csrf', u.csrf(r.text)], ['sel[]', '{"id":1}']]);
   assert.strictEqual(r.status, 404);
+});
+
+test('notifications: from events and from the admin page, per user and for everybody', async () => {
+  const admin = client();
+  let r = await admin.req('?p=login');
+  await admin.post('?p=login', { _csrf: admin.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  const json = async (cl, method = 'GET', csrf = '') => {
+    const x = await cl.req('?p=notifications', { method, headers: { Accept: 'application/json', 'X-CSRF-Token': csrf } });
+    assert.strictEqual(x.status, 200, x.text.slice(0, 300));
+    return JSON.parse(x.text);
+  };
+  r = await admin.req('?p=list&t=orders');
+  assert.match(r.text, /mc-notif/);
+  // the AfterAdd event of categories (earlier test) sent one to everybody
+  let n = await json(admin);
+  assert.ok(n.items.some((i) => /Nuova categoria/.test(i.message) && i.icon === 'tag'), JSON.stringify(n));
+  const csrfA = admin.csrf(r.text);
+  // the admin page sends one to luca only and one to everybody
+  r = await admin.req('?p=admin&s=notifications');
+  assert.strictEqual(r.status, 200);
+  await admin.post('?p=admin&s=notifications', { _csrf: csrfA, user: 'luca', title: 'Solo Luca', message: 'per te', icon: '', url: '' });
+  await admin.post('?p=admin&s=notifications', { _csrf: csrfA, user: '', title: 'Tutti', message: 'manutenzione alle 18', icon: 'tools', url: '' });
+  n = await json(admin);
+  assert.ok(!n.items.some((i) => i.title === 'Solo Luca'));
+  assert.ok(n.items.some((i) => i.title === 'Tutti'));
+  const u = client();
+  r = await u.req('?p=login');
+  await u.post('?p=login', { _csrf: u.csrf(r.text), username: 'luca', password: 'Password1' });
+  r = await u.req('?p=list&t=orders');
+  n = await json(u);
+  assert.ok(n.items.some((i) => i.title === 'Solo Luca') && n.items.some((i) => i.title === 'Tutti'));
+  assert.ok(n.unread >= 2);
+  // opening the bell marks them seen, for luca only
+  n = await json(u, 'POST', u.csrf(r.text));
+  assert.strictEqual(n.unread, 0);
+  assert.strictEqual((await json(u)).unread, 0);
+  assert.ok((await json(admin)).unread > 0);
+  // without the token the POST is refused
+  const bad = await u.req('?p=notifications', { method: 'POST', headers: { Accept: 'application/json' } });
+  assert.strictEqual(bad.status, 400);
 });

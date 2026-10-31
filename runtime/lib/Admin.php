@@ -28,6 +28,7 @@ class Admin
         if ($sec->isManaged()) $sections['users'] = t('admin.users');
         if (!empty($sec->cfg['dynamicPermissions'])) { $sections['groups'] = t('admin.groups'); $sections['rights'] = t('admin.rights'); }
         if ($this->app->setting('audit')) $sections['audit'] = t('admin.audit');
+        if (Notifications::enabled()) $sections['notifications'] = t('notif.title');
         if (!isset($sections[$section])) $section = key($sections);
         if (!$section) throw new HttpError(t('error.notfound'), 404);
         $data = $this->{'s_' . $section}();
@@ -155,5 +156,26 @@ class Admin
         $total = (int)$this->db->value('SELECT COUNT(*) FROM ' . $this->db->table($ta) . $where, $p);
         $rows = $this->lower($this->db->all($this->db->limit('SELECT * FROM ' . $this->db->table($ta) . $where, 50, ($pg - 1) * 50, $this->db->q('id') . ' DESC'), $p));
         return ['rows' => $rows, 'total' => $total, 'pg' => $pg];
+    }
+
+    /** Send a notification to everybody or to one user; list and delete the sent ones. */
+    private function s_notifications()
+    {
+        if ($this->post()) {
+            if (!empty($_POST['delete'])) Notifications::delete((int)$_POST['delete']);
+            else {
+                $msg = trim((string)(isset($_POST['message']) ? $_POST['message'] : ''));
+                if ($msg === '') $this->app->flash('danger', t('val.required', t('notif.message')));
+                else {
+                    $user = trim((string)(isset($_POST['user']) ? $_POST['user'] : ''));
+                    Notifications::add($msg, trim((string)$_POST['title']), trim((string)$_POST['icon']), trim((string)$_POST['url']),
+                        !empty($_POST['expire']) ? (string)$_POST['expire'] : null, $user === '' ? null : $user, !empty($_POST['new_window']));
+                    $this->app->flash('success', t('notif.sent'));
+                }
+            }
+            redirect($this->app->url('admin', ['s' => 'notifications']));
+        }
+        $users = $this->app->security->isManaged() ? array_column($this->lower($this->db->all('SELECT ' . $this->db->q('username') . ' FROM ' . $this->db->table(Schema::t('users')) . ' ORDER BY ' . $this->db->q('username'))), 'username') : [];
+        return ['rows' => Notifications::recent(), 'users' => $users];
     }
 }

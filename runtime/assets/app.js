@@ -484,3 +484,35 @@
     }
   });
 })();
+
+// Notifications: unread count under the bell (every minute), list when opened, seen once shown.
+(function () {
+  'use strict';
+  var box = document.querySelector('.mc-notif');
+  if (!box) return;
+  var url = box.getAttribute('data-url');
+  var count = box.querySelector('.mc-notif-count');
+  var menu = box.querySelector('.mc-notif-menu');
+  var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+  var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+  var show = function (r) {
+    count.textContent = r.unread > 99 ? '99+' : String(r.unread);
+    count.classList.toggle('d-none', !r.unread);
+    if (!r.items.length) return;
+    menu.innerHTML = r.items.map(function (n) {
+      var body = '<div class="d-flex gap-2"><i class="bi bi-' + esc(n.icon || 'info-circle') + ' mt-1"></i><div class="flex-grow-1">'
+        + (n.title ? '<div class="fw-semibold">' + esc(n.title) + '</div>' : '') + '<div class="small mc-notif-text">' + esc(n.message) + '</div>'
+        + '<div class="small text-secondary">' + esc(n.at) + '</div></div></div>';
+      var cls = 'dropdown-item mc-notif-item' + (n.unread ? ' mc-notif-unread' : '');
+      return n.url ? '<a class="' + cls + '" href="' + esc(n.url) + '"' + (n.newWindow ? ' target="_blank" rel="noopener"' : '') + '>' + body + '</a>'
+        : '<div class="' + cls + '">' + body + '</div>';
+    }).join('');
+  };
+  var load = function () { fetch(url, { headers: { Accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) { if (r) show(r); }).catch(function () {}); };
+  box.addEventListener('shown.bs.dropdown', function () {
+    fetch(url, { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-Token': csrf } }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) { if (r) { show(r); count.classList.add('d-none'); } }).catch(function () {});
+  });
+  load();
+  setInterval(load, 60000);
+})();

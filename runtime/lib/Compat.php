@@ -331,6 +331,13 @@ namespace {
     function mc74_array_slice($a, $offset, $length = null, $preserve = false) { return is_array($a) ? array_slice($a, (int)$offset, $length, $preserve) : null; }
 
     // Old phpr global helpers.
+    if (!function_exists('addNotification')) {
+        /** phpr 10.7: notification under the bell, for one user or everybody ($user = null). */
+        function addNotification($message, $title = '', $icon = '', $url = '', $expire = null, $user = null, $newWindow = false)
+        {
+            return \MiB\Notifications::add($message, $title, $icon, $url, $expire, $user, $newWindow);
+        }
+    }
     if (!function_exists('CustomQuery')) { function CustomQuery($sql) { return DB::Exec($sql); } }
     if (!function_exists('DBLookup')) { function DBLookup($sql) { return DB::DBLookup($sql); } }
     if (!function_exists('db_query')) { function db_query($sql, $conn = null) { return DB::Query($sql); } }

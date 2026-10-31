@@ -7,6 +7,12 @@
   </li>
   <?php endif ?>
   <li class="nav-item"><button class="btn btn-link <?= h($mcNavClass) ?>" id="mcTheme" type="button" title="<?= h(t('theme.toggle')) ?>"><i class="bi bi-circle-half"></i></button></li>
+  <?php if ($u && \MiB\Notifications::enabled()): ?>
+  <li class="nav-item dropdown mc-notif" data-url="<?= h($app->url('notifications')) ?>">
+    <a class="<?= h($mcNavClass) ?> position-relative" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="<?= h(t('notif.title')) ?>"><i class="bi bi-bell"></i><span class="badge rounded-pill text-bg-danger mc-notif-count d-none"></span></a>
+    <div class="dropdown-menu dropdown-menu-end mc-notif-menu"><div class="px-3 py-2 small text-secondary"><?= h(t('notif.none')) ?></div></div>
+  </li>
+  <?php endif ?>
   <?php if ($u): ?>
   <li class="nav-item dropdown">
     <a class="<?= h($mcNavClass) ?> dropdown-toggle" href="#" data-bs-toggle="dropdown"><i class="bi bi-person-circle"></i> <?= h($u['fullname'] ?: $u['username']) ?></a>
