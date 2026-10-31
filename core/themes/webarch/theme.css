@@ -28,9 +28,6 @@
   .mc-webarch .mc-wa-mobile { display: inline-block; }
   .mc-webarch #layout-condensed-toggle, .mc-webarch .mc-wa-title { display: none; }
 }
-/* Dark mode: the template has no dark skin, the content area follows Bootstrap 5 */
-[data-bs-theme=dark] .mc-webarch .page-content, [data-bs-theme=dark] body.mc-webarch { background-color: #1e2125; }
-[data-bs-theme=dark] .mc-webarch .header-quick-nav { background-color: #2b3035; color: #dee2e6; }
 /* Webarch element rules that break Bootstrap 5 controls (select width, fixed input heights, .small width) */
 .mc-webarch .small { width: auto !important; }
 .mc-webarch select.form-select { width: auto; min-height: 0; background-image: var(--bs-form-select-bg-img), var(--bs-form-select-bg-icon, none) !important; border-color: var(--bs-border-color); }
@@ -44,11 +41,12 @@
 .mc-webarch table.dataTable td .form-check-input { margin-top: 0; vertical-align: middle; }
 .mc-webarch .table td { padding: 8px 12px !important; }
 .mc-webarch .btn-sm { padding: 5px 10px; }
-.mc-webarch .btn[class*="btn-outline-"] { background-color: transparent; border: 1px solid currentColor; }
+.mc-webarch .btn[class*="btn-outline-"] { background-color: transparent; color: var(--bs-btn-color); border: 1px solid var(--bs-btn-border-color); }
+.mc-webarch .btn[class*="btn-outline-"]:hover, .mc-webarch .btn[class*="btn-outline-"].show { background-color: var(--bs-btn-hover-bg); color: var(--bs-btn-hover-color); }
+/* webarch.css sets .btn { color: #5e5e5e }, which hides the Bootstrap 5 colour of link buttons */
+.mc-webarch .btn-link { color: var(--bs-btn-color); background-color: transparent; }
+.mc-webarch .btn-link:hover { color: var(--bs-btn-hover-color); }
 .mc-webarch .btn-outline-secondary { border-color: var(--bs-border-color); }
-[data-bs-theme=dark] .mc-webarch .table td { color: var(--bs-body-color); }
-[data-bs-theme=dark] .mc-webarch input, [data-bs-theme=dark] .mc-webarch select, [data-bs-theme=dark] .mc-webarch textarea { background-color: var(--bs-body-bg); color: var(--bs-body-color); border-color: var(--bs-border-color); }
-[data-bs-theme=dark] .mc-webarch .btn-outline-secondary { color: var(--bs-body-color); }
 /* Colour themes with a white logo area (Corporate, Simple) */
 .mc-wa-light .mc-wa-brand, .mc-wa-light .mc-wa-mobile { color: #22262e; }
 /* Small screens: the logo area is the whole header */
@@ -62,3 +60,33 @@
   .mc-wa-light .header-quick-nav .mc-usermenu .nav-link { color: #22262e; }
   .mc-webarch .mc-wa-brand { max-width: calc(100vw - 200px); }
 }
+
+/* Dark skin (the template has none): shell in the Webarch default palette, content on Bootstrap 5 dark.
+   Applies to every colour theme, so Corporate and Simple lose their white logo area in dark mode. */
+[data-bs-theme=dark] body.mc-webarch { background-color: #1b1e24; color: var(--bs-body-color); }
+[data-bs-theme=dark] .mc-webarch .page-content { background-color: #1e2126; }
+[data-bs-theme=dark] .mc-webarch .header { border-bottom: 1px solid #2c313a; }
+[data-bs-theme=dark] .mc-webarch .header .navbar-inner { background-color: #262a33 !important; }
+[data-bs-theme=dark] .mc-webarch .header .header-seperation { background-color: #22262e !important; }
+[data-bs-theme=dark] .mc-webarch .mc-wa-brand, [data-bs-theme=dark] .mc-webarch .mc-wa-mobile { color: #fff; }
+@media (min-width: 992px) { [data-bs-theme=dark] .mc-webarch .header-quick-nav { background-color: #262a33 !important; color: #c9d1d9; } }
+[data-bs-theme=dark] .mc-webarch .header-quick-nav .quicklinks > a, [data-bs-theme=dark] .mc-webarch .header-quick-nav .mc-usermenu .nav-link { color: #c9d1d9; }
+[data-bs-theme=dark] .mc-webarch .header .nav .h-seperate { border-left-color: #3a404b; }
+[data-bs-theme=dark] .mc-webarch .page-sidebar, [data-bs-theme=dark] .mc-webarch .page-sidebar .page-sidebar-wrapper { background-color: #1b1e24 !important; }
+[data-bs-theme=dark] .mc-webarch .page-sidebar ul.sub-menu { background-color: #16181d !important; }
+/* Content: headings, text, tables */
+[data-bs-theme=dark] .mc-webarch .page-content h1, [data-bs-theme=dark] .mc-webarch .page-content h2, [data-bs-theme=dark] .mc-webarch .page-content h3,
+[data-bs-theme=dark] .mc-webarch .page-content h4, [data-bs-theme=dark] .mc-webarch .page-content h5, [data-bs-theme=dark] .mc-webarch .page-content h6 { color: #e6e9ed; }
+[data-bs-theme=dark] .mc-webarch .page-content, [data-bs-theme=dark] .mc-webarch .page-content label, [data-bs-theme=dark] .mc-webarch .modal { color: var(--bs-body-color); }
+[data-bs-theme=dark] .mc-webarch .table td { color: var(--bs-body-color); border-top-color: var(--bs-border-color); }
+[data-bs-theme=dark] .mc-webarch .table th { border-top-color: var(--bs-border-color); color: #e6e9ed; }
+/* Controls */
+[data-bs-theme=dark] .mc-webarch input, [data-bs-theme=dark] .mc-webarch select, [data-bs-theme=dark] .mc-webarch textarea { background-color: var(--bs-body-bg); color: var(--bs-body-color); border-color: var(--bs-border-color); }
+[data-bs-theme=dark] .mc-webarch input::placeholder { color: var(--bs-secondary-color); }
+[data-bs-theme=dark] .mc-webarch .btn-outline-secondary { color: var(--bs-body-color); border-color: var(--bs-border-color); }
+[data-bs-theme=dark] .mc-webarch .btn-secondary, [data-bs-theme=dark] .mc-webarch .btn-light, [data-bs-theme=dark] .mc-webarch .btn-white { background-color: #343a40; color: #e6e9ed; border-color: #343a40; }
+[data-bs-theme=dark] .mc-webarch .page-link { background-color: var(--bs-body-bg); border-color: var(--bs-border-color); }
+[data-bs-theme=dark] .mc-webarch .page-item.disabled .page-link { background-color: #2b3035; color: var(--bs-secondary-color); }
+[data-bs-theme=dark] .mc-webarch .dropdown-menu { background-color: #2b3035; box-shadow: 0 0 8px rgba(0, 0, 0, .5); }
+[data-bs-theme=dark] .mc-webarch .dropdown-item { color: var(--bs-body-color); }
+[data-bs-theme=dark] .mc-webarch .page-content a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link) { color: #6ea8fe; }
