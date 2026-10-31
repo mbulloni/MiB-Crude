@@ -71,6 +71,8 @@ class Security
     public function requireLogin()
     {
         if (!$this->enabled() || $this->user()) return;
+        // Windows authentication: the web server already identified the browser
+        if ($this->cfg['mode'] === 'ntlm') { Ntlm::login($this->app); return; }
         if (!empty($this->cfg['guestAccess'])) return;
         if ($this->app->wantsJson()) throw new HttpError(t('error.login'), 401);
         $_SESSION['mc_return'] = $_SERVER['REQUEST_URI'];
@@ -83,6 +85,7 @@ class Security
     {
         if ($this->rightsCache !== null) return $this->rightsCache;
         $r = [];
+        if ($this->cfg['mode'] === 'ntlm') return $this->rightsCache = Ntlm::rights($this->app);
         if (!empty($this->cfg['dynamicPermissions'])) {
             $db = $this->app->db();
             foreach ($db->all('SELECT * FROM ' . $db->table(Schema::t('rights'))) as $row) {
@@ -242,6 +245,7 @@ class Security
 
     private function adminGroups()
     {
+        if ($this->cfg['mode'] === 'ntlm') return array_values((array)Ntlm::cfg($this->app)['adminGroups']);
         $out = [];
         foreach ($this->cfg['groups'] as $g) if (!empty($g['admin'])) $out[] = $g['id'];
         if (!empty($this->cfg['dynamicPermissions']) && Schema::needed()) {
@@ -261,6 +265,12 @@ class Security
             'id' => $id, 'username' => $username, 'email' => (string)$email, 'fullname' => (string)$fullname,
             'groups' => $groups, 'admin' => (bool)array_intersect($groups, $this->adminGroups()),
         ];
+    }
+
+    /** Session user for an account authenticated outside the app (Windows/NTLM). */
+    public function externalUser($username, $fullname, array $groups)
+    {
+        return $this->makeUser(null, $username, '', $fullname, $groups);
     }
 
     public function userFromRow(array $row)

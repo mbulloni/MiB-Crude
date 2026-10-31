@@ -305,6 +305,8 @@ function generate(proj, opts = {}) {
     mail: proj.project.mail || {},
     debug: !!opts.debug,
     systemPrefix: proj.project.systemPrefix || 'mc_',
+    // phpr short names (orders → orders_list.php) for the NTLM permission pages
+    tableShort: Object.fromEntries(proj.tables.filter((t) => t.phprShort).map((t) => [t.name, String(t.phprShort).toLowerCase().replace(/[^a-z0-9_]/g, '_')])),
   };
   w('config/app.php', phpFile(app, 'Application configuration'));
   const sc = { connections: {}, oidc: {}, mail: {} };

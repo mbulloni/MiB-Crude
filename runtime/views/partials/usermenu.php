@@ -21,7 +21,8 @@
       <?php if (\MiB\Builder::enabled($app)): ?><li><a class="dropdown-item" href="<?= h($app->url('builder')) ?>"><i class="bi bi-magic me-2"></i><?= h(t('builder.title')) ?></a></li><?php endif ?>
       <?php if ($app->security->isAdmin() && $app->security->enabled()): ?><li><a class="dropdown-item" href="<?= h($app->url('admin')) ?>"><i class="bi bi-shield-lock me-2"></i><?= h(t('admin.title')) ?></a></li><?php endif ?>
       <li><hr class="dropdown-divider"></li>
-      <li><a class="dropdown-item" href="<?= h($app->url('logout')) ?>"><i class="bi bi-box-arrow-right me-2"></i><?= h(t('login.logout')) ?></a></li>
+      <?php if ($app->security->cfg['mode'] === 'ntlm'): ?><li><span class="dropdown-item-text small text-secondary"><i class="bi bi-windows me-2"></i><?= h(t('ntlm.signed', $u['username'])) ?></span></li>
+      <?php else: ?><li><a class="dropdown-item" href="<?= h($app->url('logout')) ?>"><i class="bi bi-box-arrow-right me-2"></i><?= h(t('login.logout')) ?></a></li><?php endif ?>
     </ul>
   </li>
   <?php elseif ($app->security->enabled()): ?>

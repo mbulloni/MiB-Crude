@@ -565,6 +565,8 @@ class Pages
     {
         $sec = $this->app->security;
         if (!$sec->enabled()) redirect($this->app->url('home'));
+        // Windows authentication has no login form: the next page signs the browser's account in
+        if ($sec->cfg['mode'] === 'ntlm') redirect($this->app->url('home'));
         $msg = '';
         $useCaptcha = !empty($sec->cfg['captcha']['login']);
         if ($this->post()) {

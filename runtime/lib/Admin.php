@@ -26,7 +26,9 @@ class Admin
         $sec = $this->app->security;
         $sections = [];
         if ($sec->isManaged()) $sections['users'] = t('admin.users');
-        if (!empty($sec->cfg['dynamicPermissions'])) { $sections['groups'] = t('admin.groups'); $sections['rights'] = t('admin.rights'); }
+        if ($sec->cfg['mode'] === 'ntlm') { $sections['ntlm_users'] = t('ntlm.users'); $sections['ntlm_rights'] = t('ntlm.rights'); }
+        // with Windows sign-in groups and rights live in the R-LAB tables (sections above)
+        if (!empty($sec->cfg['dynamicPermissions']) && $sec->cfg['mode'] !== 'ntlm') { $sections['groups'] = t('admin.groups'); $sections['rights'] = t('admin.rights'); }
         if ($this->app->setting('audit')) $sections['audit'] = t('admin.audit');
         if (Notifications::enabled()) $sections['notifications'] = t('notif.title');
         if (!isset($sections[$section])) $section = key($sections);
@@ -177,5 +179,107 @@ class Admin
         }
         $users = $this->app->security->isManaged() ? array_column($this->lower($this->db->all('SELECT ' . $this->db->q('username') . ' FROM ' . $this->db->table(Schema::t('users')) . ' ORDER BY ' . $this->db->q('username'))), 'username') : [];
         return ['rows' => Notifications::recent(), 'users' => $users];
+    }
+
+    // --- Windows (NTLM) profiles: the R-LAB tables, edited in place --------------------------------
+
+    /** Groups known to the profile and permission tables plus the admin groups. */
+    private function ntlmGroups(Db $db, array $c)
+    {
+        $g = (array)$c['adminGroups'];
+        foreach ([[$c['userTable'], $c['groupCol']], [$c['permTable'], $c['permGroupCol']]] as list($tbl, $col)) {
+            try { foreach ($db->all('SELECT DISTINCT ' . $db->q($col) . ' AS g FROM ' . Ntlm::qt($db, $tbl)) as $r) { $r = array_change_key_case($r, CASE_LOWER); if ((string)$r['g'] !== '') $g[] = trim((string)$r['g']); } } catch (\Throwable $e) { /* missing */ }
+        }
+        $g = array_values(array_unique($g));
+        sort($g);
+        return $g;
+    }
+
+    /** Users of the profile table (username, group, area): add, change, delete. Rows have no key: matched on all columns. */
+    private function s_ntlm_users()
+    {
+        Ntlm::ensureTables($this->app);
+        $c = Ntlm::cfg($this->app);
+        $db = Ntlm::db($this->app);
+        $t = Ntlm::qt($db, $c['userTable']);
+        $cols = [$c['userCol'], $c['groupCol'], $c['areaCol']];
+        $where = implode(' AND ', array_map(function ($col) use ($db) { return $db->q($col) . ' = ?'; }, $cols));
+        if ($this->post()) {
+            $val = function ($k) { return trim((string)(isset($_POST[$k]) ? $_POST[$k] : '')); };
+            $new = [$val('username'), $val('gruppo'), $val('area')];
+            $old = [$val('o_username'), $val('o_gruppo'), $val('o_area')];
+            $a = isset($_POST['action']) ? $_POST['action'] : '';
+            try {
+                if ($a === 'delete') $db->query("DELETE FROM $t WHERE $where", $old);
+                elseif ($new[0] === '' || $new[1] === '') $this->app->flash('danger', t('val.required', t('login.username') . ' / ' . t('ntlm.group')));
+                else {
+                    $db->begin();
+                    if ($a === 'update') $db->query("DELETE FROM $t WHERE $where", $old);
+                    $db->query("INSERT INTO $t (" . implode(', ', array_map([$db, 'q'], $cols)) . ') VALUES (?, ?, ?)', $new);
+                    $db->commit();
+                    $this->app->flash('success', t('msg.saved'));
+                }
+            } catch (\Throwable $e) {
+                $db->rollback();
+                $this->app->flash('danger', $e->getMessage());
+            }
+            redirect($this->app->url('admin', ['s' => 'ntlm_users', 'q' => isset($_GET['q']) ? $_GET['q'] : '']));
+        }
+        $q = trim((string)(isset($_GET['q']) ? $_GET['q'] : ''));
+        $sel = 'SELECT ' . $db->q($c['userCol']) . ' AS u, ' . $db->q($c['groupCol']) . ' AS g, ' . $db->q($c['areaCol']) . ' AS a FROM ' . $t;
+        $p = [];
+        if ($q !== '') { $sel .= ' WHERE UPPER(' . $db->q($c['userCol']) . ') LIKE UPPER(?) OR UPPER(' . $db->q($c['groupCol']) . ') LIKE UPPER(?) OR UPPER(' . $db->q($c['areaCol']) . ') LIKE UPPER(?)'; $p = ["%$q%", "%$q%", "%$q%"]; }
+        $total = (int)$db->value('SELECT COUNT(*) FROM (' . $sel . ') x', $p);
+        $rows = $this->lower($db->all($db->limit($sel, 200, 0, $db->q($c['userCol'])), $p));
+        return ['rows' => $rows, 'total' => $total, 'q' => $q, 'groups' => $this->ntlmGroups($db, $c), 'cfg' => $c,
+            'me' => isset($_SESSION['mc_ntlm_raw']) ? $_SESSION['mc_ntlm_raw'] : ''];
+    }
+
+    /** Rights per page and group, saved as R:W:L like the R-LAB permission table (rows of other pages untouched). */
+    private function s_ntlm_rights()
+    {
+        Ntlm::ensureTables($this->app);
+        $c = Ntlm::cfg($this->app);
+        $db = Ntlm::db($this->app);
+        $t = Ntlm::qt($db, $c['permTable']);
+        // pages of this app: tables (phpr short name), reports, charts, dashboards
+        $pages = [];
+        foreach ($this->app->config['tables'] as $name => $file) {
+            $key = isset($this->app->config['tableShort'][$name]) ? $this->app->config['tableShort'][$name] : preg_replace('/[^a-z0-9_]/', '_', strtolower($name));
+            $pages[$key] = $this->app->table($name)->caption();
+        }
+        foreach (['reports' => 'report.title', 'charts' => 'chart.title', 'dashboards' => 'dashboard.title'] as $k => $lk) {
+            foreach (isset($this->app->config[$k]) ? $this->app->config[$k] : [] as $n => $d) $pages[strtolower($n)] = $this->app->label(isset($d['title']) ? $d['title'] : '', $n);
+        }
+        $groups = $this->ntlmGroups($db, $c);
+        $cur = [];
+        foreach ($db->all('SELECT ' . $db->q($c['permGroupCol']) . ' AS g, ' . $db->q($c['permPageCol']) . ' AS p, ' . $db->q($c['permCol']) . ' AS r FROM ' . $t) as $r) {
+            $r = array_change_key_case($r, CASE_LOWER);
+            $cur[strtolower(preg_replace('/\.php$/i', '', trim((string)$r['p'])))][trim((string)$r['g'])] = strtoupper((string)$r['r']);
+        }
+        if ($this->post()) {
+            $in = isset($_POST['r']) && is_array($_POST['r']) ? $_POST['r'] : [];
+            if (!empty($_POST['newgroup'])) $groups[] = trim((string)$_POST['newgroup']);
+            try {
+                $db->begin();
+                foreach (array_keys($pages) as $page) {
+                    foreach ($groups as $g) {
+                        $f = isset($in[$page][$g]) && is_array($in[$page][$g]) ? $in[$page][$g] : [];
+                        $val = (!empty($f['R']) ? 'R' : '') . ':' . (!empty($f['W']) ? 'W' : '') . ':' . (!empty($f['L']) ? 'L' : '');
+                        $had = isset($cur[$page][$g]);
+                        if ($had) $db->query('DELETE FROM ' . $t . ' WHERE ' . $db->q($c['permGroupCol']) . ' = ? AND (LOWER(' . $db->q($c['permPageCol']) . ') = ? OR LOWER(' . $db->q($c['permPageCol']) . ') = ?)', [$g, $page, $page . '.php']);
+                        if ($val !== '::') $db->query('INSERT INTO ' . $t . ' (' . implode(', ', array_map([$db, 'q'], [$c['permGroupCol'], $c['permPageCol'], $c['permCol']])) . ') VALUES (?, ?, ?)', [mb_substr($g, 0, 14), $page, $val]);
+                    }
+                }
+                $db->commit();
+                $this->app->flash('success', t('msg.saved'));
+            } catch (\Throwable $e) {
+                $db->rollback();
+                $this->app->flash('danger', $e->getMessage());
+            }
+            redirect($this->app->url('admin', ['s' => 'ntlm_rights']));
+        }
+        $others = array_diff(array_keys($cur), array_keys($pages));
+        return ['pages' => $pages, 'groups' => $groups, 'cur' => $cur, 'others' => count($others), 'cfg' => $c];
     }
 }

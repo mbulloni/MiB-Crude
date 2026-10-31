@@ -4,6 +4,7 @@ import { saveSecrets, toast, update, useStore } from '../store';
 import type { Security } from '../types';
 import { Btn, Check, LangText, Num, Row, Section, Select, Tabs, Text, lbl, slug } from './ui';
 import { useItemLock } from './TeamPanel';
+import NtlmSection, { NTLM_DEFAULTS } from './NtlmSection';
 
 const LETTERS: [string, string][] = [['S', 'Elenco'], ['V', 'Vista'], ['A', 'Nuovo'], ['E', 'Modifica'], ['D', 'Elimina'], ['P', 'Stampa/Esp.'], ['I', 'Importa']];
 
@@ -37,8 +38,13 @@ export default function SecurityPanel() {
         <Tabs value={tab} onChange={setTab} tabs={[['login', 'Accesso', 'box-arrow-in-right'], ['groups', 'Gruppi', 'people'], ['rights', 'Permessi', 'ui-checks-grid'], ['providers', 'LDAP / SSO', 'building-lock']]} />
         {tab === 'login' && <div className="cols">
           <Section title="Utenti">
-            <Row label="Origine utenti"><Select value={sec.mode === 'hardcoded' ? 'hardcoded' : sec.users.managed ? 'managed' : 'custom'} options={[['managed', 'Tabelle di sistema gestite (consigliato)'], ['custom', 'Tabella utenti esistente'], ['hardcoded', 'Un solo utente fisso']]}
-              onChange={(v) => set((s) => { s.mode = v === 'hardcoded' ? 'hardcoded' : 'database'; s.users.managed = v === 'managed'; })} /></Row>
+            <Row label="Origine utenti"><Select value={(sec.mode as string) === 'ntlm' ? 'ntlm' : sec.mode === 'hardcoded' ? 'hardcoded' : sec.users.managed ? 'managed' : 'custom'} options={[['managed', 'Tabelle di sistema gestite (consigliato)'], ['custom', 'Tabella utenti esistente'], ['hardcoded', 'Un solo utente fisso'], ['ntlm', 'Windows (NTLM, come R-LAB)']]}
+              onChange={(v) => set((s) => {
+                (s as { mode: string }).mode = v === 'hardcoded' ? 'hardcoded' : v === 'ntlm' ? 'ntlm' : 'database';
+                s.users.managed = v === 'managed';
+                if (v === 'ntlm') { const x = s as unknown as { ntlm?: object }; x.ntlm = { ...NTLM_DEFAULTS, ...(x.ntlm || {}) }; }
+              })} /></Row>
+            {(sec.mode as string) === 'ntlm' && <NtlmSection readOnly={ro} />}
             {sec.mode === 'hardcoded' && <>
               <Row label="Nome utente"><Text value={sec.hardcoded.username} onChange={(v) => set((s) => { s.hardcoded.username = v; })} /></Row>
               <Row label="Password" hint={sec.hardcoded.passwordHash ? 'Impostata (salvata come hash PBKDF2)' : 'Non impostata'}><span className="inline"><Text type="password" value={hcPw} onChange={setHcPw} />

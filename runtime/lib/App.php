@@ -150,7 +150,10 @@ class App
         $public = ['login', 'logout', 'register', 'forgot', 'reset', 'verify', 'setup', 'asset', 'oidc', 'saml', 'api', 'welcome', 'twofactor'];
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $p !== 'api' && $p !== 'saml') $this->checkCsrf();
         if ($p !== 'setup' && $this->security->needsSetup()) redirect($this->url('setup'));
-        if (!in_array($p, $public, true)) $this->security->requireLogin();
+        if (!in_array($p, $public, true)) {
+            $this->security->requireLogin();
+            if ($this->security->cfg['mode'] === 'ntlm' && $this->security->enabled()) Ntlm::logAccess($this);
+        }
         $pages = new Pages($this);
         $method = 'page_' . $p;
         if (!method_exists($pages, $method)) throw new HttpError(t('error.notfound'), 404);

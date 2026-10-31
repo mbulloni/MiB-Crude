@@ -87,4 +87,42 @@
     <td class="text-nowrap"><?= $r['expires_at'] ? h(\MiB\Format::date($r['expires_at'], 'dateTimeFormat')) : '' ?></td>
     <td><form method="post"><?= $app->csrfField() ?><button class="btn btn-sm btn-link text-danger" name="delete" value="<?= (int)$r['id'] ?>" title="<?= h(t('btn.delete')) ?>"><i class="bi bi-trash"></i></button></form></td></tr>
   <?php endforeach ?></tbody></table></div></div>
+<?php elseif ($section === 'ntlm_users'): ?>
+  <p class="small text-secondary"><i class="bi bi-windows"></i> <?= h(t('ntlm.users_help', $cfg['userTable'])) ?><?php if ($me !== ''): ?> · <?= h(t('ntlm.you', $me)) ?><?php endif ?></p>
+  <form method="post" class="card mb-3"><?= $app->csrfField() ?><input type="hidden" name="action" value="add"><div class="card-body row g-2 align-items-end">
+    <div class="col-md-4"><label class="form-label"><?= h(t('login.username')) ?> <small class="text-secondary">(<?= h($cfg['userCol']) ?>)</small></label><input class="form-control" name="username" required placeholder="NOMECOGN<?= h($cfg['suffix']) ?>"></div>
+    <div class="col-md-3"><label class="form-label"><?= h(t('ntlm.group')) ?> <small class="text-secondary">(<?= h($cfg['groupCol']) ?>)</small></label><input class="form-control" name="gruppo" required list="mcNtlmGroups"></div>
+    <div class="col-md-3"><label class="form-label"><?= h(t('ntlm.area')) ?> <small class="text-secondary">(<?= h($cfg['areaCol']) ?>)</small></label><input class="form-control" name="area"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100"><i class="bi bi-person-plus"></i> <?= h(t('btn.add')) ?></button></div>
+  </div></form>
+  <datalist id="mcNtlmGroups"><?php foreach ($groups as $g): ?><option value="<?= h($g) ?>"><?php endforeach ?></datalist>
+  <form method="get" class="mb-2 d-flex gap-2"><input type="hidden" name="p" value="admin"><input type="hidden" name="s" value="ntlm_users">
+    <input class="form-control form-control-sm" style="max-width:320px" name="q" value="<?= h($q) ?>" placeholder="<?= h(rtrim(t('dt.search'), ': ')) ?>"><button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+    <span class="small text-secondary align-self-center"><?= h(t('ntlm.count', $total)) ?></span></form>
+  <div class="card mc-scroll"><table class="table table-sm table-hover mb-0 align-middle"><thead><tr><th><?= h(t('login.username')) ?></th><th><?= h(t('ntlm.group')) ?></th><th><?= h(t('ntlm.area')) ?></th><th></th></tr></thead><tbody>
+  <?php foreach ($rows as $i => $r): ?>
+    <tr><form method="post"><?= $app->csrfField() ?><input type="hidden" name="o_username" value="<?= h($r['u']) ?>"><input type="hidden" name="o_gruppo" value="<?= h($r['g']) ?>"><input type="hidden" name="o_area" value="<?= h($r['a']) ?>">
+      <td><input class="form-control form-control-sm" name="username" value="<?= h($r['u']) ?>"></td>
+      <td><input class="form-control form-control-sm" name="gruppo" value="<?= h($r['g']) ?>" list="mcNtlmGroups"></td>
+      <td><input class="form-control form-control-sm" name="area" value="<?= h($r['a']) ?>"></td>
+      <td class="text-nowrap"><button class="btn btn-sm btn-outline-primary" name="action" value="update" title="<?= h(t('btn.save')) ?>"><i class="bi bi-check-lg"></i></button>
+        <button class="btn btn-sm btn-link text-danger" name="action" value="delete" title="<?= h(t('btn.delete')) ?>" onclick="return confirm(<?= h(json_encode(t('confirm.delete'))) ?>)"><i class="bi bi-trash"></i></button></td>
+    </form></tr>
+  <?php endforeach ?></tbody></table></div>
+  <?php if ($total > count($rows)): ?><p class="small text-secondary mt-2"><?= h(t('ntlm.more', $total - count($rows))) ?></p><?php endif ?>
+
+<?php elseif ($section === 'ntlm_rights'): ?>
+  <p class="small text-secondary"><i class="bi bi-windows"></i> <?= h(t('ntlm.rights_help', $cfg['permTable'])) ?><?php if ($others): ?> <?= h(t('ntlm.others', $others)) ?><?php endif ?></p>
+  <form method="post"><?= $app->csrfField() ?>
+  <div class="card mc-scroll"><table class="table table-sm mb-0 align-middle"><thead><tr><th><?= h(t('ntlm.page')) ?></th><?php foreach ($groups as $g): ?><th class="text-center"><?= h($g) ?><?php if (in_array($g, (array)$cfg['adminGroups'], true)): ?> <i class="bi bi-shield-check text-success" title="<?= h(t('ntlm.admin')) ?>"></i><?php endif ?></th><?php endforeach ?></tr></thead><tbody>
+  <?php foreach ($pages as $key => $label): ?>
+    <tr><td><?= h($label) ?> <small class="text-secondary"><?= h($key) ?></small></td>
+    <?php foreach ($groups as $g): $v = isset($cur[$key][$g]) ? $cur[$key][$g] : ''; ?><td class="text-center text-nowrap">
+      <?php foreach (['R', 'W', 'L'] as $l): ?><label class="me-1 small" title="<?= h(t('ntlm.flag_' . strtolower($l))) ?>"><input class="form-check-input" type="checkbox" name="r[<?= h($key) ?>][<?= h($g) ?>][<?= $l ?>]" value="1"<?= strpos($v, $l) !== false ? ' checked' : '' ?>> <?= $l ?></label><?php endforeach ?>
+    </td><?php endforeach ?></tr>
+  <?php endforeach ?></tbody></table></div>
+  <div class="d-flex gap-2 align-items-center mt-2"><button class="btn btn-primary"><?= h(t('btn.save')) ?></button>
+    <input class="form-control form-control-sm" style="max-width:220px" name="newgroup" maxlength="14" placeholder="<?= h(t('ntlm.newgroup')) ?>">
+    <span class="small text-secondary"><?= h(t('ntlm.legend')) ?></span></div>
+  </form>
 <?php endif ?>
