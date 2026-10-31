@@ -1,7 +1,7 @@
 import { checkUpdates, UpdateBanner, UpdateDialog } from './components/Updates';
 import { useEffect } from 'react';
 import { call, mc } from './api';
-import { reloadFromDisk, run, save, toast, useStore } from './store';
+import { redo, reloadFromDisk, resetHistory, run, save, toast, undo, useStore } from './store';
 import type { Nav } from './types';
 import Welcome from './components/Welcome';
 import { Btn, I, lbl } from './components/ui';
@@ -97,6 +97,7 @@ export default function App() {
   const toasts = useStore((s) => s.toasts);
   const team = useStore((s) => s.team);
   const remote = useStore((s) => s.remoteChanged);
+  const hist = useStore((s) => s.hist);
   const navKind = useStore((s) => s.nav.kind);
   useTeamLocks();
   useEffect(() => { const t = setTimeout(() => checkUpdates(true), 4000); return () => clearTimeout(t); }, []);
@@ -105,6 +106,14 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (useStore.getState().proj) run('Salvataggio…', save).then((r) => r && toast('Salvato', 'ok', 1500)); }
       if (e.key === 'F5' && useStore.getState().proj) { e.preventDefault(); generateAndPreview(); }
+      // Undo/redo of the project; text fields and code editors keep their own Ctrl+Z
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable || !!el.closest('.monaco-editor'));
+      if ((e.ctrlKey || e.metaKey) && !typing && useStore.getState().proj) {
+        const k = e.key.toLowerCase();
+        if (k === 'z' && !e.shiftKey) { e.preventDefault(); if (!undo()) toast('Niente da annullare', 'info', 1200); }
+        else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); if (!redo()) toast('Niente da ripetere', 'info', 1200); }
+      }
     };
     window.addEventListener('keydown', onKey);
     const off = mc().onClosing(async () => {
@@ -121,6 +130,7 @@ export default function App() {
     if (dirty && !confirm('Chiudere senza salvare le modifiche?')) return;
     await call('project:close');
     useStore.getState().set({ proj: null, dirty: false, team: { connected: false, user: '', project: '', role: '', locks: {}, presence: [], conflicts: [] } });
+    resetHistory();
   };
   return (
     <div className="app">
@@ -128,6 +138,8 @@ export default function App() {
         <img src="./icon.png" alt="" className="logo" />
         <b className="pname">{proj.project.name}</b>{dirty && <span className="dirty" title="Modifiche non salvate">●</span>}
         <Btn icon="save" onClick={() => run('Salvataggio…', save).then((r) => r && toast('Salvato', 'ok', 1500))} disabled={!dirty} title="Salva (Ctrl+S)">Salva</Btn>
+        <Btn icon="arrow-counterclockwise" kind="ghost" onClick={undo} disabled={!hist.undo} title={`Annulla (Ctrl+Z)${hist.undo ? ` · ${hist.undo} passi` : ''}`} />
+        <Btn icon="arrow-clockwise" kind="ghost" onClick={redo} disabled={!hist.redo} title="Ripeti (Ctrl+Y)" />
         <span className="sep" />
         <Btn icon="play-fill" kind="primary" onClick={generateAndPreview} title="Genera e apri l'anteprima (F5)">Anteprima</Btn>
         <Btn icon="rocket-takeoff" onClick={() => useStore.getState().set({ nav: { kind: 'output' } })}>Pubblica</Btn>

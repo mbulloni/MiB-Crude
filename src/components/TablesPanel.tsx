@@ -3,7 +3,7 @@
 // Right: diagram of the project tables with master/detail relations. Context menu on every item.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { call } from '../api';
-import { run, toast, update, useStore } from '../store';
+import { replaceProject, run, toast, update, useStore } from '../store';
 import type { Project, RestPaging, Table } from '../types';
 import CodeEditor from './CodeEditor';
 import { Btn, Check, Empty, I, Modal, Row, Select, Text, lbl, slug } from './ui';
@@ -17,7 +17,7 @@ type Menu = { x: number; y: number; items: ([string, string, () => void] | '-')[
 
 const DDL_TYPES: [string, string][] = [['int', 'INT'], ['bigint', 'BIGINT'], ['decimal', 'DECIMAL'], ['float', 'FLOAT'], ['varchar', 'VARCHAR'], ['text', 'TEXT'], ['date', 'DATE'], ['datetime', 'DATETIME'], ['time', 'TIME'], ['bool', 'BOOLEAN'], ['blob', 'BLOB']];
 const baseOf = (t: Table) => (t.source.type === 'table' ? t.source.table : t.source.updateTable) || '';
-const setProj = (p: Project, dir: string) => useStore.getState().set({ proj: { ...p, dir }, dirty: true });
+const setProj = (p: Project, dir: string) => replaceProject({ ...p, dir });
 
 // --- dialogs -------------------------------------------------------------------------
 

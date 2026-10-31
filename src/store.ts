@@ -13,6 +13,8 @@ interface State {
   toasts: Toast[];
   busy: string;
   remoteChanged: string[];
+  /** steps available for Undo / Redo */
+  hist: { undo: number; redo: number };
   set: (p: Partial<State>) => void;
 }
 
@@ -25,10 +27,67 @@ export const useStore = create<State>((set) => ({
   toasts: [],
   busy: '',
   remoteChanged: [],
+  hist: { undo: 0, redo: 0 },
   set: (p) => set(p),
 }));
 
 const S = () => useStore.getState();
+
+// --- undo / redo -----------------------------------------------------------------------
+// Every change of the project keeps the previous state; changes less than a second apart (typing in a
+// field) count as one step. Opening, reloading or receiving the team's files starts a new history.
+const MAX_STEPS = 100;
+let past: Project[] = [];
+let future: Project[] = [];
+let lastAt = 0;
+const publish = () => S().set({ hist: { undo: past.length, redo: future.length } });
+
+function remember(prev: Project) {
+  const now = Date.now();
+  if (now - lastAt > 1000 || !past.length) {
+    past.push(prev);
+    if (past.length > MAX_STEPS) past.shift();
+  }
+  lastAt = now;
+  future = [];
+  publish();
+}
+
+export function resetHistory() {
+  past = [];
+  future = [];
+  lastAt = 0;
+  publish();
+}
+
+/** New project state from a whole object (wizards), undoable like update(). */
+export function replaceProject(next: Project) {
+  const cur = S().proj;
+  if (cur) remember(cur);
+  S().set({ proj: next, dirty: true });
+}
+
+export function undo() {
+  const cur = S().proj;
+  const prev = past.pop();
+  if (!cur || !prev) return false;
+  future.push(cur);
+  lastAt = 0;
+  S().set({ proj: { ...prev, dir: cur.dir }, dirty: true });
+  publish();
+  return true;
+}
+
+export function redo() {
+  const cur = S().proj;
+  const next = future.pop();
+  if (!cur || !next) return false;
+  past.push(cur);
+  lastAt = 0;
+  S().set({ proj: { ...next, dir: cur.dir }, dirty: true });
+  publish();
+  return true;
+}
 
 /** Immutable update of the project: fn mutates a deep copy. */
 export function update(fn: (p: Project) => void) {
@@ -36,6 +95,7 @@ export function update(fn: (p: Project) => void) {
   if (!cur) return;
   const next = structuredClone(cur);
   fn(next);
+  remember(cur);
   S().set({ proj: next, dirty: true });
 }
 
@@ -54,6 +114,7 @@ export async function run<T>(label: string, fn: () => Promise<T>): Promise<T | u
 export async function openProject(proj: Project) {
   const secrets = await call<Secrets>('secrets:get');
   S().set({ proj, dirty: false, secrets, nav: { kind: proj.connections.length ? (proj.tables.length ? 'tables' : 'tables') : 'connections' }, remoteChanged: [] });
+  resetHistory();
 }
 
 export async function save() {
@@ -73,6 +134,7 @@ export async function saveSecrets(patch: Partial<Secrets>) {
 export async function reloadFromDisk() {
   const proj = await call<Project>('project:reload');
   S().set({ proj, dirty: false, remoteChanged: [] });
+  resetHistory();
 }
 
 export const lang = () => S().proj?.project.defaultLanguage || 'it';
