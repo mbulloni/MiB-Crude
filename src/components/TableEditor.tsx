@@ -8,7 +8,7 @@ import FieldDialog, { EDIT_AS, VIEW_AS } from './FieldDialog';
 import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
 import { useItemLock } from './TeamPanel';
 import PageDesigner from './PageDesigner';
-import RestPagingFields from './RestPaging';
+import RestPagingFields, { RestSourceOptions } from './RestPaging';
 
 const SHOW: [string, string][] = [['list', 'Lista'], ['view', 'Vista'], ['add', 'Nuovo'], ['edit', 'Modifica'], ['search', 'Ricerca'], ['export', 'Esporta'], ['import', 'Importa'], ['print', 'Stampa']];
 type TabKey = 'general' | 'fields' | 'pages' | 'layout' | 'details' | 'events' | 'api';
@@ -70,6 +70,10 @@ export default function TableEditor({ name }: { name: string }) {
             <Row label="Percorso record" hint="{campo} = valore della chiave. Vuoto = percorso elenco/{chiave}"><Text value={t.source.itemPath} onChange={(v) => set((x) => { x.source.itemPath = v; })} mono /></Row>
             <Row label="Modifica con"><Select value={t.source.updateMethod || 'PUT'} options={[['PUT', 'PUT (record completo)'], ['PATCH', 'PATCH (solo campi cambiati)']]} onChange={(v) => set((x) => { x.source.updateMethod = v; })} /></Row>
             <RestPagingFields value={t.source.paging} onChange={(v) => set((x) => { if (v) x.source.paging = v; else delete x.source.paging; })} />
+            <RestSourceOptions filterMode={t.source.filterMode} cacheSeconds={t.source.cacheSeconds} onChange={(patch) => set((x) => {
+              if ('filterMode' in patch) { if (patch.filterMode) x.source.filterMode = patch.filterMode; else delete x.source.filterMode; }
+              if ('cacheSeconds' in patch) { if (patch.cacheSeconds) x.source.cacheSeconds = patch.cacheSeconds; else delete x.source.cacheSeconds; }
+            })} />
           </> : <Row label="Tabella"><Text value={t.source.table} onChange={(v) => set((x) => { x.source.table = v; })} mono /></Row>}
           {t.source.type !== 'rest' && <Row label="Filtro fisso (WHERE)" hint="SQL sempre applicato, es. src.cancellato = 0"><Text value={t.where} onChange={(v) => set((x) => { x.where = v; })} mono /></Row>}
         </Section>

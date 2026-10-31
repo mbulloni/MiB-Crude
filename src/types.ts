@@ -21,7 +21,7 @@ export interface Field {
 }
 export interface Detail { table: string; masterKeys: string[]; detailKeys: string[]; showIn: string[]; listPreview?: boolean }
 export interface Table {
-  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest'; table?: string; sql?: string; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging };
+  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest'; table?: string; sql?: string; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals'; cacheSeconds?: number };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
   layout?: Record<string, { sections: { title: L; fields: string[]; style?: 'card' | 'tab'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;

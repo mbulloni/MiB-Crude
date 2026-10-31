@@ -38,6 +38,8 @@ const api = http.createServer((req, res) => {
       // Paged API: ?page=1&limit=3&q=&sort=name&order=desc, total in the response.
       const qp = u0.searchParams;
       let list = cities.filter((c) => !qp.get('q') || `${c.name} ${c.region}`.toLowerCase().includes(qp.get('q').toLowerCase()));
+      // ?region=a&region=b: exact match on any of the values (json-server style).
+      if (qp.getAll('region').length) list = list.filter((c) => qp.getAll('region').includes(c.region));
       if (qp.get('sort')) list = [...list].sort((a, b) => String(a[qp.get('sort')]).localeCompare(String(b[qp.get('sort')])) * (qp.get('order') === 'desc' ? -1 : 1));
       const limit = Number(qp.get('limit') || 3);
       const page = Number(qp.get('page') || 1);
@@ -102,8 +104,12 @@ test.before(async () => {
   city.filter = true;
   ds.pages.list.filterPanel = true;
   const paging = { mode: 'page', pageParam: 'page', firstPage: 1, sizeParam: 'limit', pageSize: 3, totalPath: 'total', searchParam: 'q', sortParam: 'sort', dirParam: 'order' };
-  const cds = await R.addRestView(proj, rest, TOKEN, { name: 'cities', path: '/cities', paging, readOnly: true });
+  const cds = await R.addRestView(proj, rest, TOKEN, { name: 'cities', path: '/cities', paging, readOnly: true, filterMode: 'equals' });
   assert.strictEqual(cds.source.dataPath, 'items');
+  assert.strictEqual(cds.source.filterMode, 'equals');
+  cds.fields.find((f) => f.name === 'region').filter = true;
+  cds.pages.list.filterPanel = true;
+  ds.source.cacheSeconds = 60; // users: response cache, cleared by writes
   assert.deepStrictEqual(cds.source.paging, paging);
   // SQL table -> REST lookup.
   if (SQLITE) {
@@ -121,6 +127,7 @@ test.before(async () => {
     proj.menu.items.push({ type: 'table', table: 'orders' });
   }
   proj.reports.push({ name: 'bycity', title: { it: 'Per città' }, table: 'users', groups: [{ field: 'address.city' }], aggregates: [{ field: 'age', fn: 'sum' }], columns: ['name', 'age'] });
+  proj.reports.push({ name: 'byregion', title: { it: 'Città per regione' }, table: 'cities', groups: [{ field: 'region' }], aggregates: [{ field: 'id', fn: 'count' }], columns: ['name'] });
   proj.charts.push({ name: 'agebycity', title: { it: 'Età per città' }, table: 'users', type: 'bar', labelField: 'address.city', series: [{ field: 'age', fn: 'sum' }] });
   proj.menu.items.push({ type: 'table', table: 'users' }, { type: 'table', table: 'cities' });
   P.saveProject(proj);
@@ -160,6 +167,7 @@ test('REST datasource: list, search, sort, totals, view, edit, delete', async ()
 
 test('REST paging, lookups, filter panel, unique, report and chart', async (t) => {
   const c = client();
+  let r;
   const dt = async (t, qs) => { const x = await c.req(`?p=dt&draw=1&t=${t}&${qs}`); assert.strictEqual(x.status, 200, x.text.slice(0, 600)); return JSON.parse(x.text); };
   // Paged resource: the page is asked to the API, the count comes from "total".
   calls.length = 0;
@@ -176,14 +184,30 @@ test('REST paging, lookups, filter panel, unique, report and chart', async (t) =
   d = await dt('cities', `start=0&length=3&order[0][column]=${nameCol}&order[0][dir]=desc`);
   assert.match(JSON.stringify(d.data[0]), /Torino/);
   assert.ok(calls.some((x) => x.includes('sort=name&order=desc')), calls.join(' | '));
-  // Advanced search is not an API feature: all pages are read and filtered by the app.
+  // "Equals" search and filter panel go to the API (filterMode equals): only matching records are read.
   calls.length = 0;
   d = await dt('cities', 'start=0&length=10&s[region][op]=equals&s[region][v]=Piemonte');
+  assert.strictEqual(d.recordsFiltered, 2);
+  assert.ok(calls.some((x) => x.includes('region=Piemonte')), calls.join(' | '));
+  assert.ok(!calls.some((x) => /page=3/.test(x)), 'filtered by the API: ' + calls.join(' | '));
+  calls.length = 0;
+  d = await dt('cities', 'start=0&length=10&f[region][]=Lazio&f[region][]=Piemonte');
+  assert.strictEqual(d.recordsFiltered, 4);
+  assert.ok(calls.some((x) => x.includes('region=Lazio&region=Piemonte')), calls.join(' | '));
+  // A report with an "equals" search reads only the matching records.
+  calls.length = 0;
+  r = await c.req('?p=report&r=byregion&s[region][op]=equals&s[region][v]=Lazio');
+  assert.match(r.text, /Lazio/);
+  assert.ok(!/Piemonte|Lombardia/.test(r.text));
+  assert.ok(calls.length > 0 && calls.every((x) => x.includes('region=Lazio')), calls.join(' | '));
+  // "Contains" is not an API feature: all pages are read and filtered by the app.
+  calls.length = 0;
+  d = await dt('cities', 'start=0&length=10&s[region][op]=contains&s[region][v]=mont');
   assert.strictEqual(d.recordsFiltered, 2);
   assert.ok(calls.includes('GET /api/cities?limit=3&page=3'), calls.join(' | '));
 
   // REST -> REST lookup (all pages, display template, search).
-  let r = await c.req('?p=lookup&t=users&f=address.city&q=lomb');
+  r = await c.req('?p=lookup&t=users&f=address.city&q=lomb');
   assert.deepStrictEqual(JSON.parse(r.text).map((o) => o.label), ['Bergamo (Lombardia)', 'Milano (Lombardia)']);
   // Lookup values resolved in the list and in the filter panel.
   d = await dt('users', 'start=0&length=10');
@@ -205,6 +229,20 @@ test('REST paging, lookups, filter panel, unique, report and chart', async (t) =
   assert.notStrictEqual(r.status, 302);
   assert.ok(!users.some((u) => u.name === 'Dup'));
 
+  // Response cache on users: repeated reads do not call the API, a write clears it.
+  await dt('users', 'start=0&length=10');
+  calls.length = 0;
+  await dt('users', 'start=0&length=10');
+  await c.req('?p=report&r=bycity');
+  assert.ok(!calls.includes('GET /api/users'), 'served from the cache: ' + calls.join(' | '));
+  r = await c.req('?p=edit&t=users&k[id]=1');
+  r = await c.post('?p=edit&t=users&k[id]=1', { _csrf: c.csrf(r.text), name: 'Mario Rossi', email: 'mario@example.org', age: '42', 'address.city': 'Milano', _next: 'list' });
+  assert.strictEqual(r.status, 302, r.text.slice(0, 400));
+  calls.length = 0;
+  d = await dt('users', 'start=0&length=10');
+  assert.ok(calls.includes('GET /api/users'), 'cache cleared by the edit: ' + calls.join(' | '));
+  assert.match(JSON.stringify(d.data), /42/);
+
   // Report and chart on a REST datasource.
   r = await c.req('?p=report&r=bycity');
   assert.strictEqual(r.status, 200);
@@ -212,5 +250,5 @@ test('REST paging, lookups, filter panel, unique, report and chart', async (t) =
   r = await c.req('?p=chartdata&c=agebycity');
   const chart = JSON.parse(r.text);
   assert.deepStrictEqual(chart.labels, ['Milano (Lombardia)', 'Napoli (Campania)']);
-  assert.deepStrictEqual(chart.datasets[0].data, [41, 30]);
+  assert.deepStrictEqual(chart.datasets[0].data, [42, 30]);
 });

@@ -21,3 +21,13 @@ export default function RestPagingFields({ value, onChange }: { value: RestPagin
     </>}
   </>;
 }
+
+/** Source options that do not depend on paging: filters sent to the API, response cache. */
+export function RestSourceOptions({ filterMode, cacheSeconds, onChange }: { filterMode?: string; cacheSeconds?: number; onChange: (patch: { filterMode?: '' | 'equals'; cacheSeconds?: number }) => void }) {
+  return <>
+    <Row label="Filtri all'API" hint="Se l'API filtra con ?campo=valore (più valori: campo=a&campo=b), master-dettaglio, pannello filtri, ricerche 'uguale a' e record per utente sono chiesti all'API: si leggono solo i record che servono, anche per totali, report e grafici">
+      <Select value={(filterMode || '') as '' | 'equals'} options={[['', 'No: filtra l\'app'], ['equals', 'Sì: ?campo=valore']]} onChange={(v) => onChange({ filterMode: v })} /></Row>
+    <Row label="Cache delle risposte" hint="Secondi per cui l'app riusa le risposte dell'API (0 = sempre aggiornate); svuotata a ogni inserimento, modifica o eliminazione fatti dall'app">
+      <Num value={cacheSeconds || 0} min={0} onChange={(v) => onChange({ cacheSeconds: v === '' ? 0 : v })} /></Row>
+  </>;
+}

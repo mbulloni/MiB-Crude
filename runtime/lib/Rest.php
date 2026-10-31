@@ -11,9 +11,14 @@ namespace MiB;
  *
  * Connection: driver "rest", url, auth (none|bearer|basic|header|query), user (basic user or
  * header/query parameter name); password from secrets = token or password.
- * Table source: {type: rest, path, dataPath, itemPath, itemDataPath, updateMethod, paging}
+ * Table source: {type: rest, path, dataPath, itemPath, itemDataPath, updateMethod, paging,
+ *                filterMode, cacheSeconds}
  * paging: {mode: page|offset, pageParam, firstPage, offsetParam, sizeParam, pageSize, totalPath,
  *          searchParam, sortParam, dirParam} (no dirParam: descending sort is sent as "-field")
+ * filterMode "equals": the API filters with ?field=value (several values = field=a&field=b), so
+ *   master-detail, filter panel, "equals" searches and record ownership are sent to it and only
+ *   the matching records are read (also for totals, reports and charts).
+ * cacheSeconds: list responses kept in a temporary file for that long (cleared by every write).
  */
 class Rest
 {
@@ -28,6 +33,12 @@ class Rest
     {
         $this->c = $connection;
         $this->secret = (string)$secret;
+    }
+
+    /** Identity of the connection (URL + credentials) for the response cache. */
+    public function key()
+    {
+        return sha1($this->c['url'] . "\0" . $this->secret);
     }
 
     /** HTTP call returning decoded JSON (or null for an empty body). */
@@ -121,11 +132,45 @@ class Rest
         return is_array($p) && !empty($p['mode']) && in_array($p['mode'], ['page', 'offset'], true) ? $p : null;
     }
 
-    /** Path with extra query parameters (empty values are left out). */
+    /** Path with extra query parameters; a list value repeats the parameter, empty values are left out. */
     private static function withQuery($path, array $params)
     {
-        $params = array_filter($params, function ($v) { return $v !== null && $v !== ''; });
-        return $params ? $path . (strpos($path, '?') === false ? '?' : '&') . http_build_query($params) : $path;
+        $parts = [];
+        foreach ($params as $k => $v) {
+            foreach (is_array($v) ? $v : [$v] as $x) if ($x !== null && $x !== '') $parts[] = rawurlencode((string)$k) . '=' . rawurlencode((string)$x);
+        }
+        return $parts ? $path . (strpos($path, '?') === false ? '?' : '&') . implode('&', $parts) : $path;
+    }
+
+    // --- response cache (source.cacheSeconds) ----------------------------------------
+
+    private static function cacheDir(Table $t)
+    {
+        $d = sys_get_temp_dir() . '/mibcrude-rest-' . sha1($t->app->root . "\0" . $t->name . "\0" . $t->rest->key());
+        if (!is_dir($d)) @mkdir($d, 0700, true);
+        return $d;
+    }
+
+    /** GET through the file cache when the source has cacheSeconds. */
+    private static function get(Table $t, $path)
+    {
+        $ttl = isset($t->def['source']['cacheSeconds']) ? (int)$t->def['source']['cacheSeconds'] : 0;
+        if ($ttl <= 0) return $t->rest->request('GET', $path);
+        $f = self::cacheDir($t) . '/' . sha1($path) . '.json';
+        if (is_file($f) && filemtime($f) > time() - $ttl) {
+            $j = json_decode((string)@file_get_contents($f), true);
+            if (is_array($j) && array_key_exists('v', $j)) return $j['v'];
+        }
+        $v = $t->rest->request('GET', $path);
+        if (@file_put_contents($f, json_encode(['v' => $v]), LOCK_EX) !== false) @chmod($f, 0600);
+        return $v;
+    }
+
+    /** Forget what was read from this source (after a write). */
+    private static function forget(Table $t)
+    {
+        foreach (array_keys(self::$cache) as $k) if (strpos($k, $t->name . "\0") === 0) unset(self::$cache[$k]);
+        if (!empty($t->def['source']['cacheSeconds'])) foreach (glob(self::cacheDir($t) . '/*.json') ?: [] as $f) @unlink($f);
     }
 
     /** Query parameters for one page of $size records starting at $offset (null: not expressible). */
@@ -155,19 +200,28 @@ class Rest
 
     public static function all(Table $t)
     {
+        return self::read($t, []);
+    }
+
+    /** Every record of the list endpoint called with $params (all pages when the API pages). */
+    private static function read(Table $t, array $params)
+    {
         $s = $t->def['source'];
-        $key = $t->name;
+        $key = $t->name . "\0" . json_encode($params);
         if (isset(self::$cache[$key])) return self::$cache[$key];
         $pg = self::paging($t);
-        if (!$pg) return self::$cache[$key] = self::listOf($t, $t->rest->request('GET', $s['path']), $s['path']);
+        if (!$pg) {
+            $path = self::withQuery($s['path'], $params);
+            return self::$cache[$key] = self::listOf($t, self::get($t, $path), $path);
+        }
         // Read page after page: stop on a short or empty page, at the declared total, on a page
         // equal to the previous one (API ignoring the paging parameters) or at MAX_ROWS.
         $size = !empty($pg['pageSize']) ? max(1, (int)$pg['pageSize']) : 100;
         $rows = [];
         $prev = null;
         while (count($rows) < self::MAX_ROWS) {
-            $path = self::withQuery($s['path'], self::pageParams($pg, count($rows), $size));
-            $json = $t->rest->request('GET', $path);
+            $path = self::withQuery($s['path'], $params + self::pageParams($pg, count($rows), $size));
+            $json = self::get($t, $path);
             $page = self::listOf($t, $json, $path);
             $sig = md5(json_encode($page));
             if (!$page || $sig === $prev) break;
@@ -180,24 +234,54 @@ class Rest
     }
 
     /**
-     * Query parameters when the API itself can answer the request (paging configured, only quick
-     * search and sorting it supports, no ownership restriction); null means in-memory processing.
+     * Conditions of a request the API can apply itself: ['params' => query parameters,
+     * 'complete' => every condition is among them]. Field names come from the table definition only.
+     */
+    private static function apiFilters(Table $t, array $req)
+    {
+        $eq = isset($t->def['source']['filterMode']) && $t->def['source']['filterMode'] === 'equals';
+        $pg = self::paging($t);
+        $params = [];
+        $complete = true;
+        $add = function ($field, $v) use ($t, $eq, &$params, &$complete) {
+            // Two conditions on the same field would be an AND: not expressible with repeated parameters.
+            if (!$eq || !$t->field($field) || isset($params[$field])) { $complete = false; return; }
+            $params[$field] = is_array($v) && count($v) === 1 ? reset($v) : $v;
+        };
+        if (!empty($req['master'])) foreach ($req['master'] as $c => $v) $add($c, (string)$v);
+        $own = $t->app->security->ownership($t->name);
+        if ($own) $add($own['field'], (string)userId());
+        $q = isset($req['q']) ? trim((string)$req['q']) : '';
+        if ($q !== '') {
+            if ($pg && !empty($pg['searchParam'])) $params[$pg['searchParam']] = $q;
+            else $complete = false;
+        }
+        if (!empty($req['f']) && is_array($req['f'])) foreach ($req['f'] as $name => $vals) {
+            if (is_array($vals) && $vals) $add($name, array_values(array_map('strval', $vals)));
+        }
+        if (!empty($req['s']) && is_array($req['s'])) foreach ($req['s'] as $name => $c) {
+            if (!is_array($c)) continue;
+            $op = isset($c['op']) ? $c['op'] : 'contains';
+            $v = isset($c['v']) ? $c['v'] : '';
+            if (is_array($v)) { $v = array_values(array_filter($v, 'strlen')); if ($v) $add($name, $v); continue; }
+            if (in_array($op, ['empty', 'notempty'], true)) { $complete = false; continue; }
+            if ($v === '') continue;
+            if ($op === 'equals') $add($name, (string)$v); else $complete = false;
+        }
+        return ['params' => $params, 'complete' => $complete];
+    }
+
+    /**
+     * Query parameters when the API itself can answer the request page by page (paging configured,
+     * every condition and the sort expressible as parameters); null means reading and filtering here.
      */
     private static function delegated(Table $t, array $req, $sort, $dir)
     {
         $pg = self::paging($t);
-        if (!$pg || !empty($req['master']) || !empty($req['f']) || $t->app->security->ownership($t->name)) return null;
-        if (!empty($req['s']) && is_array($req['s'])) foreach ($req['s'] as $c) {
-            if (!is_array($c)) continue;
-            $v = isset($c['v']) ? $c['v'] : '';
-            if ((is_array($v) ? array_filter($v, 'strlen') : $v !== '') || (isset($c['op']) && in_array($c['op'], ['empty', 'notempty'], true))) return null;
-        }
-        $params = [];
-        $q = isset($req['q']) ? trim((string)$req['q']) : '';
-        if ($q !== '') {
-            if (empty($pg['searchParam'])) return null;
-            $params[$pg['searchParam']] = $q;
-        }
+        if (!$pg) return null;
+        $api = self::apiFilters($t, $req);
+        if (!$api['complete']) return null;
+        $params = $api['params'];
         if (!$sort) {
             $ds = isset($t->def['pages']['list']['defaultSort']) ? $t->def['pages']['list']['defaultSort'] : null;
             if ($ds && !empty($ds['field'])) { $sort = $ds['field']; $dir = isset($ds['dir']) ? $ds['dir'] : 'asc'; }
@@ -218,7 +302,7 @@ class Rest
         if ($params !== null) {
             $size = !empty($pg['pageSize']) ? max(1, (int)$pg['pageSize']) : 100;
             $path = self::withQuery($t->def['source']['path'], $params + self::pageParams($pg, 0, $size));
-            $total = self::at($t->rest->request('GET', $path), $pg['totalPath']);
+            $total = self::at(self::get($t, $path), $pg['totalPath']);
             if (is_numeric($total)) return (int)$total;
         }
         return count(self::filter($t, $req));
@@ -232,7 +316,8 @@ class Rest
     /** In-memory equivalent of Table::buildWhere for master, quick search, advanced search and filters. */
     public static function filter(Table $t, array $req)
     {
-        $rows = self::all($t);
+        // The API applies what it can (fewer records to read); the checks below repeat every condition.
+        $rows = self::read($t, self::apiFilters($t, $req)['params']);
         $q = isset($req['q']) ? trim((string)$req['q']) : '';
         $searchable = $t->fields('search');
         $own = $t->app->security->ownership($t->name);
@@ -295,7 +380,7 @@ class Rest
         $pp = $params !== null ? self::pageParams(self::paging($t), $offset, $limit) : null;
         if ($pp !== null) {
             $path = self::withQuery($t->def['source']['path'], $params + $pp);
-            return self::listOf($t, $t->rest->request('GET', $path), $path);
+            return self::listOf($t, self::get($t, $path), $path);
         }
         $rows = self::filter($t, $req);
         if (!$sort) {
@@ -426,7 +511,7 @@ class Rest
     {
         $s = $t->def['source'];
         $json = $t->rest->request('POST', $s['path'], self::unflatten(self::typed($t, $vals)));
-        unset(self::$cache[$t->name]);
+        self::forget($t);
         $item = is_array($json) ? self::at($json, isset($s['itemDataPath']) ? $s['itemDataPath'] : '') : null;
         $flat = is_array($item) ? self::flatten($item) : [];
         $keys = [];
@@ -440,12 +525,12 @@ class Rest
         $method = !empty($s['updateMethod']) ? strtoupper($s['updateMethod']) : 'PUT';
         // PUT replaces the resource: send the whole record, PATCH only the changed fields.
         $t->rest->request($method, self::itemPath($t, $keys), self::unflatten(self::typed($t, $method === 'PUT' ? array_merge($old, $vals) : $vals)));
-        unset(self::$cache[$t->name]);
+        self::forget($t);
     }
 
     public static function delete(Table $t, array $keys)
     {
         $t->rest->request('DELETE', self::itemPath($t, $keys));
-        unset(self::$cache[$t->name]);
+        self::forget($t);
     }
 }
