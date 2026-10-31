@@ -106,6 +106,7 @@ export default function TableEditor({ name }: { name: string }) {
         </Section>
         <Section title="Modifica e finestre">
           <Row label="Modifica in linea" hint="Doppio clic su una cella della lista per modificarla"><Check value={t.pages.list.inlineEdit} onChange={(v) => set((x) => { x.pages.list.inlineEdit = v; })} /></Row>
+          <Row label="Aggiunta in linea" hint="Pulsante «Aggiungi riga»: una riga di campi sopra la lista per inserire record senza aprire la pagina Nuovo (campi della lista di tipo semplice; gli altri prendono il valore predefinito)"><Check value={!!t.pages.list.inlineAdd} onChange={(v) => set((x) => { x.pages.list.inlineAdd = v; })} /></Row>
           <Row label="Modifica selezionati" hint="Pulsante nella lista: stessi valori su tutte le righe spuntate (serve il permesso di modifica)"><Check value={t.pages.list.updateSelected !== false} onChange={(v) => set((x) => { x.pages.list.updateSelected = v; })} /></Row>
           {(['add', 'edit', 'view'] as const).map((k) => <Row key={k} label={{ add: 'Nuovo', edit: 'Modifica', view: 'Visualizza' }[k]}>
             <Select value={t.pages[k]?.mode || 'page'} options={[['page', 'Pagina'], ['popup', 'Finestra popup sopra la lista']]} onChange={(v) => set((x) => { x.pages[k] = { ...(x.pages[k] || {}), mode: v }; })} /></Row>)}

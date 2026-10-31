@@ -87,6 +87,9 @@ test.before(async () => {
   orders.api = { enabled: true, methods: ['list', 'view', 'add', 'edit', 'delete'] };
   orders.pages.list.filterPanel = true;
   orders.pages.list.inlineEdit = true;
+  const cats = proj.tables.find((t) => t.name === 'categories');
+  cats.pages.list.inlineAdd = true;
+  cats.fields.find((f) => f.name === 'name').validation = { ...(cats.fields.find((f) => f.name === 'name').validation || {}), required: true };
   orders.pages.list.views = [{ type: 'kanban', statusField: 'status', titleField: 'customer_id' }, { type: 'calendar', dateField: 'order_date', titleField: 'customer_id' }];
   orders.fields.find((f) => f.name === 'status').filter = true;
   // Event: uppercase category names; block deleting category 1.
@@ -604,4 +607,31 @@ test('crosstab report: rows × columns, row and column totals, cells link to the
   const x = await c.req('?p=report&r=cross&fmt=xlsx');
   assert.strictEqual(x.status, 200);
   assert.ok(x.text.startsWith('PK'), 'XLSX (zip) file');
+});
+
+test('inline add: row above the list, events and validation, JSON answer', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=list&t=categories');
+  assert.match(r.text, /mc-ia-open/);
+  assert.match(r.text, /<form method="post" action="index\.php\?p=inlineadd&amp;t=categories" class="card mb-2 mc-inline-add d-none"/);
+  const csrf = c.csrf(r.text);
+  // required field empty: errors by field, nothing inserted
+  r = await c.post('?p=inlineadd&t=categories', { _csrf: csrf, name: '', description: 'x' });
+  assert.strictEqual(r.status, 422);
+  assert.ok(JSON.parse(r.text).errors.name);
+  // saved through BeforeAdd (upper case), like the add page
+  r = await c.post('?p=inlineadd&t=categories', { _csrf: csrf, name: 'riga veloce', description: 'in linea' });
+  assert.strictEqual(r.status, 200, r.text);
+  assert.strictEqual(JSON.parse(r.text).ok, true);
+  r = await c.req('?p=dt&t=categories&draw=1&start=0&length=100');
+  assert.match(r.text, /RIGA VELOCE/);
+  // not for a table without the option, nor without the Add right
+  assert.strictEqual((await c.post('?p=inlineadd&t=orders', { _csrf: csrf, total: '1' })).status, 404);
+  const u = client();
+  r = await u.req('?p=login');
+  await u.post('?p=login', { _csrf: u.csrf(r.text), username: 'luca', password: 'Password1' });
+  r = await u.req('?p=list&t=customers');
+  assert.doesNotMatch(r.text, /mc-ia-open/);
 });

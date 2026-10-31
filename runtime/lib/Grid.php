@@ -60,6 +60,17 @@ class Grid
         return $out;
     }
 
+    /** Fields of the "add row" of the list (inline add): add fields of simple types, in the order of the list columns. */
+    public static function inlineAddFields(Table $t)
+    {
+        if (empty($t->def['pages']['list']['inlineAdd']) || !$t->enabled('add') || !$t->app->security->can($t->name, 'A')) return [];
+        $add = [];
+        foreach ($t->fields('add') as $f) if (in_array($f['editAs']['type'], self::INLINE_TYPES, true) && empty($f['editAs']['lookup']['multiple']) && empty($f['autoInc'])) $add[$f['name']] = $f;
+        $out = [];
+        foreach ($t->fields('list') as $f) if (isset($add[$f['name']])) $out[] = $add[$f['name']];
+        return $out;
+    }
+
     /** Fields changed by dragging in calendar/kanban views (always allowed with the Edit right). */
     public static function viewFields(Table $t)
     {

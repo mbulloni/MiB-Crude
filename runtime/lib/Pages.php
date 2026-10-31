@@ -130,6 +130,35 @@ class Pages
         $this->app->json(['html' => Format::html($t, $f, $rows[0], 'list'), 'raw' => $rows[0][$name]]);
     }
 
+    /** Inline add (row above the list): the fields of the row, defaults for the other add fields. JSON answer. */
+    public function page_inlineadd()
+    {
+        $t = $this->table();
+        $fields = Grid::inlineAddFields($t);
+        if (!$this->post() || !$fields) throw new HttpError(t('error.notfound'), 404);
+        $master = $this->master($t);
+        $shown = array_map(function ($f) { return $f['name']; }, $fields);
+        try {
+            $vals = $t->valuesFromPost('add', $_POST);
+            // add fields that are not in the row: their default, or nothing (the database default)
+            foreach ($t->fields('add') as $f) {
+                if (in_array($f['name'], $shown, true) || !array_key_exists($f['name'], $vals) || Table::postValue($_POST, $f['name']) !== null) continue;
+                $d = $t->defaultFor($f);
+                if ($d !== null) $vals[$f['name']] = $d; else unset($vals[$f['name']]);
+            }
+            if ($master) $vals = array_merge($vals, $master['filter']);
+            $errors = $t->validate($vals, 'add');
+            if ($errors) { $this->app->json(['errors' => $errors, 'error' => implode(' ', $errors)], 422); return; }
+            list($ok, $keys, $msg) = $t->insert($vals, 'inline');
+            if (!$ok) { $this->app->json(['error' => $msg], 409); return; }
+            $this->app->json(['ok' => true, 'keys' => $keys]);
+        } catch (HttpError $e) {
+            $this->app->json(['error' => $e->getMessage()], 400);
+        } catch (\PDOException $e) {
+            $this->app->json(['error' => $this->dbError($e)], 409);
+        }
+    }
+
     /** Data for the calendar, gallery, kanban and map views of the list page. */
     public function page_feed()
     {

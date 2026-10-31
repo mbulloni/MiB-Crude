@@ -53,6 +53,9 @@ if ($viewDef && in_array($curView, ['calendar', 'map'], true)) $needLibs = [$cur
   <?php if (!\MiB\Compat::hidden('add') && $t->enabled('add') && $sec->can($t->name, 'A')): ?>
     <a class="btn btn-primary btn-sm<?= ($t->page('add')['mode'] ?? 'page') === 'popup' ? ' mc-popup-link' : '' ?>" href="<?= h($app->url('add', $base)) ?>"><i class="bi bi-plus-lg"></i> <?= h(t('btn.add')) ?></a>
   <?php endif ?>
+  <?php if (!$embedded && $curView === 'table' && \MiB\Grid::inlineAddFields($t)): ?>
+    <button type="button" class="btn btn-outline-primary btn-sm mc-ia-open"><i class="bi bi-plus-square"></i> <?= h(t('btn.add_row')) ?></button>
+  <?php endif ?>
   <?php if ($canDel && !\MiB\Compat::hidden('delete')): ?>
     <button class="btn btn-outline-danger btn-sm mc-delete-selected" form="mcListForm" disabled><i class="bi bi-trash"></i> <?= h(t('btn.delete_sel')) ?></button>
   <?php endif ?>
@@ -131,6 +134,17 @@ if ($viewDef && in_array($curView, ['calendar', 'map'], true)) $needLibs = [$cur
   <li class="nav-item"><a class="nav-link<?= $curView === 'table' ? ' active' : '' ?>" href="<?= h($app->url('list', array_merge($keep, ['v' => 'table']))) ?>"><i class="bi bi-table"></i> <?= h(t('view.table')) ?></a></li>
   <?php foreach ($views as $v): ?><li class="nav-item"><a class="nav-link<?= $curView === $v['type'] ? ' active' : '' ?>" href="<?= h($app->url('list', array_merge($keep, ['v' => $v['type']]))) ?>"><i class="bi bi-<?= h(['calendar' => 'calendar3', 'gallery' => 'grid-3x3-gap', 'kanban' => 'kanban', 'map' => 'geo-alt'][$v['type']] ?? 'eye') ?>"></i> <?= h(t('view.' . $v['type'])) ?></a></li><?php endforeach ?>
 </ul>
+<?php endif ?>
+<?php $inlineAdd = !$embedded && $curView === 'table' ? \MiB\Grid::inlineAddFields($t) : []; if ($inlineAdd): ?>
+<form method="post" action="<?= h($app->url('inlineadd', array_merge(['t' => $t->name], $master ? $master['qs'] : []))) ?>" class="card mb-2 mc-inline-add d-none" novalidate>
+  <?= $app->csrfField() ?><div class="card-body p-2"><div class="row g-2 align-items-end">
+  <?php foreach ($inlineAdd as $f): $def = $t->defaultFor($f); ?>
+    <div class="col-sm-6 col-md mc-ia-field" data-field="<?= h($f['name']) ?>"><label class="form-label small mb-1"><?= h($t->fieldLabel($f)) ?><?= !empty($f['validation']['required']) ? ' <span class="text-danger">*</span>' : '' ?></label>
+      <?= \MiB\Controls::render($t, $f, $def, 'add', ['name' => $f['name']]) ?><div class="invalid-feedback"></div></div>
+  <?php endforeach ?>
+    <div class="col-auto d-flex gap-1"><button class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i> <?= h(t('btn.save')) ?></button><button type="button" class="btn btn-outline-secondary btn-sm mc-ia-cancel"><?= h(t('btn.cancel')) ?></button></div>
+  </div><div class="small text-danger mt-1 mc-ia-error"></div></div>
+</form>
 <?php endif ?>
 <?php if ($curView !== 'table'): ?>
 <?php if ($curView === 'map' && !empty($viewDef['addressField']) && \MiB\Geocode::views($t) && $t->writeTable() && $sec->can($t->name, 'E')): ?>

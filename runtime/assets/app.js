@@ -550,3 +550,42 @@ document.addEventListener('click', function (e) {
   document.cookie = name + '=' + encodeURIComponent(JSON.stringify(cur)) + '; path=/; max-age=31536000; samesite=lax';
   location.reload();
 });
+
+// Inline add: the row above the list is saved without leaving the page, then the list is reloaded.
+(function () {
+  var form = document.querySelector('form.mc-inline-add');
+  var open = document.querySelector('.mc-ia-open');
+  if (!form || !open) return;
+  var first = function () { var i = form.querySelector('.mc-ia-field input, .mc-ia-field select, .mc-ia-field textarea'); if (i) i.focus(); };
+  open.addEventListener('click', function () { form.classList.toggle('d-none'); if (!form.classList.contains('d-none')) first(); });
+  form.querySelector('.mc-ia-cancel').addEventListener('click', function () { form.classList.add('d-none'); });
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var btn = form.querySelector('button.btn-primary');
+    var err = form.querySelector('.mc-ia-error');
+    form.querySelectorAll('.is-invalid').forEach(function (x) { x.classList.remove('is-invalid'); });
+    err.textContent = '';
+    btn.disabled = true;
+    fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        btn.disabled = false;
+        if (!res.ok || !res.j.ok) {
+          var errs = res.j.errors || {};
+          Object.keys(errs).forEach(function (k) {
+            var box = form.querySelector('.mc-ia-field[data-field="' + (window.CSS && CSS.escape ? CSS.escape(k) : k) + '"]');
+            if (!box) return;
+            var c = box.querySelector('input, select, textarea');
+            if (c) c.classList.add('is-invalid');
+            box.querySelector('.invalid-feedback').textContent = errs[k];
+          });
+          err.textContent = Object.keys(errs).length ? '' : (res.j.error || 'Error');
+          return;
+        }
+        form.reset();
+        if (window.jQuery && jQuery.fn.dataTable) jQuery('#mcGrid').DataTable().ajax.reload(null, false);
+        first();
+      })
+      .catch(function (x) { btn.disabled = false; err.textContent = x.message; });
+  });
+})();
