@@ -1,9 +1,10 @@
 import { checkUpdates, UpdateBanner, UpdateDialog } from './components/Updates';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { call, mc } from './api';
 import { redo, reloadFromDisk, resetHistory, run, save, toast, undo, useStore } from './store';
 import type { Nav } from './types';
 import Welcome from './components/Welcome';
+import SearchDialog from './components/SearchDialog';
 import { Btn, I, lbl } from './components/ui';
 import ProjectPanel from './components/ProjectPanel';
 import ConnectionsPanel from './components/ConnectionsPanel';
@@ -98,6 +99,7 @@ export default function App() {
   const team = useStore((s) => s.team);
   const remote = useStore((s) => s.remoteChanged);
   const hist = useStore((s) => s.hist);
+  const [searching, setSearching] = useState(false);
   const navKind = useStore((s) => s.nav.kind);
   useTeamLocks();
   useEffect(() => { const t = setTimeout(() => checkUpdates(true), 4000); return () => clearTimeout(t); }, []);
@@ -106,6 +108,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (useStore.getState().proj) run('Salvataggio…', save).then((r) => r && toast('Salvato', 'ok', 1500)); }
       if (e.key === 'F5' && useStore.getState().proj) { e.preventDefault(); generateAndPreview(); }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f' && useStore.getState().proj) { e.preventDefault(); setSearching(true); }
       // Undo/redo of the project; text fields and code editors keep their own Ctrl+Z
       const el = e.target instanceof HTMLElement ? e.target : null;
       const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable || !!el.closest('.monaco-editor'));
@@ -140,6 +143,7 @@ export default function App() {
         <Btn icon="save" onClick={() => run('Salvataggio…', save).then((r) => r && toast('Salvato', 'ok', 1500))} disabled={!dirty} title="Salva (Ctrl+S)">Salva</Btn>
         <Btn icon="arrow-counterclockwise" kind="ghost" onClick={undo} disabled={!hist.undo} title={`Annulla (Ctrl+Z)${hist.undo ? ` · ${hist.undo} passi` : ''}`} />
         <Btn icon="arrow-clockwise" kind="ghost" onClick={redo} disabled={!hist.redo} title="Ripeti (Ctrl+Y)" />
+        <Btn icon="search" kind="ghost" onClick={() => setSearching(true)} title="Cerca nel progetto (Ctrl+Maiusc+F)">Cerca</Btn>
         <span className="sep" />
         <Btn icon="play-fill" kind="primary" onClick={generateAndPreview} title="Genera e apri l'anteprima (F5)">Anteprima</Btn>
         <Btn icon="rocket-takeoff" onClick={() => useStore.getState().set({ nav: { kind: 'output' } })}>Pubblica</Btn>
@@ -159,6 +163,7 @@ export default function App() {
       </div>
       {busy && <div className="busy"><span className="spinner" /> {busy}</div>}
       <Toasts toasts={toasts} />
+      {searching && <SearchDialog onClose={() => setSearching(false)} />}
     </div>
   );
 }

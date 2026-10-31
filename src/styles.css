@@ -255,3 +255,12 @@ progress { width: 100%; }
 .preview-table { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
 
 .region-box { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+
+/* Cerca nel progetto */
+.search-results { margin-top: 10px; max-height: 60vh; overflow: auto; }
+.search-group { margin-bottom: 10px; }
+.search-where { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; opacity: .8; margin: 6px 0 2px; }
+.search-hit { display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: 6px; padding: 4px 8px; color: inherit; cursor: pointer; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-hit:hover { background: var(--hover, rgba(127,127,127,.15)); }
+.search-what { opacity: .75; margin-right: 6px; }
+.search-hit mark { background: rgba(255, 200, 0, .35); color: inherit; border-radius: 2px; }
