@@ -1,6 +1,6 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.9.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1), filtri REST all'API e strato AnyChart completo (v0.6.0), modifica selezionati, notifiche, clic sui grafici e PDF (v0.7.0), intestazione/piè/menu del progetto, accesso Windows NTLM e Docker di progetto (v0.8.0), Docker su Windows con Apache24 di produzione e mod_authn_ntlm (v0.9.0); restano i limiti sotto.
+Stato v0.9.1 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1), filtri REST all'API e strato AnyChart completo (v0.6.0), modifica selezionati, notifiche, clic sui grafici e PDF (v0.7.0), intestazione/piè/menu del progetto, accesso Windows NTLM e Docker di progetto (v0.8.0), Docker su Windows con Apache24 di produzione e mod_authn_ntlm (v0.9.0), controllo del sistema dei contenitori prima di avviare (v0.9.1); restano i limiti sotto.
 
 ## Fatto (v0.2.0, 2026-10-30)
 1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
