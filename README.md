@@ -8,7 +8,7 @@ Generatore visuale di applicazioni web PHP per Linux, per Linux, con lavoro **mu
 
 Parti da un database esistente (MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, SQLite) o da un **servizio REST JSON**, scegli le tabelle — oppure crea tabelle e dati da un **modello pronto** (CRM, helpdesk, prenotazioni risorse, archivio documenti) — e ottieni un'applicazione web completa:
 
-- **Pagine**: lista (ricerca rapida, ricerca avanzata, pannello filtri, ordinamento, paginazione, totali, selezione multipla), nuovo, modifica, visualizza, copia, elimina, stampa, esporta (CSV/XLSX/JSON), importa (CSV/XLSX con aggiornamento e "tutto o niente")
+- **Pagine**: lista (ricerca rapida, ricerca avanzata, pannello filtri, ordinamento, paginazione, totali, selezione multipla), nuovo, modifica, visualizza, copia, elimina, **modifica selezionati** (stessi valori su tutte le righe spuntate), stampa, esporta (CSV/XLSX/JSON/**PDF**, anche il singolo record dalla vista), importa (CSV/XLSX con aggiornamento e "tutto o niente")
 - **Campi**: 17 formati di visualizzazione e 19 controlli di modifica — lookup da tabella o elenco fisso, a cascata, completamento automatico, selezione multipla, "aggiungi nuovo" in finestra; upload file/immagini con miniature e ridimensionamento (cartella o BLOB); testo formattato; validazioni (obbligatorio, unico, email, min/max, regex)
 - **Master-dettaglio** ricavato dalle chiavi esterne (schede nella vista/modifica, icone nella lista)
 - **Viste della lista**: calendario, kanban, galleria, mappa; modifica in linea; nuovo/modifica in finestra; campi QR code e firma
@@ -17,7 +17,8 @@ Parti da un database esistente (MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, S
 - **Origini dati REST**: una risorsa di un'API JSON (autenticazione Bearer, Basic, chiave in header o URL) diventa una tabella con lista, ricerca, filtri, ordinamento, totali, visualizza/modifica/elimina tramite l'API; paginazione lato API (pagina o scostamento, ricerca, ordinamento e filtri `?campo=valore` delegati), cache delle risposte, lookup verso risorse REST, report e grafici
 - **Sicurezza**: utenti gestiti o tabella esistente o utente fisso, gruppi, permessi per tabella (A/E/D/S/V/P/I), **permessi dinamici** gestibili dall'app, record per utente, registrazione con conferma email, recupero password, CAPTCHA, regole password, blocco dopo tentativi falliti, **LDAP/Active Directory**, **OpenID Connect** (Okta, Entra ID, Google, Keycloak) con mappatura gruppi, **SAML 2.0** (firma XML verificata), **autenticazione a due fattori** (TOTP)
 - **Registro attività** (audit) e **blocco record** durante la modifica
-- **Report** con raggruppamenti e totali, **grafici** (Apache ECharts), **dashboard**; **Report & Chart Builder** web per gli utenti finali
+- **Notifiche**: campanella nell'intestazione con le non lette; messaggi dalla sezione Amministrazione › Notifiche (a tutti o a un utente, con collegamento e scadenza) o dagli eventi con `addNotification()` come in phpr
+- **Report** con raggruppamenti e totali, **grafici** (Apache ECharts; un clic su barra, punto o fetta apre la lista filtrata su quel valore o periodo), **dashboard**; **Report & Chart Builder** web per gli utenti finali
 - **API REST** per tabella con chiave API e descrizione **OpenAPI**
 - Menu ad albero, temi (colore, barra laterale/alta, chiaro/scuro), **multilingua** con traduzioni
 - **Anteprima** integrata (PHP locale o Docker) e **pubblicazione** incrementale via SFTP, FTP/FTPS o cartella

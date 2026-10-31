@@ -121,7 +121,7 @@ export default function TableEditor({ name }: { name: string }) {
         </Section>
         <Section title="Moduli ed esportazione">
           <Row label="Colonne nei moduli"><Select value={String(t.pages.edit?.columns || 1)} options={[['1', '1'], ['2', '2'], ['3', '3']]} onChange={(v) => set((x) => { x.pages.edit = { ...x.pages.edit, columns: Number(v) }; x.pages.add = { ...x.pages.add, columns: Number(v) }; })} /></Row>
-          <Row label="Formati di esportazione"><span className="chips">{['csv', 'xlsx', 'json'].map((fm) => <Check key={fm} label={fm.toUpperCase()} value={(t.pages.export?.formats || []).includes(fm)} onChange={(v) => set((x) => { const cur: string[] = x.pages.export.formats || []; x.pages.export.formats = v ? [...cur, fm] : cur.filter((y) => y !== fm); if (!x.pages.export.formats.length) x.pages.export.formats = ['csv']; })} />)}</span></Row>
+          <Row label="Formati di esportazione"><span className="chips">{['csv', 'xlsx', 'json', 'pdf'].map((fm) => <Check key={fm} label={fm.toUpperCase()} value={(t.pages.export?.formats || []).includes(fm)} onChange={(v) => set((x) => { const cur: string[] = x.pages.export.formats || []; x.pages.export.formats = v ? [...cur, fm] : cur.filter((y) => y !== fm); if (!x.pages.export.formats.length) x.pages.export.formats = ['csv']; })} />)}</span></Row>
         </Section>
       </div>}
 

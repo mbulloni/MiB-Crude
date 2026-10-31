@@ -17,6 +17,7 @@ $sections = \MiB\Layout::sections($t, 'view', $fields);
   <?php endif ?>
   <?= \MiB\Buttons::html($t, 'view', false, $keys) ?>
   <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i></button>
+  <?php if ($t->enabled('export') && in_array('pdf', $t->def['pages']['export']['formats'], true) && $sec->can($t->name, 'P')): ?><a class="btn btn-outline-secondary btn-sm" target="_blank" href="<?= h($app->url('pdf', $qs)) ?>"><i class="bi bi-filetype-pdf"></i> PDF</a><?php endif ?>
   <a class="btn btn-link btn-sm ms-auto" href="<?= h($master ? $app->url('list', array_merge(['t' => $t->name], $master['qs'])) : $app->url('list', ['t' => $t->name])) ?>"><i class="bi bi-arrow-left"></i> <?= h(t('btn.back')) ?></a>
 </div>
 <?php foreach ($sections as $s): ?>

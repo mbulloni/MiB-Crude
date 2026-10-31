@@ -452,6 +452,31 @@ class Pages
         Export::send($t, $rows, $fields, $fmt);
     }
 
+    /** One record as PDF (button on the view page when the PDF export is enabled). */
+    public function page_pdf()
+    {
+        $t = $this->table();
+        if (!$t->enabled('view') || !$t->enabled('export') || !in_array('pdf', $t->def['pages']['export']['formats'], true)) throw new HttpError(t('error.notfound'), 404);
+        $this->app->security->check($t->name, 'V');
+        $this->app->security->check($t->name, 'P');
+        $keys = $t->keysFromRequest();
+        $row = $t->fetchOne($keys);
+        if (!$row) throw new HttpError(t('error.notfound'), 404);
+        $rows = [$row];
+        $fields = $t->fields('view');
+        $t->resolveLookups($rows, $fields);
+        $row = $rows[0];
+        $this->app->event($t->name, 'ProcessValues', [&$row, 'view']);
+        $pairs = [];
+        foreach ($fields as $f) $pairs[$t->fieldLabel($f)] = Format::plain($t, $f, isset($row[$f['name']]) ? $row[$f['name']] : null, $row);
+        Audit::raw('export ' . $t->name, (string)userName());
+        $pdf = Pdf::record($t->caption() . ' — ' . implode(' / ', array_map('strval', $keys)), $pairs);
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . preg_replace('/\W/', '_', $t->name) . '_' . preg_replace('/\W/', '_', implode('_', $keys)) . '.pdf"');
+        header('Content-Length: ' . strlen($pdf));
+        echo $pdf;
+    }
+
     public function page_import()
     {
         $t = $this->table();

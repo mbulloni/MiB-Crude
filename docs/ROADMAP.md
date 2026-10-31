@@ -39,11 +39,18 @@ Stato v0.6.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 
 ## Fatto (v0.6.0, 2026-10-31)
 - Origini REST: filtri inviati all'API (`?campo=valore`, più valori ripetendo il parametro) per master-dettaglio, pannello filtri, ricerche "uguale a" e record per utente, anche per totali, report e grafici; cache delle risposte per N secondi, svuotata dalle modifiche (2026-10-31).
+- PDF: solo i caratteri di Windows-1252 (gli altri, per esempio cirillico, greco o emoji, diventano «?»); le immagini dei campi non sono incluse; testi troppo lunghi per la colonna vengono troncati con «…» (nella vista del record vanno a capo).
 - Strato AnyChart: impilamento dei valori e al 100% (`stackMode`), marcatori delle linee, etichette esterne delle torte (`outsideLabelsCriticalAngle`), stringhe di formato AnyChart (`{%Value}{decimalsCount:2,groupsSeparator:.}`, `{%PercentValue}`, `{%SeriesName}`) in etichette, tooltip e assi, `anychart.format.number` con opzioni; nessuna chiamata dei progetti reali resta ignorata (2026-10-31).
 
+## Dopo v0.6.0
+- **Modifica selezionati** ("Update selected" di phpr): pulsante nella lista, campi da cambiare scelti con una spunta, ogni record passa da blocco, validazione, eventi BeforeEdit/AfterEdit, valori automatici e registro attività; opzione della pagina lista nel designer.
+- **Notifiche** (phpr 10.7): `addNotification($message, $title, $icon, $url, $expire, $user, $newWindow)`, campanella nell'intestazione di tutti i temi, sezione Amministrazione › Notifiche; tabelle di sistema `mc_notifications` e `mc_notif_seen` (schema 3) provate su MariaDB, PostgreSQL, SQLite, SQL Server e Oracle.
+- **Grafici con clic**: barra, punto o fetta aprono la lista filtrata (valore esatto o intervallo di date di anno, trimestre, mese, settimana, giorno).
+- **PDF**: formato di esportazione della lista (A4, orizzontale se servono più colonne, intestazione su ogni pagina) e pulsante PDF nella vista del record; generatore PHP senza dipendenze, caratteri Windows-1252 (accenti italiani, €).
+
 ## Limiti aperti
-- Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto (non raggiungibili dall'ambiente di sviluppo).
 - Origini REST: con API a pagine e filtri `?campo=valore` lista, ricerca rapida, ordinamento, master-dettaglio, pannello filtri e ricerche "uguale a" sono eseguiti dall'API; le altre condizioni (contiene, maggiore/minore, intervalli, vuoto) e i totali, report e grafici senza filtri leggono tutte le pagine (massimo 50.000 record), con la cache delle risposte facoltativa per non rileggerle a ogni richiesta. Le condizioni SQL dei lookup (`where`) non si applicano ai lookup verso tabelle REST; l'importazione su REST non può essere annullata in blocco (ogni record è una chiamata all'API).
+- PDF: solo i caratteri di Windows-1252 (gli altri, per esempio cirillico, greco o emoji, diventano «?»); le immagini dei campi non sono incluse; testi troppo lunghi per la colonna vengono troncati con «…» (nella vista del record vanno a capo).
 - Strato AnyChart: copre tutte le chiamate dei 55 eventi grafico del progetto reale di prova e in più formati `{%Value}{...}`, impilamento e marcatori; altre chiamate AnyChart vengono ignorate senza errori.
 - Temi: adattatori per Metronic 8, DesignReset (Cork/Equation), Satria, Slim, Webarch e Material Admin. Slim, Webarch e Material Admin girano sul Bootstrap 5 delle pagine: restano gli stili del tema, non i componenti JavaScript del template (grafici demo, chat, pannello impostazioni; per Material Admin anche i componenti Angular Material, il pannello di personalizzazione e le animazioni a onda dei pulsanti). Il tema va importato su ogni computer del team.
 - Aggiornamenti integrati: puntano a `mbulloni/MiB-Crude` su GitHub; senza release pubblicate il controllo segnala l'errore. Aggiornamento del .deb dall'app provato con successo (0.4.0 → 0.4.1, 2026-10-31).

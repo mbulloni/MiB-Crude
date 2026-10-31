@@ -1,7 +1,7 @@
 <?php
 namespace MiB;
 
-/** CSV / XLSX / JSON export and CSV / XLSX reading for import. */
+/** CSV / XLSX / JSON / PDF export and CSV / XLSX reading for import. */
 class Export
 {
     public static function send(Table $t, array $rows, array $fields, $fmt)
@@ -21,6 +21,18 @@ class Export
             $data[] = $line;
         }
         switch ($fmt) {
+            case 'pdf':
+                // formatted values (dates, numbers, lookups) as on the screen; numbers aligned right
+                $shown = [];
+                foreach ($rows as $r) { $line = []; foreach ($fields as $f) $line[] = Format::plain($t, $f, isset($r[$f['name']]) ? $r[$f['name']] : null, $r); $shown[] = $line; }
+                $right = [];
+                foreach ($fields as $i => $f) if (in_array($f['type'], ['int', 'decimal'], true) && empty($f['editAs']['lookup'])) $right[] = $i;
+                $pdf = Pdf::table($t->caption(), t('pdf.records', count($rows)), $head, $shown, $right);
+                header('Content-Type: application/pdf');
+                header("Content-Disposition: attachment; filename=\"$name.pdf\"");
+                header('Content-Length: ' . strlen($pdf));
+                echo $pdf;
+                return;
             case 'json':
                 header('Content-Type: application/json; charset=utf-8');
                 header("Content-Disposition: attachment; filename=\"$name.json\"");

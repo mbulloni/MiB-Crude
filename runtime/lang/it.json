@@ -170,6 +170,7 @@
  "page.edit": "Modifica",
  "page.import": "Importa",
  "page.search": "Ricerca avanzata",
+ "pdf.records": "{0} record",
  "profile.apikey": "Chiave API",
  "profile.apikey_gen": "Genera nuova chiave",
  "profile.apikey_help": "Usa la chiave nell'header X-Api-Key. Generandone una nuova la precedente smette di funzionare.",

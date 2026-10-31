@@ -455,3 +455,24 @@ test('chart drill-down: each bar links to the list filtered on it', async () => 
   assert.match(p.get('s[order_date][v]'), /^\d{4}-\d{2}-01$/);
   assert.match(p.get('s[order_date][v2]'), /^\d{4}-\d{2}-(28|29|30|31)$/);
 });
+
+test('PDF: list export and a single record', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=list&t=orders');
+  assert.match(r.text, /fmt=pdf/);
+  const pdf = await c.req('?p=export&t=orders&fmt=pdf');
+  assert.strictEqual(pdf.status, 200);
+  assert.match(pdf.text, /^%PDF-1\.4/);
+  assert.match(pdf.text, /\/Type \/Pages \/Kids \[[^\]]+\] \/Count [1-9]/);
+  assert.match(pdf.text, /startxref\n\d+\n%%EOF\n$/);
+  r = await c.req('?p=view&t=orders&k[id]=1');
+  assert.match(r.text, /p=pdf&amp;t=orders/);
+  const one = await c.req('?p=pdf&t=orders&k[id]=1');
+  assert.strictEqual(one.status, 200);
+  assert.match(one.text, /^%PDF-1\.4/);
+  // a table without the PDF format has no button and no page
+  r = await c.req('?p=pdf&t=no_such_table&k[id]=1');
+  assert.notStrictEqual(r.status, 200);
+});

@@ -103,7 +103,7 @@ function defaultPages(cfg = {}) {
     view: { enabled: true },
     delete: { enabled: true },
     search: { enabled: true },
-    export: { enabled: true, formats: ['csv', 'xlsx', 'json'] },
+    export: { enabled: true, formats: ['csv', 'xlsx', 'json', 'pdf'] },
     import: { enabled: false },
     print: { enabled: true },
   };
