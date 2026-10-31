@@ -22,9 +22,16 @@ $cancel = $master ? $app->url('view', ['t' => $master['table']->name, 'k' => $ma
 <form method="post" action="<?= h($app->url($mode, $qs)) ?>"<?= $hasFiles ? ' enctype="multipart/form-data"' : '' ?> class="mc-form" novalidate>
 <?= $app->csrfField() ?>
 <?php $tabs = array_values(array_filter($sections, function ($s) { return $s['style'] === 'tab'; })); ?>
+<?php // Steps: sections with style "step" are shown one at a time (Back / Next), the save buttons on the last one
+$steps = array_values(array_filter($sections, function ($s) { return $s['style'] === 'step'; }));
+$firstErr = 0;
+foreach ($steps as $i => $s) foreach ($s['fields'] as $f) if (isset($errors[$f['name']]) && !$firstErr) $firstErr = $i + 1;
+if ($steps): ?><ol class="mc-steps list-unstyled d-flex flex-wrap gap-2 mb-3" data-start="<?= max(0, $firstErr - 1) ?>"><?php foreach ($steps as $i => $s): ?>
+  <li class="mc-step-dot" data-step="<?= $i ?>"><span class="badge rounded-pill"><?= $i + 1 ?></span> <?= h($s['title'] !== '' ? $s['title'] : t('form.step', $i + 1)) ?></li><?php endforeach ?></ol><?php endif ?>
 <?php if ($tabs): ?><ul class="nav nav-tabs mb-0" role="tablist"><?php foreach ($tabs as $ti => $s): ?><li class="nav-item"><button class="nav-link<?= $ti === 0 ? ' active' : '' ?>" type="button" data-bs-toggle="tab" data-bs-target="#mc-ftab-<?= $ti ?>"><?= h($s['title'] !== '' ? $s['title'] : '#' . ($ti + 1)) ?></button></li><?php endforeach ?></ul><div class="tab-content mb-3"><?php endif ?>
-<?php $tabIndex = 0; foreach ($sections as $si => $sec_): $isTab = $sec_['style'] === 'tab'; $ccols = $sec_['columns'] ?: $cols; ?>
+<?php $tabIndex = 0; $stepIndex = 0; foreach ($sections as $si => $sec_): $isTab = $sec_['style'] === 'tab'; $isStep = $sec_['style'] === 'step'; $ccols = $sec_['columns'] ?: $cols; ?>
 <?php if ($isTab): ?><div class="tab-pane fade<?= $tabIndex === 0 ? ' show active' : '' ?>" id="mc-ftab-<?= $tabIndex++ ?>"><?php endif ?>
+<?php if ($isStep): ?><div class="mc-step" data-step="<?= $stepIndex++ ?>"><?php endif ?>
 <div class="card mb-3<?= $isTab ? ' border-top-0 rounded-top-0' : '' ?>">
   <?php if ($sec_['title'] !== '' && !$isTab): ?><div class="card-header fw-semibold"><?= h($sec_['title']) ?></div><?php endif ?>
   <div class="card-body"><div class="row g-3">
@@ -44,10 +51,12 @@ $cancel = $master ? $app->url('view', ['t' => $master['table']->name, 'k' => $ma
   <?php endforeach ?>
   </div></div>
 </div>
-<?php if ($isTab): ?></div><?php endif ?>
+<?php if ($isTab || $isStep): ?></div><?php endif ?>
 <?php endforeach ?>
 <?php if ($tabs): ?></div><?php endif ?>
-<div class="d-flex flex-wrap gap-2 mc-form-buttons">
+<?php if ($steps): ?><div class="d-flex gap-2 mb-2 mc-step-nav"><button type="button" class="btn btn-outline-secondary mc-step-prev"><i class="bi bi-arrow-left"></i> <?= h(t('form.prev')) ?></button>
+  <button type="button" class="btn btn-primary mc-step-next"><?= h(t('form.next')) ?> <i class="bi bi-arrow-right"></i></button></div><?php endif ?>
+<div class="d-flex flex-wrap gap-2 mc-form-buttons<?= $steps ? ' mc-steps-save' : '' ?>">
   <?= \MiB\Buttons::html($t, $mode, false, $keys) ?>
   <?php if ($lockedBy === ''): ?>
   <button class="btn btn-primary" name="_next" value="list"><i class="bi bi-check-lg"></i> <?= h(t('btn.save')) ?></button>

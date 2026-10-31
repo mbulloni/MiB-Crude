@@ -104,3 +104,9 @@ td.mc-saved { background: color-mix(in srgb, var(--bs-success) 18%, transparent)
 .mc-hide-header .slim-header, .mc-hide-header .header.navbar, .mc-hide-header #header { display: none !important; }
 .mc-hide-footer .footer-wrapper, .mc-hide-footer .slim-footer, .mc-hide-footer #kt_app_footer { display: none !important; }
 .mc-region-footer { clear: both; }
+
+/* Forms in steps */
+.mc-steps .mc-step-dot { cursor: pointer; padding: .25rem .6rem; border-radius: 2rem; border: 1px solid var(--bs-border-color); color: var(--bs-secondary-color); font-size: .875rem; }
+.mc-steps .mc-step-dot .badge { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
+.mc-steps .mc-step-dot.active { border-color: var(--bs-primary); color: var(--bs-body-color); font-weight: 600; }
+.mc-steps .mc-step-dot.active .badge, .mc-steps .mc-step-dot.done .badge { background: var(--bs-primary); color: #fff; }

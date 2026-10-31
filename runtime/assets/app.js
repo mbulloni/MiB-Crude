@@ -589,3 +589,35 @@ document.addEventListener('click', function (e) {
       .catch(function (x) { btn.disabled = false; err.textContent = x.message; });
   });
 })();
+
+// Forms in steps: one step at a time, Next checks the fields of the step, the save buttons on the last step.
+document.querySelectorAll('form.mc-form').forEach(function (form) {
+  var steps = form.querySelectorAll('.mc-step');
+  if (!steps.length) return;
+  var dots = form.querySelectorAll('.mc-step-dot');
+  var prev = form.querySelector('.mc-step-prev');
+  var next = form.querySelector('.mc-step-next');
+  var save = form.querySelector('.mc-steps-save');
+  var cur = parseInt((form.querySelector('.mc-steps') || {}).getAttribute && form.querySelector('.mc-steps').getAttribute('data-start'), 10) || 0;
+  var show = function (i) {
+    cur = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach(function (s, n) { s.classList.toggle('d-none', n !== cur); });
+    dots.forEach(function (d, n) { d.classList.toggle('active', n === cur); d.classList.toggle('done', n < cur); });
+    prev.classList.toggle('invisible', cur === 0);
+    next.classList.toggle('d-none', cur === steps.length - 1);
+    save.classList.toggle('d-none', cur !== steps.length - 1);
+  };
+  var valid = function () {
+    var bad = Array.prototype.find.call(steps[cur].querySelectorAll('input, select, textarea'), function (el) { return el.willValidate && !el.checkValidity(); });
+    if (bad) { bad.classList.add('is-invalid'); bad.reportValidity(); return false; }
+    return true;
+  };
+  next.addEventListener('click', function () { if (valid()) { show(cur + 1); var f = steps[cur].querySelector('input, select, textarea'); if (f) f.focus(); } });
+  prev.addEventListener('click', function () { show(cur - 1); });
+  dots.forEach(function (d, n) { d.addEventListener('click', function () { if (n < cur || valid()) show(n <= cur + 1 ? n : cur + 1); }); });
+  // Enter in a field goes to the next step instead of saving
+  form.addEventListener('submit', function (e) { if (cur < steps.length - 1 && !e.submitter) { e.preventDefault(); next.click(); } }, true);
+  form.addEventListener('keydown', function (e) { if (e.key === 'Enter' && cur < steps.length - 1 && e.target.tagName === 'INPUT') { e.preventDefault(); next.click(); } });
+  form.addEventListener('input', function (e) { if (e.target.classList && e.target.checkValidity && e.target.checkValidity()) e.target.classList.remove('is-invalid'); });
+  show(cur);
+});

@@ -6,7 +6,7 @@ import { Btn, I, LangText, Select, Tabs, lbl } from './ui';
 
 type Page = 'edit' | 'add' | 'view';
 interface Block { type: 'html' | 'snippet'; html?: Record<string, string>; event?: string }
-interface Sec { title: Record<string, string>; style?: 'card' | 'tab'; columns?: number; fields: string[]; blocks?: Block[] }
+interface Sec { title: Record<string, string>; style?: 'card' | 'tab' | 'step'; columns?: number; fields: string[]; blocks?: Block[] }
 type Drag = { kind: 'field'; name: string; from: number } | { kind: 'new-html' } | { kind: 'new-snippet' } | null;
 
 const SPANS = [3, 4, 6, 8, 12];
@@ -110,9 +110,9 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
               <div key={si} className={`pd-section ${s.style === 'tab' ? 'tab' : ''} ${over === `${si}:` ? 'over' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setOver(`${si}:`); }} onDrop={(e) => { e.preventDefault(); dropField(si); }}>
                 <div className="pd-shead">
-                  <I n={s.style === 'tab' ? 'folder2' : 'card-heading'} />
+                  <I n={s.style === 'tab' ? 'folder2' : s.style === 'step' ? 'signpost-split' : 'card-heading'} />
                   <LangText value={s.title} onChange={(v) => write((secs) => { secs[si].title = v; })} />
-                  <Select value={s.style || 'card'} options={[['card', 'Riquadro'], ['tab', 'Scheda']]} onChange={(v) => write((secs) => { secs[si].style = v as any; })} />
+                  <Select value={s.style || 'card'} options={[['card', 'Riquadro'], ['tab', 'Scheda'], ['step', 'Passo (Avanti/Indietro)']]} onChange={(v) => write((secs) => { secs[si].style = v as any; })} />
                   <Select value={String(s.columns || '')} options={[['', `Colonne: ${cols}`], ['1', '1 colonna'], ['2', '2 colonne'], ['3', '3 colonne'], ['4', '4 colonne']]} onChange={(v) => write((secs) => { secs[si].columns = v ? Number(v) : undefined; })} />
                   <Btn small kind="ghost" icon="chevron-up" title="Sposta su" onClick={() => write((secs) => { if (si > 0) [secs[si - 1], secs[si]] = [secs[si], secs[si - 1]]; })} />
                   <Btn small kind="ghost" icon="chevron-down" title="Sposta giù" onClick={() => write((secs) => { if (si < secs.length - 1) [secs[si + 1], secs[si]] = [secs[si], secs[si + 1]]; })} />

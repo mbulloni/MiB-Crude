@@ -87,6 +87,8 @@ test.before(async () => {
   orders.api = { enabled: true, methods: ['list', 'view', 'add', 'edit', 'delete'] };
   orders.pages.list.filterPanel = true;
   orders.pages.list.inlineEdit = true;
+  // product add page in two steps
+  proj.tables.find((t) => t.name === 'products').layout = { add: { sections: [{ title: { it: 'Prodotto' }, style: 'step', fields: ['name'] }, { title: { it: 'Prezzo' }, style: 'step', fields: ['price'] }] } };
   const cats = proj.tables.find((t) => t.name === 'categories');
   cats.pages.list.inlineAdd = true;
   cats.fields.find((f) => f.name === 'name').validation = { ...(cats.fields.find((f) => f.name === 'name').validation || {}), required: true };
@@ -634,4 +636,18 @@ test('inline add: row above the list, events and validation, JSON answer', async
   await u.post('?p=login', { _csrf: u.csrf(r.text), username: 'luca', password: 'Password1' });
   r = await u.req('?p=list&t=customers');
   assert.doesNotMatch(r.text, /mc-ia-open/);
+});
+
+test('add page in steps: indicator, one section per step, save buttons on the last one', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  r = await c.req('?p=add&t=products');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual((r.text.match(/class="mc-step" data-step="\d"/g) || []).length, 2);
+  assert.match(r.text, /mc-step-dot" data-step="0"><span class="badge rounded-pill">1<\/span> Prodotto/);
+  assert.match(r.text, /mc-step-next/);
+  assert.match(r.text, /mc-form-buttons mc-steps-save/);
+  // the edit page keeps the normal layout
+  assert.doesNotMatch((await c.req('?p=edit&t=products&k[id]=1')).text, /mc-step-next/);
 });

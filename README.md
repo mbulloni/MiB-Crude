@@ -14,6 +14,7 @@ Parti da un database esistente (MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, S
 - **Viste della lista**: calendario, kanban, galleria, mappa; modifica in linea; nuovo/modifica in finestra; campi QR code e firma
 - **Page designer** a sezioni (riquadri o schede, colonne, larghezze per campo) con blocchi HTML e snippet PHP
 - **Eventi PHP** (BeforeAdd, AfterEdit, BeforeSelect, CustomValidate…) con editor Monaco, controllo sintassi, azioni predefinite e **Assistente AI** (Claude: scrive o modifica l'evento conoscendo tabelle e campi del progetto, controlla la sintassi con `php -l`; chiave API cifrata nel portachiavi di sistema)
+- **Pagine a passi**: nel designer delle pagine una sezione può essere un «Passo»; Nuovo e Modifica mostrano un passo alla volta con Avanti/Indietro, controllo dei campi obbligatori del passo e salvataggio all'ultimo
 - **Aggiunta in linea**: pulsante «Aggiungi riga» nella lista per inserire record senza aprire la pagina Nuovo (eventi, validazione e valori predefiniti come la pagina Nuovo)
 - **Report a campi incrociati (crosstab)**: righe = raggruppamenti, colonne = valori di un campo (anche per anno, trimestre, mese…), totali di riga e di colonna, clic su una cella per aprire la lista filtrata, esportazione XLSX
 - **Aspetto scelto dall'utente**: con i temi Material Admin e Slim ogni utente cambia colori o posizione del menu dal pulsante con la tavolozza nell'intestazione
