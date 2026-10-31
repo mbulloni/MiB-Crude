@@ -1,6 +1,6 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.2.0 (2026-10-30): tutti i punti della roadmap iniziale implementati e testati; restano i limiti sotto.
+Stato v0.3.0 (2026-10-31): roadmap iniziale completa (v0.2.0) e origini REST complete; restano i limiti sotto.
 
 ## Fatto (v0.2.0, 2026-10-30)
 1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
@@ -19,7 +19,7 @@ Stato v0.2.0 (2026-10-30): tutti i punti della roadmap iniziale implementati e t
 18. Pulsanti personalizzati phpr (OnBefore/OnServer/OnAfter).
 19. Import/export tabelle in ZIP; origini dati REST.
 
-## Dopo v0.2.0
+## Fatto (v0.3.0, 2026-10-31)
 - Origini REST complete (2026-10-31): paginazione dell'API (numero di pagina o scostamento, totale, ricerca e ordinamento delegati all'API), lookup verso tabelle REST da tabelle SQL e REST (anche a cascata, modello `{campo} ({campo})`), pannello filtri, controllo valori unici, importazione, report, grafici e dashboard su origini REST; paginazione modificabile anche dopo la creazione (scheda Generale della tabella).
 
 ## Limiti aperti
