@@ -1,6 +1,6 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.6.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1), filtri REST all'API e strato AnyChart completo (v0.6.0); restano i limiti sotto.
+Stato v0.7.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1), filtri REST all'API e strato AnyChart completo (v0.6.0), modifica selezionati, notifiche, clic sui grafici e PDF (v0.7.0); restano i limiti sotto.
 
 ## Fatto (v0.2.0, 2026-10-30)
 1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
@@ -42,7 +42,7 @@ Stato v0.6.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 - PDF: solo i caratteri di Windows-1252 (gli altri, per esempio cirillico, greco o emoji, diventano «?»); le immagini dei campi non sono incluse; testi troppo lunghi per la colonna vengono troncati con «…» (nella vista del record vanno a capo).
 - Strato AnyChart: impilamento dei valori e al 100% (`stackMode`), marcatori delle linee, etichette esterne delle torte (`outsideLabelsCriticalAngle`), stringhe di formato AnyChart (`{%Value}{decimalsCount:2,groupsSeparator:.}`, `{%PercentValue}`, `{%SeriesName}`) in etichette, tooltip e assi, `anychart.format.number` con opzioni; nessuna chiamata dei progetti reali resta ignorata (2026-10-31).
 
-## Dopo v0.6.0
+## Fatto (v0.7.0, 2026-10-31)
 - **Modifica selezionati** ("Update selected" di phpr): pulsante nella lista, campi da cambiare scelti con una spunta, ogni record passa da blocco, validazione, eventi BeforeEdit/AfterEdit, valori automatici e registro attività; opzione della pagina lista nel designer.
 - **Notifiche** (phpr 10.7): `addNotification($message, $title, $icon, $url, $expire, $user, $newWindow)`, campanella nell'intestazione di tutti i temi, sezione Amministrazione › Notifiche; tabelle di sistema `mc_notifications` e `mc_notif_seen` (schema 3) provate su MariaDB, PostgreSQL, SQLite, SQL Server e Oracle.
 - **Grafici con clic**: barra, punto o fetta aprono la lista filtrata (valore esatto o intervallo di date di anno, trimestre, mese, settimana, giorno).
