@@ -1,6 +1,6 @@
 # Roadmap — gap rispetto a generatori classici
 
-Stato v0.5.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0); restano i limiti sotto.
+Stato v0.5.1 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST complete (v0.3.0), temi Slim e Webarch (v0.4.0), correzione import eventi (v0.4.1), skin scura Webarch (v0.4.2), tema Material Admin (v0.5.0), riconnessione al server del team (v0.5.1); restano i limiti sotto.
 
 ## Fatto (v0.2.0, 2026-10-30)
 1. Test end-to-end su tutti i database: MariaDB, PostgreSQL, SQL Server, Oracle, SQLite (`npm run test:db`, container Docker in docs/TESTING.md).
@@ -33,6 +33,9 @@ Stato v0.5.0 (2026-10-31): roadmap iniziale completa (v0.2.0), origini REST comp
 
 ## Fatto (v0.5.0, 2026-10-31)
 - Adattatore Material Design Admin (AngularJS 1 + Angular Material + Bootstrap 3): intestazione e menu laterale riscritti in PHP senza AngularJS, dal main.css del template restano solo ui.css e app.css; combinazioni di colori del personalizzatore (barra scura, logo blu, intestazione blu con barra chiara, menu orizzontale), menu ridotto alle icone, menu a scomparsa su mobile, skin scura aggiunta (2026-10-31).
+
+## Fatto (v0.5.1, 2026-10-31)
+- Server del team: dopo una riconnessione la chiusura asincrona del vecchio socket non annulla più le richieste della nuova connessione né segna il designer come disconnesso (era anche il test instabile della suite).
 
 ## Limiti aperti
 - Query SQL del progetto reale di prova non provate in esecuzione: richiedono i database di produzione del progetto (non raggiungibili dall'ambiente di sviluppo).
