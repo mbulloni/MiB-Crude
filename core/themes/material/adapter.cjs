@@ -31,6 +31,10 @@ module.exports = {
   dir: 'material',
   SKINS,
   templateCss,
+  /** Options the users can change in the app (same CSS, other classes). */
+  choices() {
+    return [{ key: 'skin', label: { it: 'Colori', en: 'Colours' }, values: Object.entries(SKINS).map(([id, [label, set]]) => ({ id, label: { it: label }, set: { skin: id, horizontal: false, ...set } })) }];
+  },
   detect(dir) {
     const main = path.join(dir, 'styles', 'main.css');
     if (path.basename(dir) !== 'dist' || !fs.existsSync(main) || !fs.existsSync(path.join(dir, 'app', 'layout', 'sidebar.html'))) return null;

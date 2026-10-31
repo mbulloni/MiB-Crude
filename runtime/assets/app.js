@@ -536,3 +536,17 @@ document.addEventListener('submit', function (e) {
     input.value = JSON.stringify(q);
   } catch (x) { /* keep the search from the address */ }
 }, true);
+
+// Theme customizer (user menu): the user's choice in a cookie read by the layout, then a reload.
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('.mc-choice, .mc-choice-reset');
+  if (!b) return;
+  var box = b.closest('.mc-customizer');
+  var name = box.getAttribute('data-cookie');
+  var cur = {};
+  try { var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)')); if (m) cur = JSON.parse(decodeURIComponent(m[1])) || {}; } catch (x) { cur = {}; }
+  if (b.classList.contains('mc-choice-reset')) cur = {};
+  else cur[b.getAttribute('data-key')] = b.getAttribute('data-value');
+  document.cookie = name + '=' + encodeURIComponent(JSON.stringify(cur)) + '; path=/; max-age=31536000; samesite=lax';
+  location.reload();
+});

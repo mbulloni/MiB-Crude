@@ -77,6 +77,7 @@ export default function ThemesSection() {
       {curAuth && !themes.some((t) => t.id === curAuth) && <p className="warn"><I n="exclamation-triangle" /> Il tema "{curAuth}" non è installato su questo computer.</p>}
       {cur && !themes.some((t) => t.id === cur) && <p className="warn"><I n="exclamation-triangle" /> Il tema "{cur}" scelto per il progetto non è installato su questo computer: importalo per generare l'applicazione.</p>}
       {cur && <Row label="Colore principale"><Check value={!!(p.project.theme as any).primaryOverride} onChange={(v) => update((d) => { (d.project.theme as any).primaryOverride = v; })} label="Usa il colore scelto sopra invece di quello del tema" /></Row>}
+      {cur && <Row label="Personalizzazione" hint="Material Admin: colori; Slim: menu laterale o orizzontale. Ogni utente sceglie dal pulsante con la tavolozza nell'intestazione; la scelta resta nel suo browser"><Check value={p.project.theme.userChoices !== false} onChange={(v) => update((d) => { d.project.theme.userChoices = v; })} label="Gli utenti possono cambiare l'aspetto del tema" /></Row>}
       {dlg && <ImportDialog onClose={() => setDlg(false)} onDone={reload} />}
     </Section>
   );

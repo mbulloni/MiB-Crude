@@ -337,6 +337,34 @@ class Theme
         return isset($app->config['theme'][$key]['id']) ? $app->config['theme'][$key] : null;
     }
 
+    /**
+     * Options of the theme: the project's, then the user's choices (cookie mc_theme_<app>, set by the theme
+     * customizer of the user menu) when the theme offers them; unknown values are ignored.
+     */
+    public static function options(App $app, $key = 'pack')
+    {
+        $pack = self::pack($app, $key);
+        $o = $pack && isset($pack['options']) ? $pack['options'] : [];
+        $mine = json_decode(isset($_COOKIE[self::cookie($app)]) ? (string)$_COOKIE[self::cookie($app)] : '', true);
+        if (!is_array($mine) || !$pack) return $o;
+        foreach (self::choices($app, $key) as $c) {
+            if (!isset($mine[$c['key']])) continue;
+            foreach ($c['values'] as $v) if ((string)$v['id'] === (string)$mine[$c['key']]) $o = array_merge($o, $v['set']);
+        }
+        return $o;
+    }
+
+    public static function choices(App $app, $key = 'pack')
+    {
+        $pack = self::pack($app, $key);
+        return $pack && !empty($pack['choices']) ? $pack['choices'] : [];
+    }
+
+    public static function cookie(App $app)
+    {
+        return 'mc_theme_' . substr(md5($app->root), 0, 8);
+    }
+
     private static function url(App $app, $path)
     {
         $f = $app->root . '/' . $path;

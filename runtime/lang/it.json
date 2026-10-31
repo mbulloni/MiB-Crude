@@ -273,6 +273,8 @@
  "task.schedule": "Pianificazione",
  "task.task": "Attività",
  "task.title": "Attività pianificate",
+ "theme.customize": "Personalizza l'aspetto",
+ "theme.reset": "Aspetto predefinito",
  "theme.toggle": "Tema chiaro/scuro",
  "updsel.apply": "Applica a {0} record",
  "updsel.help": "Spunta i campi da cambiare (si spuntano da soli quando li modifichi): gli altri campi restano come sono in ogni record.",

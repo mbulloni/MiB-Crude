@@ -14,6 +14,7 @@ Parti da un database esistente (MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, S
 - **Viste della lista**: calendario, kanban, galleria, mappa; modifica in linea; nuovo/modifica in finestra; campi QR code e firma
 - **Page designer** a sezioni (riquadri o schede, colonne, larghezze per campo) con blocchi HTML e snippet PHP
 - **Eventi PHP** (BeforeAdd, AfterEdit, BeforeSelect, CustomValidate…) con editor Monaco, controllo sintassi, azioni predefinite e **Assistente AI** (Claude: scrive o modifica l'evento conoscendo tabelle e campi del progetto, controlla la sintassi con `php -l`; chiave API cifrata nel portachiavi di sistema)
+- **Aspetto scelto dall'utente**: con i temi Material Admin e Slim ogni utente cambia colori o posizione del menu dal pulsante con la tavolozza nell'intestazione
 - **Cerca nel progetto** (pulsante Cerca o Ctrl+Maiusc+F): tabelle, campi, lookup, SQL, codice degli eventi (con il numero di riga), menu, report, grafici, dashboard, traduzioni, intestazione/piè/menu, attività pianificate e modelli email; un clic apre il pannello del risultato
 - **Annulla / ripeti** nel designer: pulsanti nella barra in alto, Ctrl+Z e Ctrl+Y (o Ctrl+Maiusc+Z), fino a 100 passi; la digitazione continua in un campo conta come un passo
 - **Geocodifica** della vista mappa: coordinate calcolate dall'indirizzo (campo o modello `{via}, {cap} {citta}`) con OpenStreetMap Nominatim (anche un server aziendale) o Google, al salvataggio, con il pulsante «Geocodifica» sopra la mappa o con `Geocode::fill('tabella')` in un'attività pianificata

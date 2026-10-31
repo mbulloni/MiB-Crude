@@ -2,7 +2,8 @@
 /** Slim shell (ThemePixels markup): sidebar or horizontal navbar. @var \MiB\App $app */
 $cfg = $app->config;
 $pack = \MiB\Theme::pack($app);
-$horizontal = isset($pack['options']['menu']) && $pack['options']['menu'] === 'horizontal';
+$opt = \MiB\Theme::options($app);
+$horizontal = isset($opt['menu']) && $opt['menu'] === 'horizontal';
 $home = $app->url('home', ['menu' => 1]);
 $icon = function ($it) { return '<i class="bi bi-' . h(!empty($it['icon']) ? $it['icon'] : 'dot') . '"></i>'; };
 $target = function ($it) { return !empty($it['newWindow']) ? ' target="_blank"' : ''; };

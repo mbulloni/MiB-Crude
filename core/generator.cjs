@@ -194,7 +194,9 @@ function generate(proj, opts = {}) {
     copied += copyDir(layouts, path.join(out, 'theme', packId, 'layouts'), (s) => mine(s) && !s.endsWith('.php'));
     copied += copyDir(layouts, path.join(out, 'runtime', 'themes', packId), (s) => s.endsWith('.php'));
     const m = th.manifest;
-    return { id: packId, kind: m.kind || 'app', css: m.css, js: m.js, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {} };
+    // options each user can change in the app (theme customizer), when the adapter allows it and the project does not turn it off
+    const choices = adapter && adapter.choices && (proj.project.theme || {}).userChoices !== false ? adapter.choices() : [];
+    return { id: packId, kind: m.kind || 'app', css: m.css, js: m.js, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {}, choices };
   };
   const themePack = installTheme(proj.project.theme && proj.project.theme.pack);
   const authPack = installTheme(proj.project.theme && proj.project.theme.authPack);

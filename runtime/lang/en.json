@@ -273,6 +273,8 @@
  "task.schedule": "Schedule",
  "task.task": "Task",
  "task.title": "Scheduled tasks",
+ "theme.customize": "Customize the look",
+ "theme.reset": "Default look",
  "theme.toggle": "Light/dark theme",
  "updsel.apply": "Apply to {0} records",
  "updsel.help": "Tick the fields to change (they are ticked automatically when you edit them): the other fields of each record stay as they are.",

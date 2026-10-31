@@ -14,6 +14,10 @@ module.exports = {
   id: 'slim',
   name: 'Slim (ThemePixels)',
   dir: 'slim',
+  /** Options the users can change in the app (same CSS, other markup). */
+  choices() {
+    return [{ key: 'menu', label: { it: 'Menu', en: 'Menu' }, values: [{ id: 'sidebar', label: { it: 'Laterale', en: 'Sidebar' }, set: { menu: 'sidebar' } }, { id: 'horizontal', label: { it: 'Orizzontale', en: 'Horizontal' }, set: { menu: 'horizontal' } }] }];
+  },
   detect(dir) {
     if (!fs.existsSync(path.join(dir, 'css', 'slim.css')) || !fs.existsSync(path.join(dir, 'sidebar', 'blank.html'))) return null;
     const head = fs.readFileSync(path.join(dir, 'css', 'slim.css'), 'utf8').slice(0, 200);

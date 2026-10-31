@@ -66,3 +66,52 @@ test('templates are recognised, installed and used by the generator', { skip: !f
   fs.rmSync(lib, { recursive: true, force: true });
   fs.rmSync(path.dirname(dir), { recursive: true, force: true });
 });
+
+test('theme customizer: the user changes colours and menu, unknown values ignored', { skip: !fs.existsSync(SRC) && 'cartella Template non presente' }, async () => {
+  const { spawn } = require('node:child_process');
+  const { found } = T.scan(SRC);
+  const lib = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lib-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-thc-'));
+  for (const [adapter, variant] of [['material', 'dark'], ['slim', 'sidebar']]) {
+    const m = T.install(found.find((f) => f.adapter === adapter), variant, lib);
+    const dir = path.join(root, adapter);
+    const proj = P.createProject(dir, 'x');
+    proj.connections.push({ id: 'main', name: 'x', driver: 'sqlite', file: path.join(dir, 'x.db') });
+    proj.project.theme.pack = m.id;
+    const out = G.generate(proj, { themesDir: lib, outDir: path.join(dir, 'out') }).outDir;
+    const port = 19300 + Math.floor(Math.random() * 90);
+    const srv = spawn(process.env.MIBCRUDE_PHP_BIN || 'php', ['-S', `127.0.0.1:${port}`, '-t', out], { stdio: 'ignore' });
+    try {
+      for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${port}/`); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
+      const page = async (cookie) => {
+        const r = await fetch(`http://127.0.0.1:${port}/index.php?p=home&menu=1`, { headers: cookie ? { cookie } : {} });
+        const html = await r.text();
+        // one whole page: an error in the layout would render the error page after a half page
+        assert.strictEqual(r.status, 200, html.slice(0, 300));
+        assert.strictEqual((html.match(/<!doctype/gi) || []).length, 1, `${adapter}: the layout broke`);
+        assert.match(html, /<\/html>\s*$/);
+        return html;
+      };
+      let html = await page();
+      const name = (html.match(/class="nav-item dropdown mc-customizer" data-cookie="([^"]+)"/) || [])[1];
+      assert.ok(name, `${adapter}: customizer in the user menu`);
+      const set = (o) => `${name}=${encodeURIComponent(JSON.stringify(o))}`;
+      if (adapter === 'material') {
+        assert.match(html, /id="mcMdMin"/, 'sidebar layout');
+        html = await page(set({ skin: 'horizontal' }));
+        assert.doesNotMatch(html, /id="mcMdMin"/, 'horizontal menu chosen by the user');
+        assert.match(html, /mc-choice active" data-key="skin" data-value="horizontal"/);
+        html = await page(set({ skin: 'light' }));
+        assert.match(html, /id="mcMdMin"/, 'back to a sidebar skin');
+        html = await page(set({ skin: '<script>' }));
+        assert.match(html, /mc-choice active" data-key="skin" data-value="dark"/, 'unknown value: the project skin');
+      } else {
+        assert.match(html, /mc-slim-sidebar/);
+        html = await page(set({ menu: 'horizontal' }));
+        assert.match(html, /mc-slim-horizontal/);
+      }
+    } finally { srv.kill(); }
+  }
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(lib, { recursive: true, force: true });
+});

@@ -2,7 +2,7 @@
 /** Material Design Admin shell: the markup AngularJS renders from header.html and sidebar.html. @var \MiB\App $app */
 $cfg = $app->config;
 $pack = \MiB\Theme::pack($app);
-$o = isset($pack['options']) ? $pack['options'] : [];
+$o = \MiB\Theme::options($app);
 $horizontal = !empty($o['horizontal']);
 $home = $app->url('home', ['menu' => 1]);
 $menuHtml = function ($items, $sub = false) use (&$menuHtml, $horizontal) {
