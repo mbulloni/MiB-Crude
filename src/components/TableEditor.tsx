@@ -75,8 +75,9 @@ export default function TableEditor({ name }: { name: string }) {
             <Row label="Percorso record" hint="{campo} = valore della chiave. Vuoto = percorso elenco/{chiave}"><Text value={t.source.itemPath} onChange={(v) => set((x) => { x.source.itemPath = v; })} mono /></Row>
             <Row label="Modifica con"><Select value={t.source.updateMethod || 'PUT'} options={[['PUT', 'PUT (record completo)'], ['PATCH', 'PATCH (solo campi cambiati)']]} onChange={(v) => set((x) => { x.source.updateMethod = v; })} /></Row>
             <RestPagingFields value={t.source.paging} onChange={(v) => set((x) => { if (v) x.source.paging = v; else delete x.source.paging; })} />
-            <RestSourceOptions filterMode={t.source.filterMode} cacheSeconds={t.source.cacheSeconds} onChange={(patch) => set((x) => {
+            <RestSourceOptions filterMode={t.source.filterMode} filterOps={t.source.filterOps} cacheSeconds={t.source.cacheSeconds} onChange={(patch) => set((x) => {
               if ('filterMode' in patch) { if (patch.filterMode) x.source.filterMode = patch.filterMode; else delete x.source.filterMode; }
+              if ('filterOps' in patch) { if (patch.filterOps && Object.keys(patch.filterOps).length) x.source.filterOps = patch.filterOps; else delete x.source.filterOps; }
               if ('cacheSeconds' in patch) { if (patch.cacheSeconds) x.source.cacheSeconds = patch.cacheSeconds; else delete x.source.cacheSeconds; }
             })} />
           </> : <Row label="Tabella"><Text value={t.source.table} onChange={(v) => set((x) => { x.source.table = v; })} mono /></Row>}

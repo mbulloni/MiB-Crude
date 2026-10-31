@@ -167,7 +167,7 @@ function RestDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: strin
   const p = useStore((s) => s.proj)!;
   const rest = p.connections.filter((c) => c.driver === 'rest');
   const [conn, setConn] = useState(rest.some((c) => c.id === conn0) ? conn0 : rest[0]?.id || '');
-  const [o, setO] = useState<{ name: string; path: string; dataPath: string; key: string; itemPath: string; updateMethod: string; readOnly: boolean; paging?: RestPaging; filterMode?: '' | 'equals'; cacheSeconds?: number }>({ name: '', path: '', dataPath: '', key: '', itemPath: '', updateMethod: 'PUT', readOnly: false });
+  const [o, setO] = useState<{ name: string; path: string; dataPath: string; key: string; itemPath: string; updateMethod: string; readOnly: boolean; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number }>({ name: '', path: '', dataPath: '', key: '', itemPath: '', updateMethod: 'PUT', readOnly: false });
   const [prev, setPrev] = useState<{ dataPath: string; rows: any[]; columns: { name: string }[]; total: number } | null>(null);
   const s = (patch: Partial<typeof o>) => setO({ ...o, ...patch });
   const preview = () => run('Lettura dal servizio…', async () => {
@@ -195,7 +195,7 @@ function RestDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: strin
       <Row label="Modifica con"><span className="inline"><Select value={o.updateMethod} options={[['PUT', 'PUT (record completo)'], ['PATCH', 'PATCH (solo campi cambiati)']]} onChange={(v) => s({ updateMethod: v })} />
         <Check label="Sola lettura" value={o.readOnly} onChange={(v) => s({ readOnly: v })} /></span></Row>
       <RestPagingFields value={o.paging} onChange={(v) => s({ paging: v })} />
-      <RestSourceOptions filterMode={o.filterMode} cacheSeconds={o.cacheSeconds} onChange={(patch) => s(patch)} />
+      <RestSourceOptions filterMode={o.filterMode} filterOps={o.filterOps} cacheSeconds={o.cacheSeconds} onChange={(patch) => s(patch)} />
       {prev && <><p className="help">{prev.total} record letti, {cols.length} campi{prev.dataPath ? ` (dati in "${prev.dataPath}")` : ''}.</p>
         <div className="preview-table"><table className="grid"><thead><tr>{cols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
           <tbody>{prev.rows.slice(0, 10).map((r, i) => <tr key={i}>{cols.map((c) => <td key={c}>{String(r[c] ?? '')}</td>)}</tr>)}</tbody></table></div></>}

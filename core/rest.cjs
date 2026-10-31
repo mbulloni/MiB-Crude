@@ -77,6 +77,7 @@ async function addRestView(proj, conn, secret, opts) {
   ds.source = { type: 'rest', path: opts.path, dataPath: s.dataPath, itemPath: opts.itemPath || '', itemDataPath: opts.itemDataPath || '', updateMethod: opts.updateMethod || 'PUT' };
   if (opts.paging && opts.paging.mode) ds.source.paging = opts.paging;
   if (opts.filterMode) ds.source.filterMode = opts.filterMode;
+  if (opts.filterMode === 'custom' && opts.filterOps && Object.keys(opts.filterOps).length) ds.source.filterOps = opts.filterOps;
   if (opts.cacheSeconds > 0) ds.source.cacheSeconds = Number(opts.cacheSeconds);
   ds.keys = key ? [key] : [];
   ds.readOnly = !!opts.readOnly || !key;

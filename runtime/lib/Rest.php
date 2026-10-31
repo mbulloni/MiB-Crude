@@ -235,39 +235,84 @@ class Rest
     }
 
     /**
+     * Filter syntax of the API (source.filterMode): op => [parameter template with {field}, exact]. An exact
+     * parameter selects the same records as the app; an inexact one only narrows them (the app checks again).
+     *   equals       ?campo=valore
+     *   json-server  campo, campo_ne, campo_like, campo_gte, campo_lte
+     *   strapi       filters[campo][$eq], [$ne], [$containsi], [$startsWithi], [$gt], [$lt], [$gte], [$lte], [$in][], [$null], [$notNull]
+     *   custom       source.filterOps: {op: template} for equals, in, notequals, contains, starts, more, less, from, to, empty, notempty
+     */
+    private static function filterOps(Table $t)
+    {
+        $s = $t->def['source'];
+        switch (isset($s['filterMode']) ? $s['filterMode'] : '') {
+            case 'equals': return ['equals' => ['{field}', true], 'in' => ['{field}', true]];
+            case 'json-server': return ['equals' => ['{field}', true], 'in' => ['{field}', true], 'notequals' => ['{field}_ne', true], 'contains' => ['{field}_like', false],
+                'from' => ['{field}_gte', true], 'to' => ['{field}_lte', true], 'more' => ['{field}_gte', false], 'less' => ['{field}_lte', false]];
+            case 'strapi':
+                $f = function ($op) { return ['filters[{field}][' . $op . ']', true]; };
+                return ['equals' => $f('$eq'), 'in' => ['filters[{field}][$in][]', true], 'notequals' => $f('$ne'), 'contains' => $f('$containsi'), 'starts' => $f('$startsWithi'),
+                    'more' => $f('$gt'), 'less' => $f('$lt'), 'from' => $f('$gte'), 'to' => $f('$lte'), 'empty' => $f('$null'), 'notempty' => $f('$notNull')];
+            case 'custom':
+                $out = [];
+                foreach (isset($s['filterOps']) && is_array($s['filterOps']) ? $s['filterOps'] : [] as $op => $tpl) if (is_string($tpl) && $tpl !== '') $out[$op] = [$tpl, true];
+                return $out;
+        }
+        return [];
+    }
+
+    /**
      * Conditions of a request the API can apply itself: ['params' => query parameters,
      * 'complete' => every condition is among them]. Field names come from the table definition only.
      */
     private static function apiFilters(Table $t, array $req)
     {
-        $eq = isset($t->def['source']['filterMode']) && $t->def['source']['filterMode'] === 'equals';
+        $ops = self::filterOps($t);
         $pg = self::paging($t);
         $params = [];
         $complete = true;
-        $add = function ($field, $v) use ($t, $eq, &$params, &$complete) {
-            // Two conditions on the same field would be an AND: not expressible with repeated parameters.
-            if (!$eq || !$t->field($field) || isset($params[$field])) { $complete = false; return; }
-            $params[$field] = is_array($v) && count($v) === 1 ? reset($v) : $v;
+        // one condition: parameter from the template; two on the same parameter would be an AND: not expressible
+        $add = function ($op, $field, $v) use ($t, $ops, &$params, &$complete) {
+            if (!isset($ops[$op]) || !$t->field($field)) { $complete = false; return; }
+            $name = str_replace('{field}', $field, $ops[$op][0]);
+            if (isset($params[$name])) { $complete = false; return; }
+            $params[$name] = is_array($v) && count($v) === 1 ? reset($v) : $v;
+            if (!$ops[$op][1]) $complete = false;
         };
-        if (!empty($req['master'])) foreach ($req['master'] as $c => $v) $add($c, (string)$v);
+        $eq = function ($field, $v) use ($add, $ops) {
+            if (is_array($v) && count($v) > 1) $add(isset($ops['in']) ? 'in' : 'none', $field, $v);
+            else $add('equals', $field, is_array($v) ? (string)reset($v) : $v);
+        };
+        if (!empty($req['master'])) foreach ($req['master'] as $c => $v) $eq($c, (string)$v);
         $own = $t->app->security->ownership($t->name);
-        if ($own) $add($own['field'], (string)userId());
+        if ($own) $eq($own['field'], (string)userId());
         $q = isset($req['q']) ? trim((string)$req['q']) : '';
         if ($q !== '') {
             if ($pg && !empty($pg['searchParam'])) $params[$pg['searchParam']] = $q;
             else $complete = false;
         }
         if (!empty($req['f']) && is_array($req['f'])) foreach ($req['f'] as $name => $vals) {
-            if (is_array($vals) && $vals) $add($name, array_values(array_map('strval', $vals)));
+            if (is_array($vals) && $vals) $eq($name, array_values(array_map('strval', $vals)));
         }
         if (!empty($req['s']) && is_array($req['s'])) foreach ($req['s'] as $name => $c) {
             if (!is_array($c)) continue;
             $op = isset($c['op']) ? $c['op'] : 'contains';
             $v = isset($c['v']) ? $c['v'] : '';
-            if (is_array($v)) { $v = array_values(array_filter($v, 'strlen')); if ($v) $add($name, $v); continue; }
-            if (in_array($op, ['empty', 'notempty'], true)) { $complete = false; continue; }
+            $v2 = isset($c['v2']) ? (string)$c['v2'] : '';
+            if (is_array($v)) { $v = array_values(array_filter($v, 'strlen')); if ($v) $eq($name, $v); continue; }
+            if ($op === 'empty' || $op === 'notempty') { $add($op, $name, 'true'); continue; }
             if ($v === '') continue;
-            if ($op === 'equals') $add($name, (string)$v); else $complete = false;
+            if ($op === 'equals') { $eq($name, (string)$v); continue; }
+            if ($op === 'between') {
+                $add('from', $name, (string)$v);
+                // a date alone means the whole day for the app: the API would stop at midnight
+                if ($v2 !== '' && strlen($v2) === 10) $complete = false;
+                elseif ($v2 !== '') $add('to', $name, $v2);
+                continue;
+            }
+            // a "like" parameter of json-server is a regular expression: plain words only
+            if ($op === 'contains' && isset($ops['contains']) && !$ops['contains'][1] && !preg_match('/^[\p{L}\p{N} _-]+$/u', (string)$v)) { $complete = false; continue; }
+            $add($op, $name, (string)$v);
         }
         return ['params' => $params, 'complete' => $complete];
     }

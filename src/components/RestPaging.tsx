@@ -23,10 +23,18 @@ export default function RestPagingFields({ value, onChange }: { value: RestPagin
 }
 
 /** Source options that do not depend on paging: filters sent to the API, response cache. */
-export function RestSourceOptions({ filterMode, cacheSeconds, onChange }: { filterMode?: string; cacheSeconds?: number; onChange: (patch: { filterMode?: '' | 'equals'; cacheSeconds?: number }) => void }) {
+export type FilterMode = '' | 'equals' | 'json-server' | 'strapi' | 'custom';
+const OPS: [string, string][] = [['equals', 'uguale'], ['in', 'uno dei valori'], ['notequals', 'diverso'], ['contains', 'contiene'], ['starts', 'inizia con'], ['more', 'maggiore'], ['less', 'minore'], ['from', 'da (≥)'], ['to', 'a (≤)'], ['empty', 'vuoto'], ['notempty', 'non vuoto']];
+
+export function RestSourceOptions({ filterMode, filterOps, cacheSeconds, onChange }: { filterMode?: string; filterOps?: Record<string, string>; cacheSeconds?: number; onChange: (patch: { filterMode?: FilterMode; filterOps?: Record<string, string>; cacheSeconds?: number }) => void }) {
+  const ops = filterOps || {};
   return <>
-    <Row label="Filtri all'API" hint="Se l'API filtra con ?campo=valore (più valori: campo=a&campo=b), master-dettaglio, pannello filtri, ricerche 'uguale a' e record per utente sono chiesti all'API: si leggono solo i record che servono, anche per totali, report e grafici">
-      <Select value={(filterMode || '') as '' | 'equals'} options={[['', 'No: filtra l\'app'], ['equals', 'Sì: ?campo=valore']]} onChange={(v) => onChange({ filterMode: v })} /></Row>
+    <Row label="Filtri all'API" hint="Le condizioni (master-dettaglio, pannello filtri, ricerca avanzata, record per utente) vengono chieste all'API nella sua sintassi: si leggono solo i record che servono, anche per totali, report e grafici; con condizioni tutte esatte anche la paginazione resta all'API">
+      <Select value={(filterMode || '') as FilterMode} options={[['', 'No: filtra l\'app'], ['equals', 'Solo uguale: ?campo=valore'], ['json-server', 'json-server: campo, campo_ne, campo_like, campo_gte, campo_lte'], ['strapi', 'Strapi: filters[campo][$eq], $containsi, $gt, $lt…'], ['custom', 'Personalizzata (modelli per operatore)']]}
+        onChange={(v) => onChange({ filterMode: v })} /></Row>
+    {filterMode === 'custom' && <Row label="Parametri per operatore" hint="Nome del parametro con {field} = campo, es. {field}[gt] o filter.{field}.contains; il valore è quello cercato (vuoto/non vuoto: true). Operatori senza modello: filtra l'app">
+      <table className="grid small"><tbody>{OPS.map(([op, label]) => <tr key={op}><td>{label}</td><td>
+        <Text value={ops[op]} onChange={(v) => { const n = { ...ops, [op]: v }; if (!v) delete n[op]; onChange({ filterOps: n }); }} mono placeholder={op === 'equals' || op === 'in' ? '{field}' : `{field}_${op}`} /></td></tr>)}</tbody></table></Row>}
     <Row label="Cache delle risposte" hint="Secondi per cui l'app riusa le risposte dell'API (0 = sempre aggiornate); svuotata a ogni inserimento, modifica o eliminazione fatti dall'app">
       <Num value={cacheSeconds || 0} min={0} onChange={(v) => onChange({ cacheSeconds: v === '' ? 0 : v })} /></Row>
   </>;
