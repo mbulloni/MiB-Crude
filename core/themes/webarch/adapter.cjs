@@ -20,11 +20,30 @@ module.exports = {
     const variants = Object.entries(THEMES).filter(([, [f]]) => fs.existsSync(path.join(dir, 'webarch', 'css', f))).map(([id, [, label]]) => ({ id, label }));
     return { root: dir, name: `Webarch ${version}`, slug: `webarch${version.split('.')[0]}`, variants };
   },
+  /**
+   * Every colour as webarch/css/webarch-<id>.css next to webarch.css (same ../img and ../fonts), so that users
+   * can switch colour in the app. Also fills a pack installed by an older version, from the template folder.
+   */
+  colours(root, dest) {
+    for (const [id, [file]] of Object.entries(THEMES)) {
+      const to = path.join(dest, 'webarch', 'css', `webarch-${id}.css`);
+      const from = root && path.join(root, 'webarch', 'css', file);
+      if (!fs.existsSync(to) && from && fs.existsSync(from)) { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(from, to); }
+    }
+  },
+  /** Colours the users can choose in the app: those available in the pack (assets folder). */
+  choices(assets) {
+    const ids = Object.keys(THEMES).filter((id) => fs.existsSync(path.join(assets, 'webarch', 'css', `webarch-${id}.css`)));
+    if (ids.length < 2) return [];
+    return [{ key: 'color', label: { it: 'Colori', en: 'Colours' }, values: ids.map((id) => ({ id, label: { it: THEMES[id][1] },
+      set: { color: id, cssSwap: { 'assets/webarch/css/webarch.css': `assets/webarch/css/webarch-${id}.css` } } })) }];
+  },
   install(root, variant, dest) {
     const { copy } = require('../index.cjs');
     const [file] = THEMES[variant] || THEMES.default;
     // Always webarch/css/webarch.css so that ../img and ../fonts resolve.
     copy(path.join(root, 'webarch', 'css', file), path.join(dest, 'webarch', 'css', 'webarch.css'));
+    module.exports.colours(root, dest);
     copy(path.join(root, 'webarch', 'img'), path.join(dest, 'webarch', 'img'));
     copy(path.join(root, 'webarch', 'fonts'), path.join(dest, 'webarch', 'fonts'));
     return {

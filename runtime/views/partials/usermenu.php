@@ -13,7 +13,7 @@
     <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:14rem">
       <?php foreach ($mcChoices as $mcC): ?>
         <div class="small fw-semibold text-secondary px-2 pt-1"><?= h($app->label($mcC['label'], $mcC['key'])) ?></div>
-        <?php foreach ($mcC['values'] as $mcV): $mcOn = true; foreach ($mcV['set'] as $mcK => $mcX) if ((string)(isset($mcOpt[$mcK]) ? $mcOpt[$mcK] : '') !== (string)$mcX) $mcOn = false; ?>
+        <?php foreach ($mcC['values'] as $mcV): $mcOn = true; foreach ($mcV['set'] as $mcK => $mcX) if (!is_array($mcX) && (string)(isset($mcOpt[$mcK]) && !is_array($mcOpt[$mcK]) ? $mcOpt[$mcK] : '') !== (string)$mcX) $mcOn = false; ?>
           <button type="button" class="dropdown-item rounded mc-choice<?= $mcOn ? ' active' : '' ?>" data-key="<?= h($mcC['key']) ?>" data-value="<?= h($mcV['id']) ?>"><i class="bi bi-<?= $mcOn ? 'check2' : 'dot' ?> me-1"></i><?= h($app->label($mcV['label'], $mcV['id'])) ?></button>
         <?php endforeach ?>
       <?php endforeach ?>

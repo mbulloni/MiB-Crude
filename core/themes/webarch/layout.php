@@ -3,7 +3,8 @@
 $cfg = $app->config;
 $home = $app->url('home', ['menu' => 1]);
 $pack = \MiB\Theme::pack($app);
-$color = isset($pack['options']['color']) ? $pack['options']['color'] : 'default';
+$opt = \MiB\Theme::options($app);
+$color = isset($opt['color']) ? $opt['color'] : 'default';
 $menuHtml = function ($items, $sub = false) use (&$menuHtml) {
     $out = '';
     foreach ($items as $i => $it) {

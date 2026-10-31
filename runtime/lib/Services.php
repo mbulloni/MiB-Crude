@@ -378,7 +378,10 @@ class Theme
         $h = '';
         if ($pack && !empty($pack['fonts'])) $h .= '<link rel="stylesheet" href="' . h($pack['fonts']) . '">' . "\n";
         if (!$pack || empty($pack['providesBootstrap'])) $h .= '<link rel="stylesheet" href="' . h($app->asset('vendor/bootstrap.min.css')) . '">' . "\n";
-        if ($pack) foreach ($pack['css'] as $c) $h .= '<link rel="stylesheet" href="' . h(self::url($app, 'theme/' . $pack['id'] . '/' . $c)) . '">' . "\n";
+        // a user's theme choice may replace a stylesheet (Webarch colours)
+        $swap = $pack ? self::options($app, $key) : [];
+        $swap = isset($swap['cssSwap']) && is_array($swap['cssSwap']) ? $swap['cssSwap'] : [];
+        if ($pack) foreach ($pack['css'] as $c) $h .= '<link rel="stylesheet" href="' . h(self::url($app, 'theme/' . $pack['id'] . '/' . (isset($swap[$c]) ? $swap[$c] : $c))) . '">' . "\n";
         foreach (['bootstrap-icons.min.css', 'dataTables.bootstrap5.min.css', 'responsive.bootstrap5.min.css', 'buttons.bootstrap5.min.css'] as $c) $h .= '<link rel="stylesheet" href="' . h($app->asset('vendor/' . $c)) . '">' . "\n";
         $h .= '<link rel="stylesheet" href="' . h($app->asset('app.css')) . '">' . "\n";
         if (!$pack || !empty($app->config['theme']['primaryOverride'])) $h .= '<style>:root{--mc-primary:' . h($app->config['theme']['primary']) . ';}</style>' . "\n";

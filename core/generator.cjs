@@ -184,6 +184,9 @@ function generate(proj, opts = {}) {
     const Themes = require('./themes/index.cjs');
     const th = Themes.load(opts.themesDir, packId);
     if (!th) throw new Error(`Il tema grafico "${packId}" non è installato su questo computer: importalo da Impostazioni e stile → Temi grafici`);
+    const adapter0 = Themes.ADAPTERS.find((a) => a.id === th.manifest.adapter);
+    // packs installed by an older version: files the adapter adds now (e.g. Webarch colours), from the template folder
+    if (adapter0 && adapter0.colours) try { adapter0.colours(th.manifest.source, path.join(th.dir, 'assets')); } catch { /* template folder gone */ }
     copied += copyDir(path.join(th.dir, 'assets'), path.join(out, 'theme', packId, 'assets'));
     // Layouts, theme.css and theme.js are MiB-Crude code: taken from the current adapter, so a theme imported
     // with an older version gets every fix without importing the template again (library copy as fallback).
@@ -195,7 +198,7 @@ function generate(proj, opts = {}) {
     copied += copyDir(layouts, path.join(out, 'runtime', 'themes', packId), (s) => s.endsWith('.php'));
     const m = th.manifest;
     // options each user can change in the app (theme customizer), when the adapter allows it and the project does not turn it off
-    const choices = adapter && adapter.choices && (proj.project.theme || {}).userChoices !== false ? adapter.choices() : [];
+    const choices = adapter && adapter.choices && (proj.project.theme || {}).userChoices !== false ? adapter.choices(path.join(th.dir, 'assets')) : [];
     return { id: packId, kind: m.kind || 'app', css: m.css, js: m.js, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {}, choices };
   };
   const themePack = installTheme(proj.project.theme && proj.project.theme.pack);

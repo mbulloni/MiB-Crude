@@ -72,7 +72,7 @@ test('theme customizer: the user changes colours and menu, unknown values ignore
   const { found } = T.scan(SRC);
   const lib = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lib-'));
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-thc-'));
-  for (const [adapter, variant] of [['material', 'dark'], ['slim', 'sidebar']]) {
+  for (const [adapter, variant] of [['material', 'dark'], ['slim', 'sidebar'], ['webarch', 'default']]) {
     const m = T.install(found.find((f) => f.adapter === adapter), variant, lib);
     const dir = path.join(root, adapter);
     const proj = P.createProject(dir, 'x');
@@ -105,6 +105,13 @@ test('theme customizer: the user changes colours and menu, unknown values ignore
         assert.match(html, /id="mcMdMin"/, 'back to a sidebar skin');
         html = await page(set({ skin: '<script>' }));
         assert.match(html, /mc-choice active" data-key="skin" data-value="dark"/, 'unknown value: the project skin');
+      } else if (adapter === 'webarch') {
+        assert.match(html, /theme\/[^"]+\/assets\/webarch\/css\/webarch\.css/);
+        html = await page(set({ color: 'corporate' }));
+        assert.match(html, /theme\/[^"]+\/assets\/webarch\/css\/webarch-corporate\.css/, 'colour chosen by the user');
+        assert.match(html, /mc-wa-light/);
+        assert.match(html, /mc-choice active" data-key="color" data-value="corporate"/);
+        assert.ok(fs.existsSync(path.join(out, 'theme', m.id, 'assets', 'webarch', 'css', 'webarch-corporate.css')));
       } else {
         assert.match(html, /mc-slim-sidebar/);
         html = await page(set({ menu: 'horizontal' }));
