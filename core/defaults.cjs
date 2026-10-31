@@ -135,7 +135,7 @@ function datasourceFromSchema(desc, opts) {
   return {
     name: desc.name,
     connection,
-    source: type === 'sql' ? { type: 'sql', sql: opts.sql || '' } : { type: 'table', table: desc.name },
+    source: type === 'sql' ? { type: 'sql', sql: opts.sql || '' } : type === 'proc' ? { type: 'proc', procedure: opts.procedure, params: opts.params || [] } : { type: 'table', table: desc.name },
     caption: label(desc.name, languages),
     keys: desc.pk && desc.pk.length ? desc.pk : [],
     fields,
@@ -160,6 +160,7 @@ function suggestDetails(masterName, described) {
 
 const TABLE_EVENTS = {
   BeforeSelect: { args: '&$where, &$orderBy, $page', help: 'Modifica WHERE/ORDER BY prima di leggere i record. $where è una stringa SQL (vuota = nessun filtro).' },
+  ProcParams: { args: '&$params', help: 'Solo origini stored procedure: parametri della chiamata (nome => valore), modificabili prima di eseguirla, es. $params[\'anno\'] = date(\'Y\').' },
   BeforeShowList: { args: '&$rows, $page', help: 'Prima di mostrare la lista: puoi modificare $rows (array di record).' },
   ProcessValues: { args: '&$values, $page', help: 'Prima di mostrare un record in visualizza/modifica.' },
   BeforeAdd: { args: '&$values, &$message, $page', help: 'Prima di inserire. return false per annullare (con $message).' },

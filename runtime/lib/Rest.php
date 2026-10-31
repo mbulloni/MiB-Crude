@@ -209,6 +209,7 @@ class Rest
         $s = $t->def['source'];
         $key = $t->name . "\0" . json_encode($params);
         if (isset(self::$cache[$key])) return self::$cache[$key];
+        if ($s['type'] === 'proc') return self::$cache[$key] = Proc::rows($t);
         $pg = self::paging($t);
         if (!$pg) {
             $path = self::withQuery($s['path'], $params);

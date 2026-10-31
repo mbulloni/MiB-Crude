@@ -9,6 +9,7 @@ import CodeEditor from './CodeEditor';
 import { Btn, Check, Empty, I, Modal, Row, Select, Text, lbl, slug } from './ui';
 import { ConnectionDialog } from './ConnectionsPanel';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
+import { ProcDialog } from './ProcSection';
 
 type DbTable = { name: string; type: string };
 type Col = { name: string; type: string; size: number | string; scale: number | string; pk: boolean; autoInc: boolean; nullable: boolean; default: string; orig?: string | null };
@@ -347,7 +348,7 @@ export default function TablesPanel() {
   const [multi, setMulti] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<Menu>(null);
-  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table }>(null);
+  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'proc' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table }>(null);
 
   const load = (connId: string) => call<DbTable[]>('db:tables', p, connId).then((r) => setDbt((x) => ({ ...x, [connId]: r }))).catch((e) => toast(`${connId}: ${e.message}`, 'err'));
   useEffect(() => { p.connections.forEach((c) => load(c.id)); }, [p.connections.length]);
@@ -461,6 +462,7 @@ export default function TablesPanel() {
       ['star', 'Rendi connessione principale', () => update((d) => { d.project.defaultConnection = connId; })],
       ['plus-square', 'Crea tabella', () => setDlg({ kind: 'structure', conn: connId, table: null })],
       ['code-square', 'Nuova query SQL', () => setDlg({ kind: 'sql', conn: connId })],
+      ['gear-wide-connected', 'Nuova da stored procedure', () => setDlg({ kind: 'proc', conn: connId })],
       ['file-earmark-code', 'Crea script SQL', () => setDlg({ kind: 'script', conn: connId })],
       ['arrow-repeat', 'Sincronizza database', sync],
       ['arrow-clockwise', 'Ricarica elenco tabelle', () => load(connId)],
@@ -484,7 +486,7 @@ export default function TablesPanel() {
   const Item = ({ t, depth }: { t: Table; depth: number }) => (
     <div className={`tt-item ${selected === t.name ? 'on' : ''} ${multi.has(t.name) && multi.size > 1 ? 'multi' : ''}`} style={{ paddingLeft: 10 + depth * 16 }}
       onClick={(e) => pick(e, t.name)} onDoubleClick={() => goTable(t.name)} onContextMenu={(e) => tableMenu(e, t)}>
-      <I n={t.source.type === 'sql' ? 'code-square' : t.source.type === 'rest' ? 'cloud' : 'window-stack'} className="muted" /> <span className="grow">{t.name}</span>
+      <I n={t.source.type === 'sql' ? 'code-square' : t.source.type === 'rest' ? 'cloud' : t.source.type === 'proc' ? 'gear-wide-connected' : 'window-stack'} className="muted" /> <span className="grow">{t.name}</span>
       {p.reports.filter((r) => r.table === t.name).length > 0 && <I n="file-earmark-bar-graph" className="muted" />}
       {p.charts.filter((r) => r.table === t.name).length > 0 && <I n="bar-chart" className="muted" />}
       <button type="button" className="tt-more" onClick={(e) => tableMenu(e, t)}><I n="three-dots-vertical" /></button>
@@ -508,6 +510,7 @@ export default function TablesPanel() {
         <span className="sep" />
         <Btn small icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn>
         <Btn small icon="code-square" onClick={() => setDlg({ kind: 'sql', conn: p.project.defaultConnection })}>Nuova query SQL</Btn>
+        <Btn small icon="gear-wide-connected" onClick={() => setDlg({ kind: 'proc', conn: p.project.defaultConnection })}>Da stored procedure</Btn>
         {p.connections.some((c) => c.driver === 'rest') && <Btn small icon="cloud" onClick={() => setDlg({ kind: 'rest', conn: '' })}>Nuova origine REST</Btn>}
         <Btn small icon="magic" onClick={() => setDlg({ kind: 'template', conn: p.project.defaultConnection })}>Da modello</Btn>
         <Btn small icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn>
@@ -570,6 +573,7 @@ export default function TablesPanel() {
         {menu.items.map((it, i) => it === '-' ? <hr key={i} /> : <button key={i} type="button" onClick={() => { setMenu(null); it[2](); }}><I n={it[0]} /> {it[1]}</button>)}
       </div>}
       {dlg?.kind === 'sql' && <SqlViewDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
+      {dlg?.kind === 'proc' && <ProcDialog conn={dlg.conn!} onClose={() => setDlg(null)} onCreated={(np, n) => { setProj(np, p.dir); useStore.getState().set({ nav: { kind: 'table', id: n } }); }} />}
       {dlg?.kind === 'structure' && <StructureDialog conn={dlg.conn!} table={dlg.table ?? null} onClose={() => setDlg(null)} onDone={(name, created, add) => {
         load(dlg.conn!);
         if (created && add) addToProject(dlg.conn!, [name]);

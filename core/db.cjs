@@ -41,6 +41,8 @@ async function connect(conn, password) {
       return {
         driver: 'mysql',
         query: async (sql, params = []) => { const r = await c.query(sql, params); return Array.isArray(r) ? r.map((x) => ({ ...x })) : []; },
+        // CALL returns [rows of the first result set, ..., OK packet]
+        call: async (sql, params = []) => { const r = await c.query(sql, params); const first = Array.isArray(r) && Array.isArray(r[0]) ? r[0] : Array.isArray(r) ? r : []; return first.map((x) => ({ ...x })); },
         close: () => c.end(),
       };
     }
@@ -73,6 +75,19 @@ async function connect(conn, password) {
           const r = await req.query(sql.replace(/\?/g, () => `@p${i++}`));
           return r.recordset || [];
         },
+        // procedures: rows plus the declared column types (rows.meta = { column: 'int' | 'decimal' | ... })
+        call: async (sql, params = []) => {
+          const req = pool.request();
+          let i = 0;
+          params.forEach((p, n) => req.input(`p${n}`, p));
+          const r = await req.query(sql.replace(/\?/g, () => `@p${i++}`));
+          const rows = r.recordset || [];
+          const cols = (r.recordset && r.recordset.columns) || {};
+          const meta = {};
+          for (const [name, col] of Object.entries(cols)) meta[name] = genericType(String((col.type && (col.type.declaration || col.type.name)) || ''));
+          Object.defineProperty(rows, 'meta', { value: meta });
+          return rows;
+        },
         close: () => pool.close(),
       };
     }
@@ -86,6 +101,16 @@ async function connect(conn, password) {
           let i = 0;
           const r = await c.execute(sql.replace(/\?/g, () => `:${++i}`), params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
           return r.rows || [];
+        },
+        call: async (sql, params = []) => {
+          let i = 0;
+          const r = await c.execute(sql.replace(/\?/g, () => `:${++i}`), params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+          const rows = r.rows || [];
+          const meta = {};
+          // NUMBER without scale or with decimals is a decimal, NUMBER(n, 0) an integer
+          for (const m of r.metaData || []) meta[m.name] = m.dbTypeName === 'NUMBER' ? (m.scale === 0 ? 'int' : 'decimal') : genericType(String(m.dbTypeName || ''));
+          Object.defineProperty(rows, 'meta', { value: meta });
+          return rows;
         },
         close: () => c.close(),
       };
@@ -270,9 +295,90 @@ async function describeQuery(c, sql) {
   });
 }
 
+// --- stored procedures (source.type = proc; see runtime/lib/Proc.php for the call forms) ------------------
+
+const PROC_NAME = /^[A-Za-z_][A-Za-z0-9_$#]*(\.[A-Za-z_][A-Za-z0-9_$#]*){0,2}$/;
+
+/** SQL calling a procedure (designer side, same forms as the runtime). */
+function procSql(driver, name, n) {
+  if (!PROC_NAME.test(name || '')) throw new Error(`Nome di procedura non valido: ${name || '(vuoto)'}`);
+  const marks = Array(n).fill('?').join(', ');
+  switch (driver) {
+    case 'mysql': return `CALL ${name}(${marks})`;
+    case 'sqlsrv': return `SET NOCOUNT ON; EXEC ${name}${n ? ` ${marks}` : ''}`;
+    case 'pgsql': return `SELECT * FROM ${name}(${marks})`;
+    case 'oracle': return `SELECT * FROM TABLE(${name}(${marks}))`;
+    default: throw new Error('Le stored procedure non sono disponibili con questo database (SQLite non le ha)');
+  }
+}
+
+/** Procedures (MariaDB/MySQL, SQL Server) or set-returning / pipelined functions (PostgreSQL, Oracle) with their input parameters. */
+async function listProcedures(c) {
+  let rows;
+  switch (c.driver) {
+    case 'mysql':
+      rows = await c.query(`SELECT r.ROUTINE_NAME AS name, p.PARAMETER_NAME AS param, p.DATA_TYPE AS type, p.ORDINAL_POSITION AS pos
+        FROM information_schema.ROUTINES r LEFT JOIN information_schema.PARAMETERS p ON p.SPECIFIC_SCHEMA = r.ROUTINE_SCHEMA AND p.SPECIFIC_NAME = r.ROUTINE_NAME AND p.PARAMETER_MODE = 'IN'
+        WHERE r.ROUTINE_SCHEMA = DATABASE() AND r.ROUTINE_TYPE = 'PROCEDURE' ORDER BY r.ROUTINE_NAME, p.ORDINAL_POSITION`);
+      break;
+    case 'sqlsrv':
+      rows = await c.query(`SELECT SCHEMA_NAME(pr.schema_id) + '.' + pr.name AS name, STUFF(pa.name, 1, 1, '') AS param, TYPE_NAME(pa.user_type_id) AS type, pa.parameter_id AS pos
+        FROM sys.procedures pr LEFT JOIN sys.parameters pa ON pa.object_id = pr.object_id AND pa.is_output = 0
+        WHERE pr.is_ms_shipped = 0 ORDER BY 1, pa.parameter_id`);
+      break;
+    case 'pgsql':
+      rows = await c.query(`SELECT n.nspname || '.' || p.proname AS name, a.name AS param, a.type AS type, a.pos AS pos
+        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        LEFT JOIN LATERAL (SELECT u.name, format_type(u.t, NULL) AS type, u.pos FROM unnest(COALESCE(p.proargnames[1:p.pronargs], ARRAY[]::text[]), p.proargtypes::oid[]) WITH ORDINALITY AS u(name, t, pos)) a ON true
+        WHERE p.proretset AND n.nspname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1, a.pos`);
+      break;
+    case 'oracle':
+      rows = await c.query(`SELECT p.OBJECT_NAME AS "name", a.ARGUMENT_NAME AS "param", a.DATA_TYPE AS "type", a.POSITION AS "pos"
+        FROM USER_PROCEDURES p LEFT JOIN USER_ARGUMENTS a ON a.OBJECT_NAME = p.OBJECT_NAME AND a.IN_OUT = 'IN' AND a.ARGUMENT_NAME IS NOT NULL AND a.PACKAGE_NAME IS NULL
+        WHERE p.PIPELINED = 'YES' AND p.OBJECT_TYPE = 'FUNCTION' ORDER BY 1, a.POSITION`);
+      break;
+    default:
+      return [];
+  }
+  const out = new Map();
+  for (const r0 of rows) {
+    const r = lc(r0);
+    if (!out.has(r.name)) out.set(r.name, { name: r.name, params: [] });
+    if (r.param) out.get(r.name).params.push({ name: String(r.param), type: String(r.type || '').toLowerCase() });
+  }
+  return [...out.values()];
+}
+
+/** Values to call the procedure with in the designer: constants and defaults (session/user/get have no value here). */
+function sampleParams(params) {
+  return (params || []).map((p) => (p.from === 'null' ? null : p.from === 'value' || !p.from ? (p.value === undefined ? '' : p.value) : (p.sample !== undefined && p.sample !== '' ? p.sample : (p.default !== undefined && p.default !== '' ? p.default : null))));
+}
+
+async function callProcedure(c, name, params) {
+  const vals = sampleParams(params);
+  const sql = procSql(c.driver, name, vals.length);
+  return c.call ? c.call(sql, vals) : c.query(sql, vals);
+}
+
+/** Fields of the first result set of a procedure. */
+async function describeProcedure(c, name, params) {
+  const rows = await callProcedure(c, name, params);
+  if (!rows.length) throw new Error('La procedura non restituisce righe con questi parametri: impossibile ricavare i campi (indica valori di prova)');
+  // type from every row: one value 40 and one 250.5 make a decimal field
+  const kind = (v) => (typeof v === 'number' ? (Number.isInteger(v) ? 'int' : 'decimal') : v instanceof Date ? 'datetime'
+    // DECIMAL arrives as text (exact): "250.50" is a decimal, "2026-10-31" a date
+    : typeof v === 'string' && /^-?\d+\.\d+$/.test(v) ? 'decimal' : typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v) ? 'date'
+    : typeof v === 'string' && /^\d{4}-\d\d-\d\d[ T]\d\d:\d\d/.test(v) ? 'datetime' : v === null || v === undefined ? null : 'string');
+  return Object.keys(rows[0]).map((col) => {
+    const kinds = new Set(rows.slice(0, 200).map((r) => kind(r[col])).filter(Boolean));
+    const type = rows.meta && rows.meta[col] ? rows.meta[col] : kinds.size === 1 ? [...kinds][0] : [...kinds].every((k) => k === 'int' || k === 'decimal') && kinds.size ? 'decimal' : 'string';
+    return { name: col, dbType: type, type, nullable: true, pk: false, autoInc: false, default: null, length: null, comment: '' };
+  });
+}
+
 async function preview(c, sql, limit = 100) {
   const rows = await c.query(sql);
   return { columns: rows.length ? Object.keys(rows[0]) : [], rows: rows.slice(0, limit), total: rows.length };
 }
 
-module.exports = { DRIVERS, genericType, connect, listTables, describeTable, describeQuery, preview };
+module.exports = { DRIVERS, genericType, connect, listTables, describeTable, describeQuery, preview, procSql, listProcedures, callProcedure, describeProcedure, sampleParams };

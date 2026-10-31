@@ -11,6 +11,8 @@ class Table
     public $db;
     /** @var Rest|null set for REST datasources */
     public $rest;
+    /** Records read whole and filtered in PHP: REST and stored procedure sources */
+    public $memory = false;
     private $fieldsByName = [];
 
     public function __construct(App $app, array $def)
@@ -20,6 +22,7 @@ class Table
         $this->name = $def['name'];
         $this->db = $app->db($def['connection']);
         if ($def['source']['type'] === 'rest') $this->rest = $this->db->rest;
+        $this->memory = in_array($def['source']['type'], ['rest', 'proc'], true);
         foreach ($def['fields'] as $f) $this->fieldsByName[$f['name']] = $f;
         $app->event($this->name, 'TableInit', []);
     }
@@ -79,7 +82,7 @@ class Table
     {
         $p = $this->page($type);
         if (empty($p['enabled'])) return false;
-        if (!empty($this->def['readOnly']) && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return false;
+        if ((!empty($this->def['readOnly']) || $this->def['source']['type'] === 'proc') && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return false;
         return true;
     }
 
@@ -104,6 +107,7 @@ class Table
         $s = $this->def['source'];
         if ($s['type'] === 'table') return $s['table'];
         if ($s['type'] === 'rest') return empty($this->def['readOnly']) ? $s['path'] : null;
+        if ($s['type'] === 'proc') return null;
         return !empty($s['updateTable']) ? $s['updateTable'] : null;
     }
 
@@ -250,14 +254,14 @@ class Table
 
     public function count(array $req, $page = 'list')
     {
-        if ($this->rest) return Rest::count($this, $req);
+        if ($this->memory) return Rest::count($this, $req);
         list($w, $p) = $this->buildWhere($req, $page);
         return (int)$this->db->value('SELECT COUNT(*) FROM ' . $this->from() . " WHERE $w", $p);
     }
 
     public function fetch(array $req, $limit, $offset, $sort = '', $dir = 'asc', $page = 'list')
     {
-        if ($this->rest) return Rest::fetch($this, $req, $limit, $offset, $sort, $dir);
+        if ($this->memory) return Rest::fetch($this, $req, $limit, $offset, $sort, $dir);
         list($w, $p, $eo) = $this->buildWhere($req, $page);
         $sql = 'SELECT ' . $this->selectList() . ' FROM ' . $this->from() . " WHERE $w";
         $sql = $limit > 0 ? $this->db->limit($sql, $limit, $offset, $this->orderBy($sort, $dir, $eo))
@@ -268,7 +272,7 @@ class Table
     /** Aggregates for list totals: field => [sum|avg|count => value] */
     public function totals(array $req, $page = 'list')
     {
-        if ($this->rest) return Rest::totals($this, $req);
+        if ($this->memory) return Rest::totals($this, $req);
         $exprs = [];
         foreach ($this->fields('list') as $f) {
             if (empty($f['totals'])) continue;
@@ -309,7 +313,7 @@ class Table
 
     public function fetchOne(array $keys, $withBlobs = false)
     {
-        if ($this->rest) return Rest::fetchOne($this, $keys);
+        if ($this->memory) return Rest::fetchOne($this, $keys);
         $where = [];
         $params = [];
         foreach ($keys as $c => $v) { $where[] = $this->col($c) . ' = ?'; $params[] = $v; }
@@ -388,7 +392,7 @@ class Table
             }
             return $out;
         }
-        if (empty($lk['connection']) && $this->app->hasTable($lk['table']) && ($src = $this->app->table($lk['table'])) && $src->rest) {
+        if (empty($lk['connection']) && $this->app->hasTable($lk['table']) && ($src = $this->app->table($lk['table'])) && $src->memory) {
             if ($only !== null && !$only) return [];
             return Rest::lookupOptions($src, $lk, $q, $parent, $limit, $only);
         }
@@ -450,7 +454,7 @@ class Table
     public function filterValues($f, array $req)
     {
         unset($req['f'][$f['name']]);
-        if ($this->rest) $rows = Rest::distinct($this, $req, $f['name']);
+        if ($this->memory) $rows = Rest::distinct($this, $req, $f['name']);
         else {
             list($w, $p) = $this->buildWhere($req, 'filter');
             $col = $this->col($f['name']);
@@ -567,7 +571,7 @@ class Table
             if (!empty($val['regex']) && @preg_match('~' . str_replace('~', '\~', $val['regex']) . '~u', (string)$v) !== 1) {
                 $errors[$n] = !empty($val['regexMessage']) ? $this->app->label($val['regexMessage']) : t('val.format', $label);
             }
-            if (!empty($val['unique']) && $this->rest) {
+            if (!empty($val['unique']) && $this->memory) {
                 if (Rest::exists($this, $n, $v, $keys)) $errors[$n] = t('val.unique', $label);
             } elseif (!empty($val['unique']) && ($wt = $this->writeTable())) {
                 $sql = 'SELECT COUNT(*) FROM ' . $this->db->table($wt) . ' WHERE ' . $this->db->q($n) . ' = ?';

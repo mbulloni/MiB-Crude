@@ -55,6 +55,23 @@ async function addSqlView(proj, conn, password, name, sql) {
   });
 }
 
+// Stored procedure datasource: fields from the first result set, called with the sample/constant parameters.
+async function addProcedure(proj, conn, password, name, procedure, params) {
+  if (proj.tables.some((t) => t.name === name)) throw new Error(`Esiste già un'origine dati "${name}"`);
+  return withConnection(conn, password, async (c) => {
+    const cols = await D.describeProcedure(c, procedure, params);
+    const ds = datasourceFromSchema({ name, columns: cols, pk: [], fks: [] }, {
+      connection: conn.id, languages: proj.project.languages, settings: proj.project.settings, type: 'proc', procedure, params,
+    });
+    ds.readOnly = true;
+    // a first column named like an id is a good key for view pages and links
+    const id = cols.find((x) => /^id$|_id$|^id_/i.test(x.name));
+    if (id) ds.keys = [id.name];
+    proj.tables.push(ds);
+    return ds;
+  });
+}
+
 // Compare a datasource with the database: add new columns, flag dropped ones, refresh types.
 async function refreshTable(proj, conn, password, table) {
   if (conn.driver === 'rest') {
@@ -67,7 +84,7 @@ async function refreshTable(proj, conn, password, table) {
   return withConnection(conn, password, async (c) => {
     const ds = proj.tables.find((t) => t.name === table);
     if (!ds) throw new Error(`Origine dati ${table} non trovata`);
-    const cols = ds.source.type === 'sql' ? await D.describeQuery(c, ds.source.sql) : (await D.describeTable(c, conn, ds.source.table)).columns;
+    const cols = ds.source.type === 'sql' ? await D.describeQuery(c, ds.source.sql) : ds.source.type === 'proc' ? await D.describeProcedure(c, ds.source.procedure, ds.source.params) : (await D.describeTable(c, conn, ds.source.table)).columns;
     const names = new Set(cols.map((x) => x.name));
     const added = [];
     const removed = [];
@@ -82,4 +99,4 @@ async function refreshTable(proj, conn, password, table) {
   });
 }
 
-module.exports = { withConnection, importTables, addSqlView, refreshTable };
+module.exports = { withConnection, importTables, addSqlView, addProcedure, refreshTable };

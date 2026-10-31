@@ -186,6 +186,15 @@ handle('wizard:sqlview', async (proj, connId, name, sql) => {
   await W.addSqlView(proj, connById(proj, connId), pwOf(connId), name, sql);
   return proj;
 });
+handle('db:procedures', async (proj, connId) => W.withConnection(connById(proj, connId), pwOf(connId), (c) => D.listProcedures(c)));
+handle('db:procPreview', async (proj, connId, name, params) => W.withConnection(connById(proj, connId), pwOf(connId), async (c) => {
+  const rows = await D.callProcedure(c, name, params);
+  return { columns: rows.length ? Object.keys(rows[0]) : [], rows: rows.slice(0, 50), total: rows.length };
+}));
+handle('wizard:procedure', async (proj, connId, name, procedure, params) => {
+  await W.addProcedure(proj, connById(proj, connId), pwOf(connId), name, procedure, params);
+  return proj;
+});
 handle('wizard:refresh', async (proj, table) => {
   const t = proj.tables.find((x) => x.name === table);
   const res = await W.refreshTable(proj, connById(proj, t.connection), pwOf(t.connection), table);

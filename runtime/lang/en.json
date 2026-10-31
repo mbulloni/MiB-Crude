@@ -191,6 +191,7 @@
  "page.import": "Import",
  "page.search": "Advanced search",
  "pdf.records": "{0} records",
+ "proc.unsupported": "Stored procedures are not available with the {0} database",
  "profile.apikey": "API key",
  "profile.apikey_gen": "Generate new key",
  "profile.apikey_help": "Send the key in the X-Api-Key header. Generating a new one revokes the previous key.",
