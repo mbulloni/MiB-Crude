@@ -23,7 +23,7 @@ export interface Detail { table: string; masterKeys: string[]; detailKeys: strin
 export interface ProcParam { name: string; from?: 'value' | 'session' | 'user' | 'get' | 'null'; value?: string; sample?: string; default?: string }
 
 export interface Table {
-  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest' | 'proc'; table?: string; sql?: string; procedure?: string; params?: ProcParam[]; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number };
+  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest' | 'proc'; table?: string; sql?: string; procedure?: string; params?: ProcParam[]; write?: Partial<Record<'insert' | 'update' | 'delete', { procedure?: string; params?: { name: string; from?: string; value?: string }[] }>>; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
   layout?: Record<string, { sections: { title: L; fields: string[]; style?: 'card' | 'tab'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;

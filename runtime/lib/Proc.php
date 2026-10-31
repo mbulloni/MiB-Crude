@@ -10,6 +10,9 @@ namespace MiB;
  *   PostgreSQL     SELECT * FROM name(?, ...)          (function returning a table)
  *   Oracle         SELECT * FROM TABLE(name(?, ...))   (pipelined function)
  * Parameters: [{name, from: value|session|user|get|event, value}]; the ProcParams event can change them.
+ * Writing (source.write.insert|update|delete = {procedure, params}): parameters also from "field" (value of the
+ * record: the new one, else the old one) and "key" (key of the record); an insert procedure may return the new key
+ * as the first column of its first row.
  */
 class Proc
 {
@@ -37,12 +40,70 @@ class Proc
         return $vals;
     }
 
+    /** Is there a procedure for insert / update / delete? */
+    public static function writes(Table $t, $op)
+    {
+        $s = $t->def['source'];
+        return $s['type'] === 'proc' && !empty($s['write'][$op]['procedure']);
+    }
+
+    /**
+     * Calls the write procedure of $op. MariaDB/MySQL and SQL Server: CALL / EXEC; PostgreSQL: CALL of a
+     * procedure; Oracle: an anonymous block calling it. @return array keys of the record (insert)
+     */
+    public static function write(Table $t, $op, array $vals, array $keys, $old)
+    {
+        $w = $t->def['source']['write'][$op];
+        $vars = [];
+        foreach (isset($w['params']) && is_array($w['params']) ? $w['params'] : [] as $p) {
+            $from = isset($p['from']) ? $p['from'] : 'field';
+            $v = isset($p['value']) ? (string)$p['value'] : '';
+            if ($from === 'field') $vars[] = array_key_exists($v, $vals) ? $vals[$v] : ($old && array_key_exists($v, $old) ? $old[$v] : null);
+            elseif ($from === 'key') $vars[] = isset($keys[$v]) ? $keys[$v] : ($old && isset($old[$v]) ? $old[$v] : null);
+            elseif ($from === 'session') $vars[] = isset($_SESSION[$v]) ? $_SESSION[$v] : null;
+            elseif ($from === 'user') $vars[] = userId();
+            elseif ($from === 'null') $vars[] = null;
+            else $vars[] = $v;
+        }
+        $db = $t->db;
+        $name = $w['procedure'];
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_$#]*(\.[A-Za-z_][A-Za-z0-9_$#]*){0,2}$/', $name)) throw new \RuntimeException("Nome di procedura non valido: $name");
+        $marks = implode(', ', array_fill(0, count($vars), '?'));
+        // Oracle: unquoted (upper case like the dictionary); the name is checked above
+        $qn = $db->driver === 'oracle' ? $name : $db->q($name);
+        switch ($db->driver) {
+            case 'mysql': $sql = "CALL $qn($marks)"; break;
+            case 'sqlsrv': $sql = "SET NOCOUNT ON; EXEC $qn" . ($vars ? " $marks" : ''); break;
+            case 'pgsql': $sql = "CALL $qn($marks)"; break;
+            case 'oracle': $sql = "BEGIN $qn($marks); END;"; break;
+            default: throw new \RuntimeException(t('proc.unsupported', $db->driver));
+        }
+        $st = $db->pdo->prepare($sql);
+        foreach ($vars as $i => $v) $st->bindValue($i + 1, $v, $v === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $st->execute();
+        $first = null;
+        if ($op === 'insert' && $db->driver !== 'oracle') {
+            for ($g = 0; $g < 20; $g++) {
+                if ($st->columnCount() > 0) { $r = $st->fetch(\PDO::FETCH_NUM); if ($r) { $first = $r[0]; break; } }
+                try { if (!$st->nextRowset()) break; } catch (\PDOException $e) { break; }
+            }
+        }
+        try { while ($st->nextRowset()) { /* skip */ } } catch (\PDOException $e) { /* no more results */ }
+        $st->closeCursor();
+        Rest::forget($t);
+        if ($op !== 'insert') return $keys;
+        $out = [];
+        foreach ($t->def['keys'] as $i => $k) $out[$k] = isset($vals[$k]) && $vals[$k] !== '' ? $vals[$k] : ($i === 0 ? $first : null);
+        return $out;
+    }
+
     /** SQL calling the procedure with one placeholder per parameter. */
     public static function sql(Db $db, $name, $n)
     {
         if (!preg_match('/^[A-Za-z_][A-Za-z0-9_$#]*(\.[A-Za-z_][A-Za-z0-9_$#]*){0,2}$/', $name)) throw new \RuntimeException("Nome di procedura non valido: $name");
         $marks = implode(', ', array_fill(0, $n, '?'));
-        $qn = $db->q($name);
+        // Oracle: unquoted (upper case like the dictionary); the name is checked above
+        $qn = $db->driver === 'oracle' ? $name : $db->q($name);
         switch ($db->driver) {
             case 'mysql': return "CALL $qn($marks)";
             case 'sqlsrv': return "SET NOCOUNT ON; EXEC $qn" . ($n ? " $marks" : '');

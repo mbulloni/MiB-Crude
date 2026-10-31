@@ -90,3 +90,38 @@ export function ProcDialog({ onClose, conn: conn0, onCreated }: { onClose: () =>
     </Modal>
   );
 }
+
+type WriteOp = 'insert' | 'update' | 'delete';
+interface WriteProc { procedure?: string; params?: { name: string; from?: string; value?: string }[] }
+const OPS: [WriteOp, string][] = [['insert', 'Inserimento'], ['update', 'Modifica'], ['delete', 'Eliminazione']];
+const WFROM: [string, string][] = [['field', 'Campo del record'], ['key', 'Chiave del record'], ['value', 'Valore fisso'], ['session', 'Variabile di sessione'], ['user', 'Utente collegato'], ['null', 'NULL']];
+
+/** Procedures that write the records of a stored procedure source (source.write.insert|update|delete). */
+export function ProcWrite({ value, fields, keys, onChange }: { value: Partial<Record<WriteOp, WriteProc>> | undefined; fields: string[]; keys: string[]; onChange: (v: Partial<Record<WriteOp, WriteProc>>) => void }) {
+  const w = value || {};
+  const set = (op: WriteOp, patch: WriteProc) => {
+    const next = { ...w, [op]: { ...(w[op] || {}), ...patch } };
+    if (!next[op]!.procedure) delete next[op];
+    onChange(next);
+  };
+  const auto = (op: WriteOp): WriteProc['params'] => (op === 'delete' ? keys.map((k) => ({ name: k, from: 'key', value: k }))
+    : op === 'update' ? [...keys.map((k) => ({ name: k, from: 'key', value: k })), ...fields.filter((f) => !keys.includes(f)).map((f) => ({ name: f, from: 'field', value: f }))]
+      : fields.filter((f) => !keys.includes(f)).map((f) => ({ name: f, from: 'field', value: f })));
+  return <>{OPS.map(([op, label]) => {
+    const p = w[op];
+    const params = p?.params || [];
+    const setP = (i: number, patch: Partial<NonNullable<WriteProc['params']>[number]>) => set(op, { params: params.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
+    return <div key={op} className="region-box">
+      <Row label={label} hint={op === 'insert' ? 'La procedura può restituire la nuova chiave come prima colonna del primo risultato' : undefined}>
+        <span className="inline"><Text value={p?.procedure} onChange={(v) => set(op, { procedure: v, params: p?.params || (v ? auto(op) : []) })} mono placeholder="nessuna" />
+          {p?.procedure && <Btn small icon="magic" title="Un parametro per campo (e chiave)" onClick={() => set(op, { params: auto(op) })}>Parametri dai campi</Btn>}</span></Row>
+      {p?.procedure && <table className="grid small"><tbody>{params.map((x, i) => <tr key={i}>
+        <td><Text value={x.name} onChange={(v) => setP(i, { name: v })} mono /></td>
+        <td><Select value={x.from || 'field'} options={WFROM} onChange={(v) => setP(i, { from: v })} /></td>
+        <td>{x.from === 'field' || x.from === 'key' || !x.from ? <Select value={x.value || ''} options={(x.from === 'key' ? keys : fields).map((f) => [f, f] as [string, string])} onChange={(v) => setP(i, { value: v })} />
+          : x.from === 'user' || x.from === 'null' ? <span className="muted">—</span> : <Text value={x.value} onChange={(v) => setP(i, { value: v })} mono />}</td>
+        <td><Btn small kind="ghost" icon="x-lg" onClick={() => set(op, { params: params.filter((_, n) => n !== i) })} /></td></tr>)}
+        <tr><td colSpan={4}><Btn small icon="plus" onClick={() => set(op, { params: [...params, { name: '', from: 'field', value: fields[0] || '' }] })}>Parametro</Btn></td></tr></tbody></table>}
+    </div>;
+  })}</>;
+}

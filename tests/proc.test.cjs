@@ -36,16 +36,34 @@ const SETUP = {
     'CREATE FUNCTION mc_proc_vendite(p_area varchar, p_anno int) RETURNS TABLE(id int, venditore varchar, area varchar, importo numeric) AS $$ SELECT s.id, s.venditore, s.area, s.importo FROM mc_proc_sales s WHERE s.area = p_area AND s.anno = p_anno $$ LANGUAGE sql'],
   sqlsrv: ["IF OBJECT_ID('dbo.mc_proc_vendite') IS NOT NULL DROP PROCEDURE dbo.mc_proc_vendite", "IF OBJECT_ID('dbo.mc_proc_sales') IS NOT NULL DROP TABLE dbo.mc_proc_sales", TABLE, `INSERT INTO mc_proc_sales VALUES ${ROWS}`,
     'CREATE PROCEDURE dbo.mc_proc_vendite @p_area NVARCHAR(20), @p_anno INT AS BEGIN SET NOCOUNT ON; SELECT id, venditore, area, importo FROM mc_proc_sales WHERE area = @p_area AND anno = @p_anno END'],
-  oracle: [ignore('DROP FUNCTION mc_proc_vendite'), ignore('DROP TYPE mc_proc_tab'), ignore('DROP TYPE mc_proc_row'), ignore('DROP TABLE mc_proc_sales'), TABLE,
+  oracle: [ignore('DROP PROCEDURE mc_proc_ins'), ignore('DROP PROCEDURE mc_proc_upd'), ignore('DROP PROCEDURE mc_proc_del'), ignore('DROP FUNCTION mc_proc_vendite'), ignore('DROP TYPE mc_proc_tab'), ignore('DROP TYPE mc_proc_row'), ignore('DROP TABLE mc_proc_sales'), TABLE,
     ...ROWS.slice(1, -1).split('), (').map((r) => `INSERT INTO mc_proc_sales VALUES (${r})`),
     'CREATE TYPE mc_proc_row AS OBJECT (id NUMBER, venditore VARCHAR2(40), area VARCHAR2(20), importo NUMBER(10,2))', 'CREATE TYPE mc_proc_tab AS TABLE OF mc_proc_row',
     `CREATE FUNCTION mc_proc_vendite(p_area VARCHAR2, p_anno NUMBER) RETURN mc_proc_tab PIPELINED AS BEGIN
        FOR r IN (SELECT id, venditore, area, importo FROM mc_proc_sales WHERE area = p_area AND anno = p_anno) LOOP PIPE ROW(mc_proc_row(r.id, r.venditore, r.area, r.importo)); END LOOP; RETURN; END;`],
 };
+const WRITE = {
+  mysql: ['DROP PROCEDURE IF EXISTS mc_proc_ins', 'DROP PROCEDURE IF EXISTS mc_proc_upd', 'DROP PROCEDURE IF EXISTS mc_proc_del',
+    'CREATE PROCEDURE mc_proc_ins(IN p_id INT, IN p_venditore VARCHAR(40), IN p_area VARCHAR(20), IN p_importo DECIMAL(10,2)) BEGIN DECLARE n INT; SET n = COALESCE(p_id, (SELECT MAX(id) + 1 FROM mc_proc_sales)); INSERT INTO mc_proc_sales VALUES (n, p_area, 2026, p_venditore, p_importo); SELECT n; END',
+    'CREATE PROCEDURE mc_proc_upd(IN p_id INT, IN p_venditore VARCHAR(40), IN p_importo DECIMAL(10,2)) UPDATE mc_proc_sales SET venditore = p_venditore, importo = p_importo WHERE id = p_id',
+    'CREATE PROCEDURE mc_proc_del(IN p_id INT) DELETE FROM mc_proc_sales WHERE id = p_id'],
+  pgsql: ['DROP PROCEDURE IF EXISTS mc_proc_ins(int, varchar, varchar, numeric)', 'DROP PROCEDURE IF EXISTS mc_proc_upd(int, varchar, numeric)', 'DROP PROCEDURE IF EXISTS mc_proc_del(int)',
+    'CREATE PROCEDURE mc_proc_ins(p_id int, p_venditore varchar, p_area varchar, p_importo numeric) LANGUAGE sql AS $$ INSERT INTO mc_proc_sales VALUES (p_id, p_area, 2026, p_venditore, p_importo) $$',
+    'CREATE PROCEDURE mc_proc_upd(p_id int, p_venditore varchar, p_importo numeric) LANGUAGE sql AS $$ UPDATE mc_proc_sales SET venditore = p_venditore, importo = p_importo WHERE id = p_id $$',
+    'CREATE PROCEDURE mc_proc_del(p_id int) LANGUAGE sql AS $$ DELETE FROM mc_proc_sales WHERE id = p_id $$'],
+  sqlsrv: ["IF OBJECT_ID('dbo.mc_proc_ins') IS NOT NULL DROP PROCEDURE dbo.mc_proc_ins", "IF OBJECT_ID('dbo.mc_proc_upd') IS NOT NULL DROP PROCEDURE dbo.mc_proc_upd", "IF OBJECT_ID('dbo.mc_proc_del') IS NOT NULL DROP PROCEDURE dbo.mc_proc_del",
+    'CREATE PROCEDURE dbo.mc_proc_ins @p_id INT, @p_venditore NVARCHAR(40), @p_area NVARCHAR(20), @p_importo DECIMAL(10,2) AS BEGIN SET NOCOUNT ON; INSERT INTO mc_proc_sales VALUES (@p_id, @p_area, 2026, @p_venditore, @p_importo) END',
+    'CREATE PROCEDURE dbo.mc_proc_upd @p_id INT, @p_venditore NVARCHAR(40), @p_importo DECIMAL(10,2) AS BEGIN SET NOCOUNT ON; UPDATE mc_proc_sales SET venditore = @p_venditore, importo = @p_importo WHERE id = @p_id END',
+    'CREATE PROCEDURE dbo.mc_proc_del @p_id INT AS BEGIN SET NOCOUNT ON; DELETE FROM mc_proc_sales WHERE id = @p_id END'],
+  oracle: [
+    'CREATE OR REPLACE PROCEDURE mc_proc_ins(p_id NUMBER, p_venditore VARCHAR2, p_area VARCHAR2, p_importo NUMBER) AS BEGIN INSERT INTO mc_proc_sales VALUES (p_id, p_area, 2026, p_venditore, p_importo); END;',
+    'CREATE OR REPLACE PROCEDURE mc_proc_upd(p_id NUMBER, p_venditore VARCHAR2, p_importo NUMBER) AS BEGIN UPDATE mc_proc_sales SET venditore = p_venditore, importo = p_importo WHERE id = p_id; END;',
+    'CREATE OR REPLACE PROCEDURE mc_proc_del(p_id NUMBER) AS BEGIN DELETE FROM mc_proc_sales WHERE id = p_id; END;'],
+};
 const CLEANUP = {
-  mysql: ['DROP PROCEDURE IF EXISTS mc_proc_vendite', 'DROP TABLE IF EXISTS mc_proc_sales'],
-  pgsql: ['DROP FUNCTION IF EXISTS mc_proc_vendite(varchar, int)', 'DROP TABLE IF EXISTS mc_proc_sales'],
-  sqlsrv: ['DROP PROCEDURE dbo.mc_proc_vendite', 'DROP TABLE dbo.mc_proc_sales'],
+  mysql: ['DROP PROCEDURE IF EXISTS mc_proc_vendite', 'DROP PROCEDURE IF EXISTS mc_proc_ins', 'DROP PROCEDURE IF EXISTS mc_proc_upd', 'DROP PROCEDURE IF EXISTS mc_proc_del', 'DROP TABLE IF EXISTS mc_proc_sales'],
+  pgsql: ['DROP FUNCTION IF EXISTS mc_proc_vendite(varchar, int)', 'DROP PROCEDURE IF EXISTS mc_proc_ins(int, varchar, varchar, numeric)', 'DROP PROCEDURE IF EXISTS mc_proc_upd(int, varchar, numeric)', 'DROP PROCEDURE IF EXISTS mc_proc_del(int)', 'DROP TABLE IF EXISTS mc_proc_sales'],
+  sqlsrv: ['DROP PROCEDURE dbo.mc_proc_vendite', 'DROP PROCEDURE dbo.mc_proc_ins', 'DROP PROCEDURE dbo.mc_proc_upd', 'DROP PROCEDURE dbo.mc_proc_del', 'DROP TABLE dbo.mc_proc_sales'],
   oracle: [ignore('DROP FUNCTION mc_proc_vendite'), ignore('DROP TYPE mc_proc_tab'), ignore('DROP TYPE mc_proc_row'), ignore('DROP TABLE mc_proc_sales')],
 };
 let server;
@@ -67,6 +85,7 @@ const get = async (url) => {
 test.before(async () => {
   if (SKIP) return;
   await sql(SETUP[KIND]);
+  await sql(WRITE[KIND]);
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mibcrude-proc-'));
 });
 test.after(async () => {
@@ -101,6 +120,14 @@ test('stored procedure: designer list and fields, app with parameters, search, s
   t.pages.list.totals = true;
   proj.menu.items.push({ type: 'table', table: 'vendite' });
   proj.events.vendite = { ProcParams: "<?php\n$params['p_anno'] = 2026;\n" };
+  // writing through procedures
+  const pre = KIND === 'sqlsrv' ? 'dbo.' : '';
+  t.source.write = {
+    insert: { procedure: `${pre}mc_proc_ins`, params: [{ name: 'p_id', from: 'field', value: F.id }, { name: 'p_venditore', from: 'field', value: F.venditore }, { name: 'p_area', from: 'field', value: F.area }, { name: 'p_importo', from: 'field', value: F.importo }] },
+    update: { procedure: `${pre}mc_proc_upd`, params: [{ name: 'p_id', from: 'key', value: F.id }, { name: 'p_venditore', from: 'field', value: F.venditore }, { name: 'p_importo', from: 'field', value: F.importo }] },
+    delete: { procedure: `${pre}mc_proc_del`, params: [{ name: 'p_id', from: 'key', value: F.id }] },
+  };
+  t.readOnly = false;
   P.saveProject(proj);
   const out = G.generate(P.loadProject(dir), { secrets: P.readSecrets(dir), outDir: path.join(dir, 'out'), debug: true }).outDir;
   assert.deepStrictEqual(G.lint(out), []);
@@ -122,12 +149,42 @@ test('stored procedure: designer list and fields, app with parameters, search, s
   j = JSON.parse((await get('?p=dt&t=vendite&draw=1&start=0&length=10&q=ner')).text);
   assert.strictEqual(j.recordsFiltered, 1);
   // a page of 2 sorted by amount, totals over every record
-  j = JSON.parse((await get('?p=dt&t=vendite&draw=1&start=0&length=2&order[0][column]=3&order[0][dir]=desc')).text);
+  j = JSON.parse((await get('?p=dt&t=vendite&draw=1&start=0&length=2&order[0][column]=5&order[0][dir]=desc')).text);
   assert.deepStrictEqual(j.data.length, 2);
   assert.match(JSON.stringify(j.data[0]), /Bianchi/);
   assert.match(j.totals[F.importo], /300[.,]50/);
   assert.strictEqual((await get('?p=list&t=vendite')).status, 200);
-  // view page by key, no add/edit
   assert.strictEqual((await get(`?p=view&t=vendite&k[${F.id}]=2`)).status, 200);
-  assert.notStrictEqual((await get('?p=add&t=vendite')).status, 200);
+  // add, edit and delete through the write procedures (a browser session for CSRF)
+  const jar = {};
+  const req = async (url, form) => {
+    const r = await fetch(BASE + url, { redirect: 'manual', method: form ? 'POST' : 'GET', body: form ? new URLSearchParams(form) : undefined,
+      headers: { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; '), ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}) } });
+    for (const c of r.headers.getSetCookie()) { const [k, v] = c.split(';')[0].split('='); jar[k] = v; }
+    const text = await r.text();
+    assert.doesNotMatch(text, /(Deprecated|Warning|Notice|Fatal error)(<\/b>)?: /, text.slice(0, 400));
+    return { status: r.status, text };
+  };
+  const csrf = (html) => html.match(/name="_csrf" value="([a-f0-9]+)"/)[1];
+  let f = await req('?p=add&t=vendite');
+  assert.strictEqual(f.status, 200);
+  r = await req('?p=add&t=vendite', { _csrf: csrf(f.text), [F.id]: '9', [F.venditore]: 'Gialli', [F.area]: 'NORD', [F.importo]: '77.5', _next: 'list' });
+  assert.strictEqual(r.status, 302, (r.text.match(/alert-danger[\s\S]{0,400}/) || [r.text.slice(0, 300)])[0]);
+  j = JSON.parse((await get('?p=dt&t=vendite&draw=1&start=0&length=10')).text);
+  assert.strictEqual(j.recordsTotal, 4);
+  assert.match(JSON.stringify(j.data), /Gialli/);
+  f = await req(`?p=edit&t=vendite&k[${F.id}]=9`);
+  assert.strictEqual(f.status, 200);
+  r = await req(`?p=edit&t=vendite&k[${F.id}]=9`, { _csrf: csrf(f.text), [F.venditore]: 'Gialli Rossi', [F.area]: 'NORD', [F.importo]: '80', _next: 'list' });
+  assert.strictEqual(r.status, 302, (r.text.match(/alert-danger[\s\S]{0,400}/) || [r.text.slice(0, 300)])[0]);
+  assert.match((await get('?p=dt&t=vendite&draw=1&start=0&length=10')).text, /Gialli Rossi/);
+  r = await req('?p=delete&t=vendite', { _csrf: csrf(f.text), [`k[${F.id}]`]: '9' });
+  assert.strictEqual(JSON.parse((await get('?p=dt&t=vendite&draw=1&start=0&length=10')).text).recordsTotal, 3);
+  if (KIND === 'mysql') {
+    // no id from the form: the procedure returns the new key
+    f = await req('?p=add&t=vendite');
+    r = await req('?p=add&t=vendite', { _csrf: csrf(f.text), [F.id]: '', [F.venditore]: 'Nuovo', [F.area]: 'NORD', [F.importo]: '5', _next: 'view' });
+    assert.strictEqual(r.status, 302, (r.text.match(/alert-danger[\s\S]{0,400}/) || [r.text.slice(0, 300)])[0]);
+    assert.strictEqual(JSON.parse((await get('?p=dt&t=vendite&draw=1&start=0&length=10&q=Nuovo')).text).recordsFiltered, 1);
+  }
 });

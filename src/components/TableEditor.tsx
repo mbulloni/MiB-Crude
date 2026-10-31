@@ -9,7 +9,7 @@ import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } f
 import { useItemLock } from './TeamPanel';
 import PageDesigner from './PageDesigner';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
-import { ProcParams } from './ProcSection';
+import { ProcParams, ProcWrite } from './ProcSection';
 
 const SHOW: [string, string][] = [['list', 'Lista'], ['view', 'Vista'], ['add', 'Nuovo'], ['edit', 'Modifica'], ['search', 'Ricerca'], ['export', 'Esporta'], ['import', 'Importa'], ['print', 'Stampa']];
 type TabKey = 'general' | 'fields' | 'pages' | 'layout' | 'details' | 'events' | 'api';
@@ -68,7 +68,12 @@ export default function TableEditor({ name }: { name: string }) {
           </> : t.source.type === 'proc' ? <>
             <Row label="Stored procedure" hint="MariaDB/MySQL e SQL Server: procedura; PostgreSQL: funzione che restituisce una tabella; Oracle: funzione pipelined"><Text value={t.source.procedure} onChange={(v) => set((x) => { x.source.procedure = v; })} mono /></Row>
             <Row label="Parametri" wide><ProcParams value={t.source.params || []} onChange={(v) => set((x) => { x.source.params = v; })} /></Row>
-            <p className="help">In sola lettura: ricerca, filtri, ordinamento e totali lavorano sul risultato della procedura (al massimo 50.000 righe). Per pagine Visualizza e link serve la chiave primaria.</p>
+            <p className="help">Ricerca, filtri, ordinamento e totali lavorano sul risultato della procedura (al massimo 50.000 righe). Per pagine Visualizza e link serve la chiave primaria.</p>
+            <p className="help"><b>Scrittura</b> (facoltativa): procedure che inseriscono, modificano ed eliminano i record; senza, l'origine è in sola lettura.</p>
+            <ProcWrite value={t.source.write} fields={t.fields.map((f) => f.name)} keys={t.keys} onChange={(v) => set((x) => {
+              if (Object.keys(v).length) x.source.write = v; else delete x.source.write;
+              x.readOnly = !Object.keys(v).length;
+            })} />
           </> : t.source.type === 'rest' ? <>
             <Row label="Percorso elenco" hint="GET che restituisce i record, es. /users"><Text value={t.source.path} onChange={(v) => set((x) => { x.source.path = v; })} mono /></Row>
             <Row label="Percorso dei dati" hint="Dove si trova l'elenco nella risposta JSON (es. data)"><Text value={t.source.dataPath} onChange={(v) => set((x) => { x.source.dataPath = v; })} mono /></Row>

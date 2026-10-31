@@ -167,7 +167,7 @@ class Rest
     }
 
     /** Forget what was read from this source (after a write). */
-    private static function forget(Table $t)
+    public static function forget(Table $t)
     {
         foreach (array_keys(self::$cache) as $k) if (strpos($k, $t->name . "\0") === 0) unset(self::$cache[$k]);
         if (!empty($t->def['source']['cacheSeconds'])) foreach (glob(self::cacheDir($t) . '/*.json') ?: [] as $f) @unlink($f);

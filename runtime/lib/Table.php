@@ -82,14 +82,16 @@ class Table
     {
         $p = $this->page($type);
         if (empty($p['enabled'])) return false;
-        if ((!empty($this->def['readOnly']) || $this->def['source']['type'] === 'proc') && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return false;
+        if (!empty($this->def['readOnly']) && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return false;
+        // stored procedure source: writable through the procedures set for insert / update / delete
+        if ($this->def['source']['type'] === 'proc' && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return Proc::writes($this, ['add' => 'insert', 'import' => 'insert', 'edit' => 'update', 'delete' => 'delete'][$type]);
         return true;
     }
 
     /** "Update selected" on the list: edit page and permission, a writable source, option not turned off. */
     public function canUpdateSelected()
     {
-        return $this->enabled('edit') && $this->app->security->can($this->name, 'E') && $this->writeTable() !== null
+        return $this->enabled('edit') && $this->app->security->can($this->name, 'E') && ($this->writeTable() !== null || Proc::writes($this, 'update'))
             && (!isset($this->def['pages']['list']['updateSelected']) || $this->def['pages']['list']['updateSelected']);
     }
 
@@ -610,7 +612,8 @@ class Table
     public function insert(array $vals, $page = 'add')
     {
         $wt = $this->writeTable();
-        if (!$wt) return [false, null, t('error.readonly')];
+        $viaProc = Proc::writes($this, 'insert');
+        if (!$wt && !$viaProc) return [false, null, t('error.readonly')];
         foreach ($this->def['fields'] as $f) {
             if (!array_key_exists($f['name'], $vals) && empty($f['autoInc']) && ($d = $this->defaultFor($f)) !== null) $vals[$f['name']] = $d;
         }
@@ -623,7 +626,8 @@ class Table
         Crypto::encryptValues($this, $vals);
         $vals = $this->onlyWritable($vals);
         $auto = $this->autoField();
-        if ($this->rest) $keys = Rest::insert($this, $vals);
+        if ($viaProc) $keys = Proc::write($this, 'insert', $vals, [], null);
+        elseif ($this->rest) $keys = Rest::insert($this, $vals);
         else {
             $id = $this->db->insert($wt, $this->blobs($vals), $auto);
             $keys = [];
@@ -637,7 +641,8 @@ class Table
     public function update(array $keys, array $vals, $page = 'edit')
     {
         $wt = $this->writeTable();
-        if (!$wt) return [false, t('error.readonly')];
+        $viaProc = Proc::writes($this, 'update');
+        if (!$wt && !$viaProc) return [false, t('error.readonly')];
         $old = $this->fetchOne($keys, true);
         if (!$old) return [false, t('error.notfound')];
         $msg = '';
@@ -646,7 +651,8 @@ class Table
         $plain = $vals;
         Crypto::encryptValues($this, $vals);
         $vals = $this->onlyWritable($vals);
-        if ($this->rest) Rest::update($this, $keys, $vals, $old);
+        if ($viaProc) Proc::write($this, 'update', $vals, $keys, $old);
+        elseif ($this->rest) Rest::update($this, $keys, $vals, $old);
         else $this->db->update($wt, $this->blobs($vals), $keys);
         $newKeys = $keys;
         foreach ($keys as $k => $v) if (array_key_exists($k, $vals)) $newKeys[$k] = $vals[$k];
@@ -658,12 +664,14 @@ class Table
     public function delete(array $keys, $page = 'list')
     {
         $wt = $this->writeTable();
-        if (!$wt) return [false, t('error.readonly')];
+        $viaProc = Proc::writes($this, 'delete');
+        if (!$wt && !$viaProc) return [false, t('error.readonly')];
         $old = $this->fetchOne($keys);
         if (!$old) return [false, t('error.notfound')];
         $msg = '';
         if ($this->app->event($this->name, 'BeforeDelete', [$old, &$msg, $page]) === false) return [false, $msg ?: t('msg.cancelled')];
-        if ($this->rest) Rest::delete($this, $keys);
+        if ($viaProc) Proc::write($this, 'delete', [], $keys, $old);
+        elseif ($this->rest) Rest::delete($this, $keys);
         else $this->db->delete($wt, $keys);
         Upload::removeFiles($this, $old);
         Audit::log($this, 'delete', $keys, $old, null);
