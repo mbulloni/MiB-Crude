@@ -227,6 +227,17 @@ function phpSyntaxError(body) {
   } finally { fs.rmSync(f, { force: true }); }
 }
 
+/**
+ * Stray word left at the very end of an event (a word typed right after a closing comment):
+ * PHP reads it as a statement without ";". Removed only when that alone fixes the syntax.
+ */
+function repairStrayWord(body) {
+  const m = String(body).match(/(^|\*\/|;|\}|\n)(\s*)([A-Za-z_]\w*)\s*$/);
+  if (!m || ['return', 'exit', 'die', 'break', 'continue'].includes(m[3].toLowerCase())) return null;
+  const fixed = String(body).slice(0, m.index + m[1].length) + '\n';
+  return phpSyntaxError(fixed) ? null : { code: fixed, word: m[3] };
+}
+
 function indent(code, pad) {
   return String(code).replace(/\r\n/g, '\n').split('\n').map((l) => (l.trim() ? pad + l : l)).join('\n');
 }
@@ -541,8 +552,14 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
         report.eventsSkipped.push(`${tname}: ${en}`);
         continue;
       }
-      const body = up8(code, `${tname}: ${en}`, report);
-      const bad = phpSyntaxError(body);
+      let body = up8(code, `${tname}: ${en}`, report);
+      let bad = phpSyntaxError(body);
+      const stray = bad && repairStrayWord(body);
+      if (stray) {
+        body = stray.code;
+        bad = null;
+        report.php8.push({ where: `${tname}: ${en}`, fixes: [`testo estraneo "${stray.word}" in fondo all'evento rimosso (errore di sintassi già nel progetto originale)`], problems: [] });
+      }
       if (bad) {
         // Broken in the original project too: keep it for reference, do not generate it.
         keep(`events/${tname.replace(/[^\w.-]/g, '_')}/${en}.php`, code);
@@ -775,4 +792,4 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   return { proj: P.loadProject(targetDir), report };
 }
 
-module.exports = { importPhpr, parseXml, readPages, pageFields, wrapEvent, mapEvent, adoType };
+module.exports = { importPhpr, parseXml, readPages, pageFields, wrapEvent, mapEvent, adoType, repairStrayWord };

@@ -15,6 +15,14 @@ test('PHP 7.4 -> 8 rewrites only real code', () => {
   assert.ok(r.problems.some((p) => p.level === 'error' && /each/.test(p.msg)));
 });
 
+test('stray word at the end of an event is removed only when it is the syntax error', () => {
+  const ok = I.repairStrayWord('if ($data["A"] == 1)\n$record["css"] = "x";\n/* $old = 1; */\nricavi');
+  assert.deepStrictEqual(ok && ok.word, 'ricavi');
+  assert.ok(!/ricavi/.test(ok.code));
+  assert.strictEqual(I.repairStrayWord('$a = ;\nricavi'), null, 'other errors: event stays disabled');
+  assert.strictEqual(I.repairStrayWord('$a = 1;\nreturn'), null);
+});
+
 test('phpr events are wrapped with their variables', () => {
   const w = I.wrapEvent('EVENT_BEFOREEDIT', '$values["a"] = $oldvalues["a"];\nreturn true;', 'ordini');
   assert.strictEqual(w.to, 'BeforeEdit');
