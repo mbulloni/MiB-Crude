@@ -179,13 +179,13 @@ progress { width: 100%; }
 .recent button:hover { background: var(--hover); } .recent small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 
 /* Tables and queries (phpr "Datasource tables" screen) */
-.ds-screen { display: flex; flex-direction: column; height: 100%; }
-.ds-info { background: var(--accent); color: #fff; padding: 7px 16px; display: flex; gap: 8px; align-items: baseline; }
-.ds-info small { opacity: .8; }
-.ds-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 12px; border-bottom: 1px solid var(--border); background: var(--panel); align-items: center; }
-.ds-toolbar .sep { width: 1px; height: 20px; background: var(--border); }
-.ds-body { display: flex; flex: 1; min-height: 0; }
-.ds-tree { width: 330px; min-width: 220px; max-width: 70%; resize: horizontal; overflow: auto; border-right: 1px solid var(--border); background: var(--side); padding: 8px 0; }
+.ds-screen { display: flex; flex-direction: column; height: 100%; padding: 18px 22px; gap: 14px; box-sizing: border-box; }
+.ds-screen > .settings-hero { margin-bottom: 0; }
+.ds-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); align-items: center; }
+.ds-toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+.ds-group { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-right: 2px; }
+.ds-body { display: flex; flex: 1; min-height: 0; gap: 14px; }
+.ds-tree { width: 330px; min-width: 220px; max-width: 70%; resize: horizontal; overflow: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 10px 0; }
 .ds-tree > .inp { margin: 0 8px 8px; width: calc(100% - 16px); }
 .tt-conn, .tt-item { display: flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer; user-select: none; }
 .tt-conn { font-size: 13px; }
@@ -196,7 +196,7 @@ progress { width: 100%; }
 .tt-item:hover .tt-more, .tt-conn:hover .tt-more { visibility: visible; }
 .tt-group { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 10px 12px 4px; }
 .tt-actions { display: flex; gap: 6px; padding: 10px 12px; flex-wrap: wrap; }
-.ds-main { flex: 1; min-width: 0; position: relative; }
+.ds-main { flex: 1; min-width: 0; position: relative; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--side); }
 .diagram { position: absolute; inset: 0; overflow: auto; background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px; }
 .diagram-lines { position: absolute; left: 0; top: 0; pointer-events: none; }
 .diagram-lines path { fill: none; stroke: var(--accent); stroke-width: 1.6; opacity: .7; }

@@ -6,7 +6,7 @@ import { call } from '../api';
 import { replaceProject, run, toast, update, useStore } from '../store';
 import type { Project, RestPaging, Table } from '../types';
 import CodeEditor from './CodeEditor';
-import { Btn, Check, Empty, I, Modal, Row, Select, Text, lbl, slug } from './ui';
+import { Btn, Check, Empty, Hero, I, Modal, Row, Select, Text, lbl, slug } from './ui';
 import { ConnectionDialog } from './ConnectionsPanel';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
 import { ProcDialog } from './ProcSection';
@@ -498,27 +498,37 @@ export default function TablesPanel() {
 
   return (
     <div className="ds-screen">
-      <div className="ds-info"><I n="table" /> <b>{selected || 'Tabelle e query'}</b>{selected && <small> · doppio clic per le impostazioni, tasto destro per il menu</small>}</div>
+      <Hero icon="table" title="Tabelle e query" sub={selected ? `· ${selected}` : undefined}
+        chips={[
+          ['table', `${p.tables.filter((t) => t.source.type === 'table').length} tabelle`],
+          p.tables.some((t) => t.source.type === 'sql') && ['code-square', `${p.tables.filter((t) => t.source.type === 'sql').length} query SQL`],
+          p.tables.some((t) => t.source.type === 'rest') && ['cloud', `${p.tables.filter((t) => t.source.type === 'rest').length} REST`],
+          p.tables.some((t) => t.source.type === 'proc') && ['gear-wide-connected', `${p.tables.filter((t) => t.source.type === 'proc').length} procedure`],
+          ['diagram-3', `${p.tables.reduce((n, t) => n + t.details.length, 0)} relazioni`],
+          ['database', `${p.connections.length} connessioni`],
+        ]}
+        actions={<><Btn icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn><Btn kind="primary" icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn></>} />
       <div className="ds-toolbar">
-        <Btn small icon="arrow-repeat" onClick={sync} title="Allinea il progetto alla struttura del database">Sincronizza</Btn>
-        <Btn small icon="list-nested" onClick={() => useStore.getState().set({ nav: { kind: 'menu' } })}>Editor menu</Btn>
-        <Btn small icon="grid" onClick={() => update((d) => { d.tables.forEach((t) => { delete (t as any).diagram; }); d.tables.sort((a, b) => a.name.localeCompare(b.name)); })}>Disponi tabelle</Btn>
-        <Btn small icon="arrows-expand" onClick={() => setExpanded(new Set(p.tables.map((t) => t.name)))}>Mostra tutti i campi</Btn>
-        <Btn small icon="arrows-collapse" onClick={() => setExpanded(new Set())}>Nascondi tutti i campi</Btn>
-        <Btn small icon="diagram-3" onClick={() => setDlg({ kind: 'relation' })} disabled={p.tables.length < 2}>Aggiungi relazione</Btn>
-        <Btn small icon="file-earmark-code" onClick={() => setDlg({ kind: 'script', conn: p.project.defaultConnection })}>Crea script SQL</Btn>
-        <span className="sep" />
-        <Btn small icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn>
-        <Btn small icon="code-square" onClick={() => setDlg({ kind: 'sql', conn: p.project.defaultConnection })}>Nuova query SQL</Btn>
-        <Btn small icon="gear-wide-connected" onClick={() => setDlg({ kind: 'proc', conn: p.project.defaultConnection })}>Da stored procedure</Btn>
-        {p.connections.some((c) => c.driver === 'rest') && <Btn small icon="cloud" onClick={() => setDlg({ kind: 'rest', conn: '' })}>Nuova origine REST</Btn>}
+        <span className="ds-group">Nuova origine</span>
+        <Btn small icon="code-square" onClick={() => setDlg({ kind: 'sql', conn: p.project.defaultConnection })}>Query SQL</Btn>
+        <Btn small icon="gear-wide-connected" onClick={() => setDlg({ kind: 'proc', conn: p.project.defaultConnection })} title="Nuova origine da stored procedure">Procedura</Btn>
+        {p.connections.some((c) => c.driver === 'rest') && <Btn small icon="cloud" onClick={() => setDlg({ kind: 'rest', conn: '' })}>REST</Btn>}
         <Btn small icon="magic" onClick={() => setDlg({ kind: 'template', conn: p.project.defaultConnection })}>Da modello</Btn>
-        <Btn small icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn>
-        <Btn small icon="database-add" onClick={() => setDlg({ kind: 'conn' })}>Aggiungi connessione</Btn>
+        <Btn small icon="database-add" onClick={() => setDlg({ kind: 'conn' })} title="Aggiungi connessione" />
+        <span className="sep" />
+        <span className="ds-group">Diagramma</span>
+        <Btn small icon="grid" onClick={() => update((d) => { d.tables.forEach((t) => { delete (t as any).diagram; }); d.tables.sort((a, b) => a.name.localeCompare(b.name)); })}>Disponi</Btn>
+        <Btn small icon="arrows-expand" onClick={() => setExpanded(new Set(p.tables.map((t) => t.name)))} title="Mostra tutti i campi" />
+        <Btn small icon="arrows-collapse" onClick={() => setExpanded(new Set())} title="Nascondi tutti i campi" />
+        <Btn small icon="diagram-3" onClick={() => setDlg({ kind: 'relation' })} disabled={p.tables.length < 2}>Relazione</Btn>
+        <span className="sep" />
+        <span className="ds-group">Database</span>
+        <Btn small icon="arrow-repeat" onClick={sync} title="Allinea il progetto alla struttura del database">Sincronizza</Btn>
+        <Btn small icon="file-earmark-code" onClick={() => setDlg({ kind: 'script', conn: p.project.defaultConnection })}>Script SQL</Btn>
       </div>
       <div className="ds-body">
         <div className="ds-tree">
-          <input className="inp" placeholder="Filtra…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+          <input className="inp" placeholder="Filtra…" title="Doppio clic: impostazioni della tabella · tasto destro: menu" value={filter} onChange={(e) => setFilter(e.target.value)} />
           {p.connections.map((c) => {
             const g = byConn[c.id];
             const isOpen = open.has(c.id);
