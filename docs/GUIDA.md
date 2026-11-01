@@ -246,6 +246,8 @@ Eventi dell'applicazione: avvio, prima e dopo il login, login fallito, registraz
 
 ## 11. Impostazioni e stile
 
+In alto il riepilogo del progetto (titolo, lingue, menu, tema, funzioni attive, attività, tema grafico); a sinistra sei categorie: **Generale**, **Aspetto**, **Funzioni** (riquadri con interruttore), **Automazione**, **Comunicazione**, **Mappe**. L'ultima categoria aperta viene ricordata.
+
 - **Generale**: titolo dell'applicazione (per lingua), lingue, lingua predefinita, pagina iniziale.
 - **Formati**: data, separatori dei numeri, valuta, fuso orario.
 - **File caricati**: cartella (relativa all'app o assoluta) e dimensione massima.
