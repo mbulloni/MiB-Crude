@@ -42,7 +42,7 @@ export default function NtlmSection({ readOnly }: { readOnly: boolean }) {
     <Section title="Tabelle di profilazione" help="Nomi e colonne delle tabelle R-LAB; vengono create se mancano (si può disattivare). La gestione è nell'app: Amministrazione › Utenti Windows e Permessi pagine.">
       {t('userTable', 'Utenti e gruppi')}
       <Row label="Colonne"><span className="inline"><Text value={n.userCol} onChange={(v) => set({ userCol: v })} mono /><Text value={n.groupCol} onChange={(v) => set({ groupCol: v })} mono /><Text value={n.areaCol} onChange={(v) => set({ areaCol: v })} mono /></span></Row>
-      {t('permTable', 'Permessi pagine', 'Gruppo, Pagina (nome tabella o pagina phpr, es. ordini_list.php), Permessi R:W:L')}
+      {t('permTable', 'Permessi pagine', 'Gruppo, Pagina (nome tabella o pagina classica, es. ordini_list.php), Permessi R:W:L')}
       <Row label="Colonne"><span className="inline"><Text value={n.permGroupCol} onChange={(v) => set({ permGroupCol: v })} mono /><Text value={n.permPageCol} onChange={(v) => set({ permPageCol: v })} mono /><Text value={n.permCol} onChange={(v) => set({ permCol: v })} mono /></span></Row>
       {t('profileTable', 'Anagrafica (facoltativa)', 'Nome e cognome mostrati nell\'app')}
       <Row label="Colonne"><span className="inline"><Text value={n.profileUserCol} onChange={(v) => set({ profileUserCol: v })} mono /><Text value={n.firstNameCol} onChange={(v) => set({ firstNameCol: v })} mono /><Text value={n.lastNameCol} onChange={(v) => set({ lastNameCol: v })} mono /></span></Row>

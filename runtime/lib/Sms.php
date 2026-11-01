@@ -2,7 +2,7 @@
 namespace MiB;
 
 /**
- * Text messages (sendSms, phpr runner_sms, codes of the two-step verification). settings.sms:
+ * Text messages (sendSms, runner_sms of .phpr projects, codes of the two-step verification). settings.sms:
  *   provider "twilio": accountSid, from (number or sender id); auth token in the secrets
  *   provider "http":   url with {to} {text} {from} {password} (URL-encoded), method GET or POST, body (POST, same
  *                      placeholders, JSON-escaped when contentType is application/json), contentType, okText

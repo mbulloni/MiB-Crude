@@ -178,7 +178,7 @@ class Ntlm
             $flags = strtoupper((string)$r['r']);
             $letters = '';
             if (preg_match('/^(.+)_(list|view|add|edit|delete|search|print|export|import)\.php$/', $page, $m) && isset($idx[$m[1]])) {
-                // one phpr page: any flag grants that page
+                // one classic page: any flag grants that page
                 if (preg_match('/[RWL]/', $flags)) $letters = self::PAGE_LETTERS[$m[2]];
                 $target = $idx[$m[1]];
             } else {

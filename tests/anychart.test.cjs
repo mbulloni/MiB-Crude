@@ -1,5 +1,5 @@
 'use strict';
-// AnyChart calls of phpr chart events (JS_ModifyChart) replayed on an ECharts option.
+// AnyChart calls of imported chart events (JS_ModifyChart) replayed on an ECharts option.
 const test = require('node:test');
 const assert = require('node:assert');
 
@@ -39,7 +39,7 @@ test('anychart-compat: stacking, markers, pie outside labels, format strings', (
   global.window = { console: { warn: () => {} } };
   delete require.cache[require.resolve('../runtime/assets/anychart-compat.js')];
   require('../runtime/assets/anychart-compat.js');
-  // 100% stacking (phpr: chart.yScale().stackMode("percent")).
+  // 100% stacking (classic: chart.yScale().stackMode("percent")).
   let o = window.mcAnyChart({ series: [{ type: 'bar', data: [1, 30] }, { type: 'bar', data: [3, { value: 10 }] }], yAxis: { type: 'value' } }, 'var y = chart.yScale(); y.stackMode("percent");');
   assert.deepStrictEqual([o.series[0].stack, o.series[1].stack], ['mc', 'mc']);
   assert.deepStrictEqual(o.series[0].data, [25, 75]);

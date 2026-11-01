@@ -275,7 +275,7 @@ class Reports
                 'data' => isset($values[$i]) ? $values[$i] : [], 'color' => isset($s['color']) ? $s['color'] : ''];
         }
         $out = ['type' => $def['type'], 'labels' => $labels, 'datasets' => $datasets, 'stacked' => !empty($def['stacked']), 'links' => $links];
-        // JS_ModifyChart (phpr chart event, AnyChart API) applied in the browser by anychart-compat.js.
+        // JS_ModifyChart (imported chart event, AnyChart API) applied in the browser by anychart-compat.js.
         if (!empty($def['modifyJs'])) $out['js'] = $def['modifyJs'];
         $this->app->json($out);
     }

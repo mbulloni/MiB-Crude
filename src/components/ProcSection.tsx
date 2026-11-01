@@ -84,7 +84,7 @@ export function ProcDialog({ onClose, conn: conn0, onCreated }: { onClose: () =>
             <Text value={proc} onChange={setProc} mono placeholder="nome_procedura" />
           </span></Row>
         <Row label="Parametri" wide><ProcParams value={params} onChange={setParams} /></Row>
-        <p className="help">Come le origini stored procedure di phpr: la procedura viene eseguita a ogni pagina e il suo primo risultato diventa l'elenco dei record; ricerca, filtri, ordinamento, totali, report e grafici lavorano su quel risultato (in sola lettura).</p>
+        <p className="help">Come le classiche origini stored procedure: la procedura viene eseguita a ogni pagina e il suo primo risultato diventa l'elenco dei record; ricerca, filtri, ordinamento, totali, report e grafici lavorano su quel risultato (in sola lettura).</p>
         {prev && <PreviewGrid prev={prev} />}
       </>}
     </Modal>

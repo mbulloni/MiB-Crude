@@ -204,7 +204,7 @@ function generate(proj, opts = {}) {
   };
   const themePack = installTheme(proj.project.theme && proj.project.theme.pack);
   const authPack = installTheme(proj.project.theme && proj.project.theme.authPack);
-  // public/: files served from the application root (phpr "source" folder).
+  // public/: files served from the application root (classic "source" folder).
   copied += copyDir(path.join(proj.dir, 'public'), out);
   const logo = path.join(proj.dir, 'custom', 'logo.png');
   if (fs.existsSync(logo)) fs.copyFileSync(logo, path.join(out, 'assets', 'logo.png'));
@@ -231,14 +231,14 @@ function generate(proj, opts = {}) {
       if (f.viewAs && f.viewAs.type === 'custom' && f.viewAs.code) {
         extra.push(`    public function ViewAs_${ident(f.name)}($value, $row, $context)\n    {\n${indentCode(eventBody(f.viewAs.code), '        ')}\n    }`);
       }
-      // PHP expressions (imported from phpr): default value, auto-update value, lookup WHERE.
+      // PHP expressions (imported from .phpr projects): default value, auto-update value, lookup WHERE.
       if (f.defaultCode) extra.push(`    public function Default_${ident(f.name)}()\n    {\n        return ${f.defaultCode};\n    }`);
       if (f.autoUpdateCode) extra.push(`    public function AutoUpdate_${ident(f.name)}()\n    {\n        return ${f.autoUpdateCode};\n    }`);
       const lk = f.editAs && f.editAs.lookup;
       if (lk && lk.whereCode) extra.push(`    public function LookupWhere_${ident(f.name)}()\n    {\n        return ${lk.whereCode};\n    }`);
     }
     const evs = (proj.events || {})[t.name] || {};
-    // Client-side events (phpr "JavaScript OnLoad"): one script per table, compiled in the browser.
+    // Client-side events (classic "JavaScript OnLoad"): one script per table, compiled in the browser.
     const js = Object.fromEntries(Object.entries(evs).filter(([n, c]) => n.startsWith('JS_OnLoad_') && c && c.trim()).map(([n, c]) => [n.slice('JS_OnLoad_'.length), c]));
     // Custom buttons: client code before/after the server call.
     const btns = {};
@@ -314,7 +314,7 @@ function generate(proj, opts = {}) {
     mail: proj.project.mail || {},
     debug: !!opts.debug,
     systemPrefix: proj.project.systemPrefix || 'mc_',
-    // phpr short names (orders → orders_list.php) for the NTLM permission pages
+    // Classic short names (orders → orders_list.php) for the NTLM permission pages
     tableShort: Object.fromEntries(proj.tables.filter((t) => t.phprShort).map((t) => [t.name, String(t.phprShort).toLowerCase().replace(/[^a-z0-9_]/g, '_')])),
   };
   w('config/app.php', phpFile(app, 'Application configuration'));

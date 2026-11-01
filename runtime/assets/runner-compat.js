@@ -1,4 +1,4 @@
-/* MiB-Crude: client API compatible with phpr for imported "JavaScript OnLoad" events.
+/* MiB-Crude: client API compatible with .phpr projects for imported "JavaScript OnLoad" events.
    Supported: Runner.getControl(pageid, field) with getValue/setValue/on/off/makeReadonly/makeReadWrite/
    setDisabled/setEnabled/hide/show/addValidation/removeValidation/setFocus/clear/getDispElem/isEmpty;
    pageObj (also "this") with on/hideField/showField/hideItem/showItem/getItem/setProxyValue; proxy values. */
@@ -76,7 +76,7 @@
   window.pageObj = pageObj;
   window.pageid = 1;
 
-  // Custom buttons (phpr): Client Before -> Server (index.php?p=button) -> Client After.
+  // Custom buttons (classic): Client Before -> Server (index.php?p=button) -> Client After.
   var btnCode = (window.MCJS && window.MCJS[page.table] && window.MCJS[page.table].__buttons) || {};
   var compile = function (src, args) { try { return src ? new Function(args, src) : null; } catch (e) { console.warn('[MiB-Crude] pulsante:', e); return null; } };
   document.addEventListener('click', function (e) {
@@ -118,10 +118,10 @@
       var fn = new Function('pageObj', 'proxy', 'pageid', 'inlineRow', 'inlineObject', 'row', code);
       fn.call(pageObj, pageObj, page.proxy || {}, 1, null, null, null);
     } catch (e) {
-      if (window.console) console.warn('[MiB-Crude] evento JavaScript importato da phpr:', e);
+      if (window.console) console.warn('[MiB-Crude] evento JavaScript importato dal progetto .phpr:', e);
     }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
-  // List refresh after the grid reloads, for code listening to phpr list events.
+  // List refresh after the grid reloads, for code listening to imported list events.
   if (window.MC && window.MC.grid && window.MC.grid.on) window.MC.grid.on('draw', function () { pageObj.fireEvent('afterPageReady'); });
 })();

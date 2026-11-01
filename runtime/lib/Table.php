@@ -42,7 +42,7 @@ class Table
         return array_key_exists($mangled, $post) ? $post[$mangled] : null;
     }
 
-    /** Value of a PHP default/auto-update expression imported from phpr. */
+    /** Value of a PHP default/auto-update expression imported from .phpr projects. */
     private function codeValue($kind, $f)
     {
         $r = $this->app->event($this->name, $kind . '_' . self::ident($f['name']), []);

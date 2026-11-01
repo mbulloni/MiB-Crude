@@ -180,7 +180,7 @@ class App
         $custom = $this->root . '/custom/views/' . $view . '.php';
         include is_file($custom) ? $custom : $this->root . '/runtime/views/' . $view . '.php';
         $content = ob_get_clean();
-        // PHP snippets placed on the page (imported from phpr or defined in the designer).
+        // PHP snippets placed on the page (imported from .phpr projects or defined in the designer).
         if (isset($vars['t']) && $vars['t'] instanceof Table && !empty($vars['t']->def['snippets'])) {
             $content = $this->snippets($vars['t'], 'top') . $content . $this->snippets($vars['t'], 'bottom');
         }

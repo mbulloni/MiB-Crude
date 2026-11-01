@@ -2,7 +2,7 @@
 namespace MiB;
 
 /**
- * Saved searches of the list pages (phpr "Save search"): quick search, advanced search and filter panel
+ * Saved searches of the list pages (classic "Save search"): quick search, advanced search and filter panel
  * stored under a name in mc_searches, per user; administrators can share one with everybody.
  * Available with the sign-in on (the searches belong to a user).
  */

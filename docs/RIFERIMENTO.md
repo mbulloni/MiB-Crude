@@ -1,6 +1,6 @@
 # Riferimento tecnico
 
-Eventi, funzioni PHP disponibili nel codice degli eventi, compatibilità con phpr, tabelle di sistema e formato del progetto. Per l'uso del designer vedi [GUIDA.md](GUIDA.md).
+Eventi, funzioni PHP disponibili nel codice degli eventi, compatibilità con i progetti importati, tabelle di sistema e formato del progetto. Per l'uso del designer vedi [GUIDA.md](GUIDA.md).
 
 ## Eventi
 
@@ -64,7 +64,7 @@ Disponibili in tutti gli eventi, nei blocchi PHP, nell'intestazione/piè/menu e 
 | `\MiB\Geocode::fill('tabella', $limite)` | coordinate dei record senza coordinate (per esempio in un'attività) |
 | `\MiB\Tasks::run('nome')` | esegue subito un'attività pianificata |
 
-## Compatibilità phpr
+## Compatibilità con i progetti importati
 
 Per eseguire gli eventi importati senza riscriverli:
 
@@ -114,7 +114,7 @@ security.json              accesso, gruppi, permessi, provider
 lang/<codice>.json         traduzioni
 reports/, charts/, dashboards/   un file per elemento
 custom/                    file copiati nell'app (custom.css, logo.png…)
-public/                    file serviti dalla radice dell'app (include di phpr)
+public/                    file serviti dalla radice dell'app (include dei progetti .phpr)
 .mibcrude-local/           solo sul computer dello sviluppatore: password, chiavi, output, profili di pubblicazione
 ```
 

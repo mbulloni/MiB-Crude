@@ -1,6 +1,6 @@
 /*
- * MiB-Crude — "chart" and "anychart" objects for phpr chart events (JS_ModifyChart).
- * phpr draws charts with AnyChart; MiB-Crude uses Apache ECharts. This shim records the
+ * MiB-Crude — "chart" and "anychart" objects for imported chart events (JS_ModifyChart).
+ * .phpr projects draw charts with AnyChart; MiB-Crude uses Apache ECharts. This shim records the
  * AnyChart calls that customize a chart and applies them to the ECharts option: labels,
  * series colors, labels and markers, legend, tooltip, axes (also an extra right axis), scales,
  * stacking (also 100%), pie outside labels, zoom, AnyChart format strings ({%Value}...).
@@ -204,7 +204,7 @@
     });
   }
 
-  /** Runs phpr chart code against an ECharts option and returns the changed option. */
+  /** Runs imported chart code against an ECharts option and returns the changed option. */
   window.mcAnyChart = function (opt, code) {
     scales = [];
     var legend = function () { opt.legend = opt.legend || {}; opt.legend.textStyle = opt.legend.textStyle || {}; return opt.legend; };
@@ -267,7 +267,7 @@
       graphics: { vector: { HatchFill: {} } },
     };
     try { new Function('chart', 'anychart', code).call(chart, chart, anychart); }
-    catch (e) { if (window.console) window.console.warn('[MiB-Crude] evento del grafico importato da phpr:', e); }
+    catch (e) { if (window.console) window.console.warn('[MiB-Crude] evento del grafico importato dal progetto .phpr:', e); }
     return opt;
   };
 })();

@@ -1,6 +1,6 @@
 # CLAUDE.md — MiB-Crude
 
-Clone educativo di generatori classici per Linux, multisviluppatore. UI e messaggi in italiano.
+Generatore visuale educativo di applicazioni web PHP per Linux, multisviluppatore. UI e messaggi in italiano.
 
 ## Comandi
 - `npm run dev` designer (Vite 5175 + Electron) · `npm start` build+avvio · `npm run typecheck`
@@ -14,4 +14,4 @@ Clone educativo di generatori classici per Linux, multisviluppatore. UI e messag
 - Eventi: catalogo duplicato in `core/defaults.cjs` (generatore) e `src/events.ts` (designer): tenerli allineati.
 - Stringhe runtime in `runtime/lang/{it,en}.json`; ogni `t('chiave')` nuova va in entrambi.
 - Dopo modifiche a `src/` serve `npx vite build` prima di lanciare Electron senza dev server.
-- Import phpr: `core/phpr-import.cjs` (XML .phpr + PAGES*.sqlite), compatibilità runtime in `runtime/lib/Compat.php`, controlli PHP 8 in `core/php8-compat.cjs`.
+- Import progetti .phpr: `core/phpr-import.cjs` (XML .phpr + PAGES*.sqlite), compatibilità runtime in `runtime/lib/Compat.php`, controlli PHP 8 in `core/php8-compat.cjs`.

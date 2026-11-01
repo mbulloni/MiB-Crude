@@ -270,7 +270,7 @@ class Admin
         $c = Ntlm::cfg($this->app);
         $db = Ntlm::db($this->app);
         $t = Ntlm::qt($db, $c['permTable']);
-        // pages of this app: tables (phpr short name), reports, charts, dashboards
+        // pages of this app: tables (classic short name), reports, charts, dashboards
         $pages = [];
         foreach ($this->app->config['tables'] as $name => $file) {
             $key = isset($this->app->config['tableShort'][$name]) ? $this->app->config['tableShort'][$name] : preg_replace('/[^a-z0-9_]/', '_', strtolower($name));

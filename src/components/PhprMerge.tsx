@@ -1,4 +1,4 @@
-// One application from several phpr projects: other .phpr files merged into the open project
+// One application from several .phpr projects: other .phpr files merged into the open project
 // (core/merge.cjs). Same database = same connection, same table = shared or renamed, menu under a header.
 import { useState } from 'react';
 import { call } from '../api';
@@ -58,10 +58,10 @@ export default function PhprMergeDialog({ onClose }: { onClose: () => void }) {
   const [prefix, setPrefix] = useState('');
   const [reports, setReports] = useState<{ report: MergeReport; reportFile: string }[] | null>(null);
   const pick = async () => {
-    const f = await call<string[]>('dialog:files', 'Progetti phpr da unire', [{ name: 'phpr', extensions: ['phpr'] }]);
+    const f = await call<string[]>('dialog:files', 'Progetti .phpr da unire', [{ name: 'Progetto .phpr', extensions: ['phpr'] }]);
     if (f.length) { setFiles([...files, ...f.filter((x) => !files.includes(x))]); if (!prefix && f.length === 1) setPrefix(base(f[0])); }
   };
-  const go = () => run(`Unione di ${files.length} progett${files.length === 1 ? 'o' : 'i'} phpr…`, async () => {
+  const go = () => run(`Unione di ${files.length} progett${files.length === 1 ? 'o' : 'i'} .phpr…`, async () => {
     const r = await mergePhpr(p, files, mode, prefix);
     replaceProject(r.proj);
     useStore.getState().set({ secrets: await call<Secrets>('secrets:get') });
@@ -69,7 +69,7 @@ export default function PhprMergeDialog({ onClose }: { onClose: () => void }) {
   });
   if (reports) return <MergeReports reports={reports} onClose={onClose} />;
   return (
-    <Modal wide title="Unisci progetti phpr a questo progetto" onClose={onClose}
+    <Modal wide title="Unisci progetti .phpr a questo progetto" onClose={onClose}
       footer={<><span className="grow" /><Btn onClick={onClose}>Annulla</Btn><Btn kind="primary" icon="box-arrow-in-down" disabled={!files.length} onClick={go}>Unisci</Btn></>}>
       <p className="help">Ogni file .phpr viene convertito e aggiunto a questo progetto, per farne un'unica applicazione: le connessioni allo stesso database diventano una sola, le voci di menu finiscono sotto un'intestazione con il nome del progetto, gruppi e permessi si sommano. Niente del progetto viene sovrascritto: nomi già usati vengono condivisi o rinominati e tutto è nel rapporto. Si può annullare con Ctrl+Z finché non salvi.</p>
       <Row label="File .phpr"><span className="inline wrap">

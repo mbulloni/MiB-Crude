@@ -1,7 +1,7 @@
 {
   "name": "mib-crude",
-  "version": "0.14.0",
-  "description": "MiB-Crude - generatore visuale di applicazioni web PHP per Linux, ispirato a generatori classici, multisviluppatore",
+  "version": "0.14.1",
+  "description": "MiB-Crude - generatore visuale di applicazioni web PHP per Linux, multisviluppatore",
   "main": "electron/main.cjs",
   "type": "commonjs",
   "scripts": {
@@ -45,11 +45,11 @@
       "desktop": {
         "entry": {
           "StartupWMClass": "mib-crude",
-          "Keywords": "php;crud;generator;phpr;database;",
+          "Keywords": "php;crud;generator;database;",
           "GenericName": "Generatore app PHP"
         }
       },
-      "description": "Generatore visuale di applicazioni web PHP ispirato a generatori classici, multisviluppatore (Git e server del team)."
+      "description": "Generatore visuale di applicazioni web PHP multisviluppatore (Git e server del team)."
     },
     "directories": {
       "buildResources": "build",

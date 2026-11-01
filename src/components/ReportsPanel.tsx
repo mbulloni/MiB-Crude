@@ -106,7 +106,7 @@ function ChartEditor({ c, set }: { c: Chart; set: (fn: (x: Chart) => void) => vo
       <Row label="Opzioni"><span className="chips"><Check label="Ordina per valore" value={c.sortByValue} onChange={(v) => set((x) => { x.sortByValue = v; })} /><Check label="Serie impilate" value={c.stacked} onChange={(v) => set((x) => { x.stacked = v; })} /></span></Row>
       <Row label="Mostra solo i primi"><Num value={c.limit} onChange={(v) => set((x) => { x.limit = v || undefined; })} /></Row>
     </Section>
-    <Section title="Personalizzazione JavaScript" help="Codice eseguito nel browser prima di disegnare il grafico, con l'API AnyChart di phpr (chart.getSeriesAt(0).labels()…, chart.legend()…, chart.yAxis(1)…, anychart.scales.linear()) tradotta su ECharts. Importato dagli eventi JS_ModifyChart."
+    <Section title="Personalizzazione JavaScript" help="Codice eseguito nel browser prima di disegnare il grafico, con l'API AnyChart dei progetti .phpr (chart.getSeriesAt(0).labels()…, chart.legend()…, chart.yAxis(1)…, anychart.scales.linear()) tradotta su ECharts. Importato dagli eventi JS_ModifyChart."
       actions={!c.modifyJs ? <Btn small icon="plus-lg" onClick={() => set((x) => { x.modifyJs = '// chart: grafico, anychart: utilità (format.number, scales.linear)\nchart.legend().position("bottom");\n'; })}>Aggiungi codice</Btn>
         : <Btn small kind="ghost" icon="trash" onClick={() => set((x) => { delete x.modifyJs; })}>Rimuovi</Btn>}>
       {c.modifyJs !== undefined && <CodeEditor language="javascript" value={c.modifyJs} onChange={(v) => set((x) => { x.modifyJs = v; })} height="220px" />}

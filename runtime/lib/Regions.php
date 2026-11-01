@@ -2,7 +2,7 @@
 namespace MiB;
 
 /**
- * Header, footer and menu of the project (phpr "header/footer/menu" includes): a file of the
+ * Header, footer and menu of the project (classic "header/footer/menu" includes): a file of the
  * application (e.g. one copied from the project's public folder) or code written in the designer
  * (generated as custom/regions/<name>.php). Shown by the standard layout and by every theme layout.
  * config.settings.regions.<header|footer|menu> = {source: none|file|code, file, hideStandard, position}

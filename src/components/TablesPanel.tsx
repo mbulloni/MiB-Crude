@@ -43,7 +43,7 @@ function SqlViewDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: st
       <div className="inline"><Row label="Nome"><Text value={name} onChange={setName} placeholder="ordini_per_cliente" mono /></Row>
         <Row label="Connessione"><Select value={conn} options={p.connections.map((c) => [c.id, c.name] as [string, string])} onChange={setConn} /></Row></div>
       <CodeEditor language="sql" value={sql} onChange={setSql} height={220} />
-      <p className="help">Come le viste SQL di phpr: lista, ricerca, filtri, report e grafici lavorano sul risultato. Diventa modificabile indicando la tabella base in Impostazioni avanzate.</p>
+      <p className="help">Come le classiche viste SQL: lista, ricerca, filtri, report e grafici lavorano sul risultato. Diventa modificabile indicando la tabella base in Impostazioni avanzate.</p>
       {prev && <div className="preview-grid"><table className="grid"><thead><tr>{prev.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
         <tbody>{prev.rows.map((r, i) => <tr key={i}>{prev.columns.map((c) => <td key={c}>{r[c] == null ? <i className="null">NULL</i> : String(r[c])}</td>)}</tr>)}</tbody></table>
         <small className="hint">{prev.total} righe</small></div>}
@@ -113,8 +113,8 @@ function AdvancedDialog({ t, onClose }: { t: Table; onClose: () => void }) {
   return (
     <Modal title={`Impostazioni avanzate — ${t.name}`} onClose={onClose} footer={<><Btn onClick={onClose}>Annulla</Btn><Btn kind="primary" onClick={ok}>OK</Btn></>}>
       <Row label="Tabella base" hint="Dove vengono aggiunti, modificati ed eliminati i dati (per viste personalizzate e query SQL)"><Text value={base} onChange={setBase} mono /></Row>
-      <Row label="Prefisso nomi file" hint={`Usato per gli URL in stile phpr: ${String(prefix).toLowerCase().replace(/[^a-z0-9_]/g, '_')}_list.php`}><Text value={prefix} onChange={setPrefix} mono /></Row>
-      <Row label="URL in stile phpr"><Check value={urls} onChange={setUrls} label="Genera tabella_list.php, tabella_edit.php?editid1=… (per tutto il progetto)" /></Row>
+      <Row label="Prefisso nomi file" hint={`Usato per gli URL classici: ${String(prefix).toLowerCase().replace(/[^a-z0-9_]/g, '_')}_list.php`}><Text value={prefix} onChange={setPrefix} mono /></Row>
+      <Row label="URL classici"><Check value={urls} onChange={setUrls} label="Genera tabella_list.php, tabella_edit.php?editid1=… (per tutto il progetto)" /></Row>
     </Modal>
   );
 }
@@ -399,7 +399,7 @@ export default function TablesPanel() {
     const name = await ask('Nome della vista personalizzata', `${t.name}_vista`);
     if (!name || p.tables.some((x) => x.name === name)) return;
     update((d) => {
-      // A custom view copies all settings except events and layout (as in phpr).
+      // A custom view copies all settings except events and layout (as in .phpr projects).
       const copy: Table = JSON.parse(JSON.stringify(d.tables.find((x) => x.name === t.name)));
       copy.name = name;
       copy.caption = Object.fromEntries(Object.keys(copy.caption).map((k) => [k, name]));
@@ -518,7 +518,7 @@ export default function TablesPanel() {
           ['diagram-3', `${p.tables.reduce((n, t) => n + t.details.length, 0)} relazioni`],
           ['database', `${p.connections.length} connessioni`],
         ]}
-        actions={<><Btn icon="file-earmark-plus" title="Unisci a questo progetto le tabelle, il menu, i permessi e gli eventi di altri progetti phpr" onClick={() => setMerging(true)}>Unisci .phpr</Btn><Btn icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn><Btn kind="primary" icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn></>} />
+        actions={<><Btn icon="file-earmark-plus" title="Unisci a questo progetto le tabelle, il menu, i permessi e gli eventi di altri progetti .phpr" onClick={() => setMerging(true)}>Unisci .phpr</Btn><Btn icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn><Btn kind="primary" icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn></>} />
       <div className="ds-toolbar">
         <span className="ds-group">Nuova origine</span>
         <Btn small icon="code-square" onClick={() => setDlg({ kind: 'sql', conn: p.project.defaultConnection })}>Query SQL</Btn>

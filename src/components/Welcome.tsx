@@ -30,7 +30,7 @@ export default function Welcome() {
     await openProject(await call<Project>('project:new', dir, f.name));
     toast('Progetto creato: aggiungi una connessione al database', 'ok');
   });
-  const importPhpr = () => run(extra.length ? `Importazione e unione di ${extra.length + 1} progetti phpr…` : 'Importazione progetto phpr…', async () => {
+  const importPhpr = () => run(extra.length ? `Importazione e unione di ${extra.length + 1} progetti .phpr…` : 'Importazione progetto .phpr…', async () => {
     if (!f.phpr || !f.dir) throw new Error('Indica il file .phpr e la cartella di destinazione');
     const r = await call<any>('import:phpr', f.phpr, f.dir);
     // other .phpr files: merged into the new project, one application (saved, the project is not open yet)
@@ -79,12 +79,12 @@ export default function Welcome() {
         <Row label="Cartella padre" hint={f.dir && f.name ? `Il progetto sarà in ${f.dir}/${f.name}` : 'Il progetto è una cartella di file di testo: mettila sotto Git per lavorare in team'}>
           <span className="inline"><Text value={f.dir} onChange={set('dir')} /><Btn icon="folder" onClick={() => pickDir('dir', 'Cartella padre')} /></span></Row>
       </Modal>}
-      {dlg === 'phpr' && <Modal title="Importa un progetto phpr" onClose={() => setDlg('')} footer={<><Btn onClick={() => setDlg('')}>Annulla</Btn><Btn kind="primary" icon="box-arrow-in-down" onClick={importPhpr}>Importa</Btn></>}>
-        <p className="help">Converte tabelle, query SQL, campi, lookup, pagine (dall'archivio PAGES*.sqlite accanto al file), master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi phpr funzionano grazie allo strato di compatibilità (DB::Query, Security::getUserName, $pageObject…). Il progetto originale non viene modificato.</p>
-        <Row label="File .phpr"><span className="inline"><Text value={f.phpr} onChange={set('phpr')} mono /><Btn icon="file-earmark" onClick={async () => { const p = await call<string | null>('dialog:file', 'Progetto phpr', [{ name: 'phpr', extensions: ['phpr'] }]); if (p) setF({ ...f, phpr: p }); }} /></span></Row>
+      {dlg === 'phpr' && <Modal title="Importa un progetto .phpr" onClose={() => setDlg('')} footer={<><Btn onClick={() => setDlg('')}>Annulla</Btn><Btn kind="primary" icon="box-arrow-in-down" onClick={importPhpr}>Importa</Btn></>}>
+        <p className="help">Converte tabelle, query SQL, campi, lookup, pagine (dall'archivio PAGES*.sqlite accanto al file), master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi importati funzionano grazie allo strato di compatibilità (DB::Query, Security::getUserName, $pageObject…). Il progetto originale non viene modificato.</p>
+        <Row label="File .phpr"><span className="inline"><Text value={f.phpr} onChange={set('phpr')} mono /><Btn icon="file-earmark" onClick={async () => { const p = await call<string | null>('dialog:file', 'Progetto .phpr', [{ name: 'Progetto .phpr', extensions: ['phpr'] }]); if (p) setF({ ...f, phpr: p }); }} /></span></Row>
         <Row label="Altri .phpr da unire" hint="Facoltativo: diventano un'unica applicazione con il primo (stesso database = stessa connessione, menu sotto il nome di ciascun progetto)"><span className="inline wrap">
           {extra.map((x) => <span key={x} className="chip"><I n="file-earmark-code" /> {x.split('/').pop()} <button type="button" className="btn ghost sm" onClick={() => setExtra(extra.filter((y) => y !== x))}><I n="x" /></button></span>)}
-          <Btn icon="plus-lg" onClick={async () => { const fs = await call<string[]>('dialog:files', 'Progetti phpr da unire', [{ name: 'phpr', extensions: ['phpr'] }]); setExtra([...extra, ...fs.filter((x) => !extra.includes(x) && x !== f.phpr)]); }}>Aggiungi</Btn></span></Row>
+          <Btn icon="plus-lg" onClick={async () => { const fs = await call<string[]>('dialog:files', 'Progetti .phpr da unire', [{ name: 'Progetto .phpr', extensions: ['phpr'] }]); setExtra([...extra, ...fs.filter((x) => !extra.includes(x) && x !== f.phpr)]); }}>Aggiungi</Btn></span></Row>
         {extra.length > 0 && <Row label="Tabelle con lo stesso nome"><Select value={mergeMode} options={TABLE_MODES} onChange={setMergeMode} /></Row>}
         <Row label="Cartella padre" hint="Verrà creata una nuova cartella con il nome del progetto"><span className="inline"><Text value={f.dir} onChange={set('dir')} /><Btn icon="folder" onClick={() => pickDir('dir', 'Cartella padre')} /></span></Row>
       </Modal>}

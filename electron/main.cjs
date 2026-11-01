@@ -122,7 +122,7 @@ handle('import:phpr', async (file, parentDir) => {
   try { await git.init(dir); } catch { /* git optional */ }
   return { proj: r.proj, report: r.report, reportFile: path.join(dir, 'import-phpr', 'REPORT.md') };
 });
-// Another .phpr merged into the project (one application from several phpr projects): imported in a
+// Another .phpr merged into the project (one application from several .phpr projects): imported in a
 // temporary folder, merged in memory, files copied; opts.save writes the project too (import from Welcome).
 handle('import:phprMerge', async (proj, file, opts = {}) => {
   const { importPhpr } = require('../core/phpr-import.cjs');

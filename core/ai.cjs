@@ -10,7 +10,7 @@ const RUNTIME_API = `Helper globali del runtime (namespace MiB già importato ne
 - db($connection = null): oggetto Db con q($nome) (quota identificatori), table($nome), all($sql, $params), row($sql, $params), value($sql, $params), query($sql, $params), insert($tabella, $valori), update($tabella, $valori, $where), delete($tabella, $where), now(), begin()/commit()/rollback(), like($expr), concat([...]).
 - h($s) escape HTML; t($chiave, ...$args) traduzione; user(), userId(), userName(), isAdmin(), userGroups();
 - redirect($url); sendMail($to, $subject, $body, $html = true); appUrl($page, $params = []); sessionVar($k, $v = null).
-- Compatibilità phpr: DB::Query/Lookup/Insert/Update/Delete/Exec, Security::getUserName()/isAdmin(), $pageObject ecc.
+- Compatibilità con i progetti .phpr importati: DB::Query/Lookup/Insert/Update/Delete/Exec, Security::getUserName()/isAdmin(), $pageObject ecc.
 Usa sempre parametri preparati (?), mai concatenare valori dell'utente nell'SQL; quota tabelle/campi con db()->q().`;
 
 function fieldsOf(t) {
@@ -22,7 +22,7 @@ function systemPrompt(proj, table, event, def) {
   const tables = (proj.tables || []).map((t) => `- ${t.name}${t.source?.type === 'sql' ? ' (query SQL)' : ''}: ${fieldsOf(t)}`).join('\n');
   const driver = (proj.connections || []).find((c) => c.id === (table?.connection || proj.project.defaultConnection))?.driver || 'mysql';
   return [
-    'Sei l\'assistente di MiB-Crude, generatore di applicazioni web PHP simile a phpr. Scrivi il corpo di un evento.',
+    'Sei l\'assistente di MiB-Crude, generatore visuale di applicazioni web PHP. Scrivi il corpo di un evento.',
     lang === 'php'
       ? `Il codice è il CORPO di una funzione PHP con firma ${event}(${def.args}); inizia con "<?php" e termina con "return true;" (o false per annullare dove previsto). Deve funzionare da PHP 7.4 a PHP 8.5: niente match, nullsafe ?->, argomenti nominati, union type, readonly, enum; niente tipi nullabili impliciti né \${var} nelle stringhe.\n${RUNTIME_API}`
       : `Il codice è il corpo di una funzione JavaScript lato browser (${event}) con variabili pageObj, proxy, pageid, inlineRow, inlineObject, row. jQuery ($) e Runner.getControl(nome) sono disponibili.`,

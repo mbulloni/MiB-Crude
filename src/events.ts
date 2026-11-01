@@ -21,7 +21,7 @@ export const TABLE_EVENTS: Record<string, EventDef> = {
   AfterImport: { args: '$result, $page', help: 'Dopo un\'importazione: $result con added, updated, skipped, errors.' },
   ...Object.fromEntries(['list', 'add', 'edit', 'view', 'search', 'print'].map((p) => [`JS_OnLoad_${p}`, {
     args: 'pageObj, proxy, pageid', lang: 'javascript' as const,
-    help: `JavaScript eseguito al caricamento della pagina "${p}" (API compatibile phpr: Runner.getControl(pageid, 'campo'), pageObj.on/hideField/showField, proxy).`,
+    help: `JavaScript eseguito al caricamento della pagina "${p}" (API compatibile con i progetti .phpr: Runner.getControl(pageid, 'campo'), pageObj.on/hideField/showField, proxy).`,
   }])),
 };
 

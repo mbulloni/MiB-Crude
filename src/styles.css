@@ -184,7 +184,7 @@ progress { width: 100%; }
 .recent button { display: flex; gap: 8px; align-items: baseline; width: 100%; border: 0; background: none; color: var(--text); cursor: pointer; padding: 6px 4px; font: inherit; text-align: left; border-radius: 5px; }
 .recent button:hover { background: var(--hover); } .recent small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 
-/* Tables and queries (phpr "Datasource tables" screen) */
+/* Tables and queries (classic "Datasource tables" screen) */
 .ds-screen { display: flex; flex-direction: column; height: 100%; padding: 18px 22px; gap: 14px; box-sizing: border-box; }
 .ds-screen > .settings-hero { margin-bottom: 0; }
 .ds-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); align-items: center; }

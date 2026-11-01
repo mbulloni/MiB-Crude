@@ -41,7 +41,7 @@ async function importTables(proj, conn, password, names) {
   });
 }
 
-// Custom SQL datasource ("SQL view" in phpr terms).
+// Custom SQL datasource ("SQL view" in classic terms).
 async function addSqlView(proj, conn, password, name, sql) {
   if (proj.tables.some((t) => t.name === name)) throw new Error(`Esiste già un'origine dati "${name}"`);
   return withConnection(conn, password, async (c) => {

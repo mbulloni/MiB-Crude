@@ -392,7 +392,7 @@ class Theme
         if (!$pack || !empty($app->config['theme']['primaryOverride'])) $h .= '<style>:root{--mc-primary:' . h($app->config['theme']['primary']) . ';}</style>' . "\n";
         $h .= Pwa::head($app);
         if (is_file($app->root . '/custom/custom.css')) $h .= '<link rel="stylesheet" href="custom/custom.css?v=' . filemtime($app->root . '/custom/custom.css') . '">' . "\n";
-        // jQuery early: page snippets imported from phpr may load jQuery plugins.
+        // jQuery early: page snippets imported from .phpr projects may load jQuery plugins.
         if (!$pack || empty($pack['providesJquery'])) $h .= '<script src="' . h($app->asset('vendor/jquery.min.js')) . '"></script>' . "\n";
         return $h;
     }
@@ -456,7 +456,7 @@ class Theme
     }
 }
 
-/** Custom buttons of a page (imported from phpr or defined in the designer). */
+/** Custom buttons of a page (imported from .phpr projects or defined in the designer). */
 class Buttons
 {
     public static function html(Table $t, $page, $row, $keys = null)

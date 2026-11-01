@@ -93,7 +93,7 @@ export default function TeamPanel() {
         git?.repo ? ['git', `Git: ${git.branch}${git.files?.length ? ` · ${git.files.length} modifiche` : ''}${git.ahead ? ` · ${git.ahead} da inviare` : ''}`] : ['git', 'Nessun repository Git'],
       ]} />
       <div className="cols">
-        <Section title={<><I n="broadcast" /> Server del team (tempo reale)</>} help="Come phpr MultiDev, ma più fine: chi apre una tabella, il menu, la sicurezza o gli eventi globali li blocca per gli altri; ogni salvataggio arriva subito agli altri sviluppatori. Lo storico è versionato con Git sul server.">
+        <Section title={<><I n="broadcast" /> Server del team (tempo reale)</>} help="Più fine del classico lavoro multi-sviluppatore: chi apre una tabella, il menu, la sicurezza o gli eventi globali li blocca per gli altri; ogni salvataggio arriva subito agli altri sviluppatori. Lo storico è versionato con Git sul server.">
           {!team.connected ? <>
             <Row label="Server"><Text value={srv.url} onChange={(v) => setSrv({ ...srv, url: v })} mono /></Row>
             <Row label="Utente"><Text value={srv.user} onChange={(v) => setSrv({ ...srv, user: v })} /></Row>

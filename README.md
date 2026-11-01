@@ -1,6 +1,6 @@
 # MiB-Crude
 
-Generatore visuale di applicazioni web PHP per Linux, per Linux, con lavoro **multisviluppatore** nativo. Progetto educativo.
+Generatore visuale di applicazioni web PHP per Linux, con lavoro **multisviluppatore** nativo. Progetto educativo.
 
 ![Designer](docs/screenshots/designer-fields.png)
 
@@ -11,7 +11,7 @@ Parti da un database esistente (**MariaDB/MySQL, PostgreSQL, SQL Server, Oracle,
 Documentazione completa:
 
 - **[Guida](docs/GUIDA.md)**: ogni funzione del designer e dell'applicazione, e dove si trova
-- **[Riferimento tecnico](docs/RIFERIMENTO.md)**: eventi, funzioni PHP, compatibilità phpr, tabelle di sistema, formato del progetto
+- **[Riferimento tecnico](docs/RIFERIMENTO.md)**: eventi, funzioni PHP, compatibilità con i progetti importati, tabelle di sistema, formato del progetto
 - **[L'applicazione generata](docs/APP-GENERATA.md)**: struttura, requisiti del server, pubblicazione, Docker, attività pianificate, API
 - [Test](docs/TESTING.md) · [Versioni e limiti noti](docs/ROADMAP.md)
 
@@ -56,7 +56,7 @@ Documentazione completa:
 - Pubblicazione incrementale via SFTP, FTP/FTPS o cartella
 - **Docker di progetto** che replica la produzione (Linux, o Windows Server Core con l'Apache24 di produzione)
 - **Multisviluppatore**: Git o server del team in tempo reale
-- **Importazione di progetti .phpr** con strato di compatibilità per gli eventi, anche di **più progetti `.phpr` in un'unica applicazione**
+- **Importazione di progetti `.phpr`** con strato di compatibilità per gli eventi, anche di **più progetti `.phpr` in un'unica applicazione**
 
 ![App generata](docs/screenshots/app-list.png)
 
@@ -69,7 +69,7 @@ Documentazione completa:
 
 ## Importazione di progetti .phpr
 
-Pulsante **Importa progetto .phpr** nella schermata iniziale: legge il file `.phpr` (phpr 10.x) e l'archivio pagine `PAGES*.sqlite` accanto, e converte connessioni (password solo in locale), tabelle, query SQL, campi, lookup (anche a cascata), pagine e campi per pagina, master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi funzionano senza riscriverli grazie allo strato di compatibilità del runtime (`DB::Query`, `DB::Lookup`, `Security::getUserName()`, `$pageObject`, `$xt`, `$record` in BeforeMoveNext, `runner_mail`…). Il codice PHP 7.4 viene adeguato a PHP 8 (correzioni automatiche sicure, il resto segnalato in `import-phpr/REPORT.md`). Anche eventi JavaScript (`pageObj`, `Runner.getControl`), pulsanti personalizzati (OnBefore/OnServer/OnAfter), varianti di pagina, dashboard e personalizzazioni AnyChart dei grafici (`JS_ModifyChart`, tradotte su ECharts) vengono convertiti.
+Pulsante **Importa progetto .phpr** nella schermata iniziale: legge il file `.phpr` (versione 10.x) e l'archivio pagine `PAGES*.sqlite` accanto, e converte connessioni (password solo in locale), tabelle, query SQL, campi, lookup (anche a cascata), pagine e campi per pagina, master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi funzionano senza riscriverli grazie allo strato di compatibilità del runtime (`DB::Query`, `DB::Lookup`, `Security::getUserName()`, `$pageObject`, `$xt`, `$record` in BeforeMoveNext, `runner_mail`…). Il codice PHP 7.4 viene adeguato a PHP 8 (correzioni automatiche sicure, il resto segnalato in `import-phpr/REPORT.md`). Anche eventi JavaScript (`pageObj`, `Runner.getControl`), pulsanti personalizzati (OnBefore/OnServer/OnAfter), varianti di pagina, dashboard e personalizzazioni AnyChart dei grafici (`JS_ModifyChart`, tradotte su ECharts) vengono convertiti.
 
 **Più progetti in un'unica applicazione**: nella stessa finestra si aggiungono *Altri .phpr da unire*, oppure con il progetto aperto *Tabelle e query → Unisci .phpr*. Le connessioni allo stesso database diventano una sola, le tabelle omonime vengono condivise (se leggono la stessa tabella) o importate con un prefisso aggiornando tutti i riferimenti, il menu di ogni progetto va sotto un'intestazione con il suo nome, gruppi e permessi si sommano, gli eventi in conflitto restano da unire a mano e sono elencati in `import-phpr/<nome>/UNIONE.md`.
 
@@ -86,7 +86,7 @@ In *Impostazioni e stile → Temi grafici → Importa template…* si indica la 
 Due modalità, usabili insieme:
 
 1. **Git** — il progetto è una cartella di piccoli file JSON/PHP ordinati in modo deterministico (`tables/ordini.json`, `events/ordini/BeforeAdd.php`, …): diff leggibili, merge puliti, branch. Il pannello *Team e versioni* fa commit, pull, push, diff e risoluzione conflitti.
-2. **Server del team** (tempo reale, come phpr MultiDev ma a grana più fine) — chi apre una tabella, il menu, la sicurezza o gli eventi globali li **blocca** per gli altri; ogni salvataggio arriva subito agli altri designer; presenza online, chat, rilevamento conflitti a tre vie, storico Git sul server.
+2. **Server del team** (tempo reale, a grana fine) — chi apre una tabella, il menu, la sicurezza o gli eventi globali li **blocca** per gli altri; ogni salvataggio arriva subito agli altri designer; presenza online, chat, rilevamento conflitti a tre vie, storico Git sul server.
 
 ```bash
 npm run server -- --data ./team-data                       # avvia il server (ws://0.0.0.0:7300)
@@ -114,7 +114,7 @@ Esportazione/importazione di tabelle tra progetti in ZIP (impostazioni, report, 
 | Cartella | Contenuto |
 |---|---|
 | `core/` | modello di progetto su file, introspezione dei 5 database, default del wizard, generatore, protocollo team |
-| `runtime/` | runtime PHP dell'app generata (PHP 7.4 – 8.5, testato su 7.4, 8.4, 8.5): PDO multi-dialetto, pagine, sicurezza, API, report, compatibilità phpr |
+| `runtime/` | runtime PHP dell'app generata (PHP 7.4 – 8.5, testato su 7.4, 8.4, 8.5): PDO multi-dialetto, pagine, sicurezza, API, report, compatibilità con i progetti importati |
 | `electron/` | processo principale del designer: IPC, anteprima, pubblicazione, Git, client del server del team |
 | `src/` | interfaccia del designer (React + Monaco) |
 | `server/` | server del team (WebSocket) |

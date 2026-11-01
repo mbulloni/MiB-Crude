@@ -1,10 +1,10 @@
 'use strict';
-// Import of phpr projects (.phpr, phpr 10.x XML) into a MiB-Crude project.
+// Import of .phpr projects (.phpr, XML of version 10.x) into a MiB-Crude project.
 //  - connections (passwords go to .mibcrude-local/secrets.json, never into the project files)
 //  - tables, SQL views, charts, field settings (labels, view/edit formats, lookups, validation)
 //  - pages and the fields shown on each page, read from the PAGES*.sqlite store next to the .phpr
 //  - master/detail links, menu, user groups and permissions, login settings
-//  - PHP events, wrapped so that phpr variables ($values, $oldvalues, $keys, $where, $data,
+//  - PHP events, wrapped so that original variables ($values, $oldvalues, $keys, $where, $data,
 //    $record, $pageObject, $xt...) exist; the runtime adds DB::, Security:: and helper functions.
 // Everything that cannot be converted is listed in the report and saved under import-phpr/.
 
@@ -16,9 +16,9 @@ const { genericType, } = require('./db.cjs');
 const { defaultPages } = require('./defaults.cjs');
 const php8 = require('./php8-compat.cjs');
 
-// PHP 7.4 code from phpr -> PHP 8: safe rewrites, the rest goes to the report.
+// PHP 7.4 code from .phpr projects -> PHP 8: safe rewrites, the rest goes to the report.
 function up8(code, where, ctx) {
-  // "--rbegin--...--rend--" mark the editable parts of phpr actions: removed at build time.
+  // "--rbegin--...--rend--" mark the editable parts of the original actions: removed at build time.
   code = String(code).replace(/--rbegin--|--rend--/g, '');
   const r = php8.upgrade(code);
   if (r.fixes.length || r.problems.length) ctx.php8.push({ where, fixes: r.fixes, problems: r.problems });
@@ -29,7 +29,7 @@ const LANGS = { Italian: 'it', English: 'en', French: 'fr', German: 'de', Spanis
 const DRIVER = { mysql: 'mysql', mariadb: 'mysql', postgre: 'pgsql', postgresql: 'pgsql', mssql: 'sqlsrv', sqlserver: 'sqlsrv', oracle: 'oracle', sqlite: 'sqlite', sqlite3: 'sqlite' };
 const DB_TYPE = { 0: 'mysql', 1: 'sqlsrv', 2: 'oracle', 3: 'pgsql', 6: 'sqlite' };
 
-// ADO data types used by phpr -> generic type + SQL-ish label.
+// ADO data types used by .phpr projects -> generic type + SQL-ish label.
 function adoType(n) {
   const t = Number(n);
   if ([2, 3, 16, 17, 18, 19, 20, 21].includes(t)) return 'int';
@@ -56,10 +56,10 @@ function parseXml(file) {
   return parser.parse(fs.readFileSync(file, 'utf8')).project;
 }
 
-// Newest PAGES*.sqlite of the project (phpr 10 keeps page layouts there).
+// Newest PAGES*.sqlite of the project (Version 10 keeps page layouts there).
 async function readPages(phprFile) {
   const dir = path.dirname(phprFile);
-  // phpr 10 keeps the live store in subversion/PAGES.sqlite; PAGES_<date>.sqlite are backups.
+  // Version 10 keeps the live store in subversion/PAGES.sqlite; PAGES_<date>.sqlite are backups.
   const live = path.join(dir, 'subversion', 'PAGES.sqlite');
   const backups = fs.readdirSync(dir).filter((f) => /^PAGES.*\.sqlite3?$/i.test(f)).map((f) => path.join(dir, f))
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
@@ -181,7 +181,7 @@ const pageOf = { LIST: 'list', EDIT: 'edit', ADD: 'add', VIEW: 'view', SEARCH: '
 const PO = (t) => `$pageObject = \\MiB\\Compat::page($page, ${phpStr(t)});`;
 function phpStr(s) { return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
 
-// phpr event -> { to, use, setup, pages, cancel, loop }
+// imported event -> { to, use, setup, pages, cancel, loop }
 function mapEvent(name, table) {
   let m;
   const T = phpStr(table || '');
@@ -257,7 +257,7 @@ function wrapEvent(name, code, table) {
       + (m.cancel ? 'if ($__r === false) return false;' : '');
   }
   const body = cond ? `if (${cond}) {\n${indent(block, '    ')}\n}` : block;
-  return { to: m.to, text: `// phpr: ${name}\n${body}\n` };
+  return { to: m.to, text: `// Importato: ${name}\n${body}\n` };
 }
 
 // --- field settings -----------------------------------------------------------------
@@ -293,10 +293,10 @@ function convertField(fo, ctx) {
   f.viewAs.type = VIEW[viewFmt] || (type === 'date' ? 'date' : type === 'datetime' ? 'datetime' : type === 'bool' ? 'checkbox' : 'text');
   if (['number', 'currency', 'percent'].includes(f.viewAs.type)) f.viewAs.decimals = Number(str(ve.m_nDecimalDigits)) || (f.viewAs.type === 'number' ? 0 : 2);
   if (viewFmt === 'Custom') {
-    // phpr adds the final ";" itself when the expression lacks it.
+    // The original tool adds the final ";" itself when the expression lacks it.
     let code = up8(String(str(ve.m_strCustomExpr)).replace(/\r\n/g, '\n').trimEnd(), `${ctx.table}.${name} (formato Custom)`, ctx);
     if (code && !/[;}]$/.test(code)) code += ';';
-    f.viewAs.code = `<?php\n// Formato "Custom" importato da phpr: $value, $data\n$data = $row;\n${code}\nreturn $value;\n`;
+    f.viewAs.code = `<?php\n// Formato "Custom" importato dal progetto .phpr: $value, $data\n$data = $row;\n${code}\nreturn $value;\n`;
   }
   if (viewFmt === '' && type === 'text') f.viewAs = { type: 'longtext', truncate: Number(str(ve.m_nNumberOfChars)) || 80 };
   // Edit format.
@@ -314,7 +314,7 @@ function convertField(fo, ctx) {
       const where = str(lk.m_strWhere).trim();
       const dep = arr(lk.m_arrDependentFields && lk.m_arrDependentFields.v)[0];
       if (!str(lk.m_strTable)) {
-        ctx.warnings.push(`${ctx.table}.${name}: lookup senza tabella nel progetto phpr, convertito in casella di testo`);
+        ctx.warnings.push(`${ctx.table}.${name}: lookup senza tabella nel progetto .phpr, convertito in casella di testo`);
         f.editAs = { type: 'text' };
         return f;
       }
@@ -352,7 +352,7 @@ function convertField(fo, ctx) {
   if (va === 'Email') f.validation.email = true;
   if (va === 'Regular expression' || str(ee.m_strRegex)) { f.validation.regex = str(ee.m_strRegex); const rm = textOf(ee.m_strRegexMessage); if (rm) f.validation.regexMessage = { [ctx.languages[0]]: rm }; }
   if (bool(ee.m_bDenyDuplicates)) f.validation.unique = true;
-  // Default and auto-update values are PHP expressions in phpr.
+  // Default and auto-update values are PHP expressions in .phpr projects.
   const def = str(ee.m_strDefaultValue).trim();
   if (def) f.defaultCode = up8(def.replace(/;\s*$/, ''), `${ctx.table}.${name} (valore predefinito)`, ctx);
   const au = str(ee.m_strAutoUpdateValue).trim();
@@ -464,7 +464,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
     for (const pg of pagesOf) for (const it of Object.values(pg.info.items || {})) if (it.type === 'filter_panel_field' && it.field) filterFields.add(it.field);
     const ctx = { keys, languages: proj.project.languages, labels: (labels[tname] || {}).fields || {}, connMap, tableConn: str(t.m_strConnectionID), filterFields, warnings: report.warnings, table: tname, php8: report.php8 };
     const fields = arr(t.m_arrFieldObj && t.m_arrFieldObj.v).map((fo) => convertField(fo, ctx));
-    // Dependent lookups: phpr matches master fields case-insensitively.
+    // Dependent lookups: The original tool matches master fields case-insensitively.
     for (const f of fields) {
       const dep = f.editAs.lookup && f.editAs.lookup.dependsOn;
       if (!dep) continue;
@@ -537,13 +537,13 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
       const jsPage = { 'List page': 'list', 'Add page': 'add', 'Edit page': 'edit', 'View page': 'view', 'Search page': 'search', 'Printer-friendly page': 'print', 'Export page': 'export', 'Import page': 'import' }[str(ev.m_strPage)];
       if (en === 'EVENT_JS_ONLOAD' && jsPage) {
         // Client code runs on the generated page through runner-compat.js (Runner.getControl, pageObj.on...).
-        (proj.events[tname] ||= {})[`JS_OnLoad_${jsPage}`] = `// phpr: EVENT_JS_ONLOAD (${str(ev.m_strPage)})\n// Variabili: pageObj (anche this), proxy, pageid, inlineRow, inlineObject, row\n${code.replace(/\r\n/g, '\n')}\n`;
+        (proj.events[tname] ||= {})[`JS_OnLoad_${jsPage}`] = `// Importato: EVENT_JS_ONLOAD (${str(ev.m_strPage)})\n// Variabili: pageObj (anche this), proxy, pageid, inlineRow, inlineObject, row\n${code.replace(/\r\n/g, '\n')}\n`;
         report.jsEvents++;
         continue;
       }
       if (en === 'EVENT_JS_MODIFY_CHART' && chartTables.some((c) => c.table === tname)) {
         // AnyChart customizations, replayed on the ECharts option by anychart-compat.js.
-        for (const c of chartTables.filter((x) => x.table === tname)) c.modifyJs = `// phpr: EVENT_JS_MODIFY_CHART (API AnyChart: chart, anychart)\n${code.replace(/\r\n/g, '\n')}\n`;
+        for (const c of chartTables.filter((x) => x.table === tname)) c.modifyJs = `// Importato: EVENT_JS_MODIFY_CHART (API AnyChart: chart, anychart)\n${code.replace(/\r\n/g, '\n')}\n`;
         report.jsEvents++;
         continue;
       }
@@ -583,7 +583,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
         const key = `${sn.eventId}|${sn.position}`;
         if (!snips[key]) {
           snips[key] = { event: 'Snippet_' + sn.eventId.replace(/[^A-Za-z0-9_]/g, '_'), position: sn.position, pages: [] };
-          (proj.events[tname] ||= {})[snips[key].event] = `<?php\n// phpr: snippet ${sn.eventId} (codice PHP inserito nella pagina)\n\n$__r = (function () use ($page) {\n    ${PO(tname)}\n${indent(up8(code.replace(/\r\n/g, '\n'), `${tname}: snippet ${sn.eventId}`, report), '    ')}\n})();\nreturn true;\n`;
+          (proj.events[tname] ||= {})[snips[key].event] = `<?php\n// Importato: snippet ${sn.eventId} (codice PHP inserito nella pagina)\n\n$__r = (function () use ($page) {\n    ${PO(tname)}\n${indent(up8(code.replace(/\r\n/g, '\n'), `${tname}: snippet ${sn.eventId}`, report), '    ')}\n})();\nreturn true;\n`;
           report.snippets++;
         }
         if (!snips[key].pages.includes(ours)) snips[key].pages.push(ours);
@@ -615,9 +615,9 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
         const server = eventStore[`${it.eventId}~OnServer`];
         const after = eventStore[`${it.eventId}~OnAfter`];
         const evs = (proj.events[tname] ||= {});
-        if (before && before.trim()) evs[`JS_ButtonBefore_${bid}`] = `// phpr: pulsante ${it.eventId}, Client Before (params, ctrl, pageObj, proxy, pageid, rowData)\n${before.replace(/\r\n/g, '\n')}\n`;
-        if (after && after.trim()) evs[`JS_ButtonAfter_${bid}`] = `// phpr: pulsante ${it.eventId}, Client After (result, ctrl, pageObj, proxy, pageid, rowData, params)\n${after.replace(/\r\n/g, '\n')}\n`;
-        if (server && server.trim()) evs[`Button_${bid}`] = `<?php\n// phpr: pulsante ${it.eventId}, Server ($params, $result, $button)\n${up8(server.replace(/\r\n/g, '\n'), `${tname}: pulsante ${it.eventId}`, report)}\nreturn true;\n`;
+        if (before && before.trim()) evs[`JS_ButtonBefore_${bid}`] = `// Importato: pulsante ${it.eventId}, Client Before (params, ctrl, pageObj, proxy, pageid, rowData)\n${before.replace(/\r\n/g, '\n')}\n`;
+        if (after && after.trim()) evs[`JS_ButtonAfter_${bid}`] = `// Importato: pulsante ${it.eventId}, Client After (result, ctrl, pageObj, proxy, pageid, rowData, params)\n${after.replace(/\r\n/g, '\n')}\n`;
+        if (server && server.trim()) evs[`Button_${bid}`] = `<?php\n// Importato: pulsante ${it.eventId}, Server ($params, $result, $button)\n${up8(server.replace(/\r\n/g, '\n'), `${tname}: pulsante ${it.eventId}`, report)}\nreturn true;\n`;
         report.buttons++;
       }
     }
@@ -626,7 +626,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
     const dc = t.DiagramCoordinates;
     if (dc && str(dc.x1) !== '') ds.diagram = { x: Number(str(dc.x1)) || 0, y: Number(str(dc.y1)) || 0 };
     for (const [to, blocks] of Object.entries(evGroup)) {
-      (proj.events[tname] ||= {})[to] = `<?php\n// Importato da phpr: le variabili phpr sono ricreate dal runtime MiB-Crude (Compat).\n\n${blocks.join('\n')}\nreturn true;\n`;
+      (proj.events[tname] ||= {})[to] = `<?php\n// Importato dal progetto .phpr: le variabili originali sono ricreate dal runtime MiB-Crude (Compat).\n\n${blocks.join('\n')}\nreturn true;\n`;
     }
     for (const m of arr(t.m_arrMasterTables && t.m_arrMasterTables.v)) masters.push({ master: str(m.m_strMasterTable), detail: tname, masterKeys: arr(m.m_arrMasterKeys && m.m_arrMasterKeys.v).map(str), detailKeys: arr(m.m_arrDetailKeys && m.m_arrDetailKeys.v).map(str) });
     const variants = ds.__variants || [];
@@ -655,7 +655,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
       const ct = chartTables.find((c) => c.table === p.et);
       if (ct) d.items.push({ type: 'chart', ref: ct.name, width: p.width, height: Math.min(600, p.height) });
       else if (proj.tables.some((t) => t.name === p.et)) d.items.push({ type: 'list', table: p.et, width: p.width, height: Math.min(700, p.height), rows: 10 });
-      else if (p.snippet) d.items.push({ type: 'html', html: { [defLang]: `<p>Snippet phpr ${p.snippet}</p>` }, width: p.width });
+      else if (p.snippet) d.items.push({ type: 'html', html: { [defLang]: `<p>Snippet importato ${p.snippet}</p>` }, width: p.width });
     }
     delete d.source;
     if (!proj.dashboards.some((x) => x.name === d.name)) proj.dashboards.push(d);
@@ -672,7 +672,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
     (gGroup[w.to] ||= []).push(w.text);
     report.events++;
   }
-  for (const [to, blocks] of Object.entries(gGroup)) (proj.events._global ||= {})[to] = `<?php\n// Importato da phpr\n\n${blocks.join('\n')}\nreturn true;\n`;
+  for (const [to, blocks] of Object.entries(gGroup)) (proj.events._global ||= {})[to] = `<?php\n// Importato dal progetto .phpr\n\n${blocks.join('\n')}\nreturn true;\n`;
 
   // Menu.
   const nodes = arr(x.MenuNodes && x.MenuNodes.MenuNode);
@@ -768,16 +768,16 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
   const landing = str(x.m_strLandingTable);
   if (landing && proj.tables.some((t) => t.name === landing)) proj.project.settings.homePage = `index.php?p=${str(x.m_strLandingPage) === 'add' ? 'add' : 'list'}&t=${encodeURIComponent(landing)}`;
 
-  // Custom files shipped with the phpr project (source/) go to custom/ for reference.
+  // Custom files shipped with the .phpr project (source/) go to custom/ for reference.
   const src = path.join(path.dirname(phprFile), 'source');
   if (fs.existsSync(src) && opts.copySource !== false) {
     fs.cpSync(src, path.join(targetDir, 'public'), { recursive: true, filter: (s) => !/\.(exe|dll)$/i.test(s) });
-    report.warnings.push('File personalizzati di phpr (source/) copiati in public/: vengono pubblicati nella radice dell\'applicazione come in phpr');
+    report.warnings.push('File personalizzati del progetto .phpr (source/) copiati in public/: vengono pubblicati nella radice dell\'applicazione come nell\'originale');
   }
 
   P.saveProject(proj);
   const lines = [
-    `# Importazione di progetti .phpr`, '', `File: ${phprFile}`, `Archivio pagine: ${report.pagesFile || 'assente'}`, '',
+    `# Importazione del progetto .phpr`, '', `File: ${phprFile}`, `Archivio pagine: ${report.pagesFile || 'assente'}`, '',
     `- Tabelle: ${report.tables} (di cui query SQL: ${report.sqlViews})`, `- Grafici: ${report.charts}`, `- Eventi convertiti: ${report.events}`, `- Eventi JavaScript (onload) convertiti: ${report.jsEvents}`, `- Snippet PHP nelle pagine: ${report.snippets}`, `- Pulsanti personalizzati: ${report.buttons}`, `- Varianti di lista (viste personalizzate): ${report.variants}`, `- Dashboard: ${report.dashboards}`,
     `- Eventi non convertiti (salvati in import-phpr/events/): ${report.eventsSkipped.length}`, '',
     '## Avvisi', ...report.warnings.map((w) => `- ${w}`), '',
@@ -785,7 +785,7 @@ async function importPhpr(phprFile, targetDir, opts = {}) {
     ...report.php8.flatMap((x) => [`### ${x.where}`, ...x.fixes.map((f) => `- corretto: ${f}`), ...x.problems.map((p) => `- ${p.level === 'error' ? 'ERRORE' : 'da verificare'} (riga ${p.line}): ${p.msg}`), '']), '## Eventi non convertiti', ...report.eventsSkipped.map((e) => `- ${e}`), '',
     '## Note', '- Le password dei database sono state spostate in .mibcrude-local/secrets.json (non condiviso).',
     '- Gli eventi JavaScript "onload" girano con lo strato runner-compat.js (Runner.getControl, pageObj.on, proxy): verificare i plugin jQuery usati.',
-    '- I link in stile phpr (tabella_list.php, _edit.php?editid1=...) funzionano grazie alle pagine di inoltro generate.',
+    '- I link classici (tabella_list.php, _edit.php?editid1=...) funzionano grazie alle pagine di inoltro generate.',
   ];
   fs.mkdirSync(path.join(targetDir, 'import-phpr'), { recursive: true });
   fs.writeFileSync(path.join(targetDir, 'import-phpr', 'REPORT.md'), lines.join('\n') + '\n');

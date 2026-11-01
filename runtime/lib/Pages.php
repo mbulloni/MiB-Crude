@@ -38,7 +38,7 @@ class Pages
         foreach ($m->details() as $d) if ($d['table'] === $t->name) $link = $d;
         if (!$link) return null;
         $this->app->security->check($m->name, 'V');
-        // phpr URLs pass master keys by position (masterkey1, masterkey2...).
+        // Classic URLs pass master keys by position (masterkey1, masterkey2...).
         if (empty($_GET['mk']) && !empty($_GET['mkv']) && is_array($_GET['mkv'])) {
             foreach ($m->def['keys'] as $i => $k) if (isset($_GET['mkv'][$i])) $_GET['mk'][$k] = (string)$_GET['mkv'][$i];
         }
@@ -433,7 +433,7 @@ class Pages
 
     // --- update selected --------------------------------------------------------
 
-    /** "Update selected" (phpr): the same values on every selected record, through the normal edit path. */
+    /** "Update selected" (classic): the same values on every selected record, through the normal edit path. */
     public function page_updatesel()
     {
         $t = $this->table();
@@ -941,7 +941,7 @@ class Pages
         (new Reports($this->app))->chartData(isset($_GET['c']) ? (string)$_GET['c'] : '');
     }
 
-    /** Custom buttons (phpr OnServer): JSON {params, keys, selected[]} -> {result}. */
+    /** Custom buttons (classic OnServer): JSON {params, keys, selected[]} -> {result}. */
     public function page_button()
     {
         $t = $this->table();

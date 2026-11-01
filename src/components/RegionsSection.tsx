@@ -21,7 +21,7 @@ export default function RegionsSection() {
     if (patch.source === 'code' && !all[name].code) all[name].code = SAMPLE[name];
   });
   return (
-    <Section title="Intestazione, piè di pagina e menu" help="Come gli «include» di phpr: un file della cartella public/ del progetto (copiato nella radice dell'app, per esempio k-nav-bar-top.php) oppure codice HTML/PHP scritto qui. Vale per il layout standard e per tutti i temi; un errore nel codice viene mostrato al suo posto senza bloccare la pagina.">
+    <Section title="Intestazione, piè di pagina e menu" help="Come gli «include» dei progetti .phpr: un file della cartella public/ del progetto (copiato nella radice dell'app, per esempio k-nav-bar-top.php) oppure codice HTML/PHP scritto qui. Vale per il layout standard e per tutti i temi; un errore nel codice viene mostrato al suo posto senza bloccare la pagina.">
       {(['header', 'footer', 'menu'] as Name[]).map((name) => {
         const r = regions?.[name] || {};
         const src = r.source || 'none';

@@ -1,6 +1,6 @@
 'use strict';
-// Merge of a project (usually just imported from a phpr .phpr) into another one, to build a single
-// application from several phpr projects. Works on the in-memory projects; files of custom/ and
+// Merge of a project (usually just imported from a .phpr file) into another one, to build a single
+// application from several .phpr projects. Works on the in-memory projects; files of custom/ and
 // public/ and the import notes are copied by copyFiles(). Nothing is ever overwritten in the target:
 // same names are shared (connections to the same database, identical tables) or renamed, and every
 // choice ends up in the report.

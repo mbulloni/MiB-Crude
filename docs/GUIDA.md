@@ -1,12 +1,12 @@
 # Guida di MiB-Crude
 
-MiB-Crude è un generatore visuale di applicazioni web PHP, per Linux, per Linux. Nel designer (un'applicazione desktop Electron) si descrive l'applicazione: connessioni ai database, tabelle, campi, pagine, sicurezza, report, grafici, eventi PHP. Con un clic MiB-Crude genera un'applicazione web PHP completa (PHP 7.4 – 8.5, Bootstrap 5, DataTables, ECharts), la mostra in anteprima e la pubblica sul server.
+MiB-Crude è un generatore visuale di applicazioni web PHP, per Linux. Nel designer (un'applicazione desktop Electron) si descrive l'applicazione: connessioni ai database, tabelle, campi, pagine, sicurezza, report, grafici, eventi PHP. Con un clic MiB-Crude genera un'applicazione web PHP completa (PHP 7.4 – 8.5, Bootstrap 5, DataTables, ECharts), la mostra in anteprima e la pubblica sul server.
 
 Il progetto è una cartella di piccoli file di testo: più sviluppatori lavorano insieme tramite Git o tramite il **server del team** (modifiche in tempo reale, blocco per elemento).
 
 Questa guida descrive ogni funzione e dove si trova. Altri documenti:
 
-- [RIFERIMENTO.md](RIFERIMENTO.md): eventi, funzioni PHP disponibili nel codice, compatibilità phpr, tabelle di sistema, formato del progetto
+- [RIFERIMENTO.md](RIFERIMENTO.md): eventi, funzioni PHP disponibili nel codice, compatibilità con i progetti importati, tabelle di sistema, formato del progetto
 - [APP-GENERATA.md](APP-GENERATA.md): struttura dell'applicazione generata, requisiti del server, pubblicazione, attività pianificate, sicurezza dei file
 - [TESTING.md](TESTING.md): test automatici
 - [ROADMAP.md](ROADMAP.md): storia delle versioni e limiti noti
@@ -242,7 +242,7 @@ Eventi dell'applicazione: avvio, prima e dopo il login, login fallito, registraz
 - esportazione XLSX e stampa;
 - **campi incrociati (crosstab)**: le colonne diventano i valori di un campo (es. i mesi o le aree), le righe sono i raggruppamenti. Ogni cella mostra i totali; ci sono i totali di riga, di colonna e generale. Un clic su una cella apre la lista filtrata su quella riga e quella colonna.
 
-**Grafici** (Apache ECharts): colonne, barre, linee, aree, dispersione, torta, ciambella, rosa, imbuto, treemap, gauge, radar; serie multiple, impilamento, ordinamento per valore. Un clic su barra, punto o fetta apre la lista filtrata su quel valore o periodo. Le personalizzazioni AnyChart dei progetti phpr (`JS_ModifyChart`) vengono tradotte su ECharts.
+**Grafici** (Apache ECharts): colonne, barre, linee, aree, dispersione, torta, ciambella, rosa, imbuto, treemap, gauge, radar; serie multiple, impilamento, ordinamento per valore. Un clic su barra, punto o fetta apre la lista filtrata su quel valore o periodo. Le personalizzazioni AnyChart dei progetti .phpr (`JS_ModifyChart`) vengono tradotte su ECharts.
 
 **Dashboard**: conteggi, indicatori (somma/media di un campo), grafici, report, liste e blocchi HTML in una griglia.
 
@@ -257,7 +257,7 @@ In alto il riepilogo del progetto (titolo, lingue, menu, tema, funzioni attive, 
 - **File caricati**: cartella (relativa all'app o assoluta) e dimensione massima.
 - **Stile**: colore principale, menu (barra laterale o in alto), tema chiaro/scuro/automatico, densità. Il logo è il file `custom/logo.png` del progetto.
 - **Temi grafici da template acquistati**: *Importa template…* riconosce **Metronic 8**, **Cork 3 / Equation 2**, **Satria** (pagine di accesso e presentazione), **Slim**, **Webarch** e **Material Design Admin**, con le loro varianti. Copia solo CSS, JS e font nella libreria locale `~/.config/MiB-Crude/themes`: i file dei template non entrano mai nel progetto né in MiB-Crude, per le licenze. *Gli utenti possono cambiare l'aspetto del tema*: con Material (colori), Webarch (colori) e Slim (menu laterale o orizzontale) ogni utente sceglie dal pulsante con la tavolozza nell'intestazione, e la scelta resta nel suo browser. Con **Equation** l'app prende anche lo stile delle pagine del template, in chiaro e in scuro: indicatori del cruscotto e schede della home come i widget di Equation (icona nel cerchio colorato, titolo colorato, numero grande), grafici con la tavolozza, il carattere Nunito, griglia tratteggiata, aree sfumate, barre arrotondate e ciambella con il totale al centro, menu «…» sulle schede dei grafici (*Scarica immagine*, *Apri il grafico*), tabelle con l'intestazione colorata, paginazione a pillole e pagina di accesso nel riquadro centrato del template.
-- **Intestazione, piè di pagina e menu**: un file della cartella `public/` del progetto (come gli *include* di phpr) o codice HTML/PHP scritto qui; si può nascondere l'intestazione o il piè standard; il menu può sostituire o affiancare quello generato. Vale per tutti i temi.
+- **Intestazione, piè di pagina e menu**: un file della cartella `public/` del progetto (come gli *include* dei progetti .phpr) o codice HTML/PHP scritto qui; si può nascondere l'intestazione o il piè standard; il menu può sostituire o affiancare quello generato. Vale per tutti i temi.
 - **Pagina di presentazione** pubblica con i pulsanti Accedi/Registrati.
 - **Funzioni avanzate**:
   - registro attività (audit) di accessi, inserimenti, modifiche ed eliminazioni;
@@ -301,15 +301,15 @@ node server/mibcrude-server.cjs --data ./team-data --add-user mario --role admin
 
 ## 15. Importazione di progetti .phpr
 
-*Importa progetto .phpr* legge il file `.phpr` (phpr 10.x) e l'archivio delle pagine `PAGES*.sqlite`. Converte:
+*Importa progetto .phpr* legge il file `.phpr` (versione 10.x) e l'archivio delle pagine `PAGES*.sqlite`. Converte:
 
 - connessioni, tabelle, query SQL, campi, lookup (anche a cascata);
 - pagine e campi per pagina, master-dettaglio, menu, gruppi e permessi, grafici;
 - eventi PHP e JavaScript, pulsanti personalizzati, varianti di pagina, dashboard.
 
-Gli eventi funzionano senza riscriverli grazie allo strato di compatibilità (`DB::Query`, `DB::Lookup`, `Security::getUserName()`, `$pageObject`, `$xt`, `runner_mail`…). Il codice PHP 7.4 viene adeguato a PHP 8 (correzioni sicure automatiche, il resto in `import-phpr/REPORT.md`). Con *URL in stile phpr* l'app risponde anche a `tabella_list.php`, `tabella_edit.php?editid1=…`.
+Gli eventi funzionano senza riscriverli grazie allo strato di compatibilità (`DB::Query`, `DB::Lookup`, `Security::getUserName()`, `$pageObject`, `$xt`, `runner_mail`…). Il codice PHP 7.4 viene adeguato a PHP 8 (correzioni sicure automatiche, il resto in `import-phpr/REPORT.md`). Con *URL classici* l'app risponde anche a `tabella_list.php`, `tabella_edit.php?editid1=…`.
 
-### Più progetti phpr in un'unica applicazione
+### Più progetti .phpr in un'unica applicazione
 
 Due modi:
 

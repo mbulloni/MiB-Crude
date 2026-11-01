@@ -1,5 +1,5 @@
 'use strict';
-// PHP 7.4 -> PHP 8.x checks for code imported from phpr projects.
+// PHP 7.4 -> PHP 8.x checks for code imported from .phpr projects.
 // Safe rewrites are applied automatically; everything else is reported with the reason.
 // Strings and comments are masked first so that only real code is changed.
 

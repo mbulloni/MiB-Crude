@@ -8,7 +8,7 @@ Cosa produce MiB-Crude, cosa serve sul server e come si mette in produzione. Per
 index.php                  punto d'ingresso unico (index.php?p=<pagina>&t=<tabella>)
 cron.php                   attività pianificate (solo da riga di comando)
 sw.js                      service worker (solo con «App installabile»)
-<tabella>_list.php …       con «URL in stile phpr»
+<tabella>_list.php …       con «URL classici»
 config/app.php             configurazione generata dal progetto
 config/secrets.php         password e chiavi (fuori dal controllo di versione)
 config/tables/*.php        definizione di ogni origine dati

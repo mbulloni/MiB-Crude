@@ -219,7 +219,7 @@ class Security
         session_regenerate_id(true);
         $_SESSION['mc_user'] = $user;
         $_SESSION['mc_seen'] = time();
-        // Session variables used by phpr event code.
+        // Session variables used by .phpr projects event code.
         $_SESSION['UserID'] = $user['username'];
         $_SESSION['UserName'] = $user['fullname'] ?: $user['username'];
         $_SESSION['GroupID'] = $user['groups'] ? $user['groups'][0] : '';

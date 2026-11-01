@@ -2,7 +2,7 @@
 namespace MiB;
 
 /**
- * Notifications (phpr 10.7 addNotification): messages for one user or for everybody, shown under the
+ * Notifications (addNotification of .phpr projects): messages for one user or for everybody, shown under the
  * bell of the header. Stored in the main database; each user keeps the id of the last one seen.
  */
 class Notifications

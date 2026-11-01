@@ -1,5 +1,5 @@
 'use strict';
-// phpr import: PHP 8 rewrites (always) and a real project when available on this machine.
+// .phpr import: PHP 8 rewrites (always) and a real project when available on this machine.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -23,7 +23,7 @@ test('stray word at the end of an event is removed only when it is the syntax er
   assert.strictEqual(I.repairStrayWord('$a = 1;\nreturn'), null);
 });
 
-test('phpr events are wrapped with their variables', () => {
+test('imported events are wrapped with their variables', () => {
   const w = I.wrapEvent('EVENT_BEFOREEDIT', '$values["a"] = $oldvalues["a"];\nreturn true;', 'ordini');
   assert.strictEqual(w.to, 'BeforeEdit');
   assert.match(w.text, /\$oldvalues = \$old;/);
@@ -32,10 +32,10 @@ test('phpr events are wrapped with their variables', () => {
   assert.match(m.text, /applyRecord\('ordini', \$data, \$record\)/);
 });
 
-// Optional real project, any phpr 10.x .phpr: MIBCRUDE_PHPR_SAMPLE=/path/project.phpr
+// Optional real project, any version 10.x .phpr: MIBCRUDE_PHPR_SAMPLE=/path/project.phpr
 // (MIBCRUDE_PHPR_TABLES=n also checks the number of imported tables).
 const REAL = process.env.MIBCRUDE_PHPR_SAMPLE || '';
-test('real phpr 10.3 project imports and generates valid PHP', { skip: !(REAL && fs.existsSync(REAL)) && 'progetto phpr reale non indicato (MIBCRUDE_PHPR_SAMPLE)' }, async (t) => {
+test('real .phpr project (version 10.3) imports and generates valid PHP', { skip: !(REAL && fs.existsSync(REAL)) && 'progetto .phpr reale non indicato (MIBCRUDE_PHPR_SAMPLE)' }, async (t) => {
   const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mc-phpr-')), 'p');
   t.after(() => fs.rmSync(path.dirname(dir), { recursive: true, force: true })); // the import holds real DB passwords, even when a check fails
   const { proj, report } = await I.importPhpr(REAL, dir, { copySource: false });
