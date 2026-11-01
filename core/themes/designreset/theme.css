@@ -16,3 +16,7 @@
 .mc-dr-horizontal .mc-dr-title { display: none !important; }
 .mc-dr-horizontal #sidebar ul.menu-categories li.menu > .dropdown-toggle i.bi { margin-right: 8px; font-size: 16px; }
 .mc-dr-horizontal #sidebar ul.menu-categories ul.submenu.dropdown-menu { min-width: 200px; }
+
+/* the -.5rem margins of the Bootstrap rows fit in the scrollable content area: no needless horizontal scrollbar */
+.mc-designreset .middle-content { margin-left: -.5rem; margin-right: -.5rem; width: auto; }
+.mc-designreset .middle-content > .layout-top-spacing { padding-left: .5rem; padding-right: .5rem; }

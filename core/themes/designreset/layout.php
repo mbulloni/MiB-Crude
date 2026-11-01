@@ -41,7 +41,7 @@ $logo = is_file($app->root . '/assets/logo.png') ? '<img src="assets/logo.png" c
 <title><?= h($app->title ? $app->title . ' · ' : '') ?><?= h($app->label($cfg['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body class="mc-themed mc-designreset<?= $horizontal ? ' mc-dr-horizontal' : '' ?><?= \MiB\Regions::bodyClass($app) ?>">
+<body class="mc-themed mc-designreset<?= $horizontal ? ' mc-dr-horizontal' : '' ?><?= \MiB\Theme::bodyClass($app) ?><?= \MiB\Regions::bodyClass($app) ?>">
 <?= \MiB\Regions::html($app, 'header') ?>
 <div class="header-container">
  <header class="header navbar navbar-expand-sm expand-header<?= $horizontal ? ' container-xxl' : '' ?>">

@@ -397,6 +397,19 @@ class Theme
         return $h;
     }
 
+    /** Own look of a template family ('equation'), '' otherwise. */
+    public static function flavor(App $app, $key = 'pack')
+    {
+        $pack = self::pack($app, $key);
+        return $pack && !empty($pack['flavor']) ? (string)$pack['flavor'] : '';
+    }
+
+    /** Classes for <body> from the flavor of the theme (' mc-eq'). */
+    public static function bodyClass(App $app, $key = 'pack')
+    {
+        return self::flavor($app, $key) === 'equation' ? ' mc-eq' : '';
+    }
+
     /** Attributes for <html>: dark mode handling of the theme. */
     public static function htmlAttrs(App $app, $key = 'pack')
     {
@@ -420,7 +433,7 @@ class Theme
         foreach (['dataTables.min.js', 'dataTables.bootstrap5.min.js', 'dataTables.responsive.min.js', 'responsive.bootstrap5.min.js', 'dataTables.buttons.min.js', 'buttons.bootstrap5.min.js', 'buttons.colVis.min.js'] as $j) {
             $s .= '<script src="' . h($app->asset('vendor/' . $j)) . '"></script>' . "\n";
         }
-        $s .= '<script>window.MC = ' . json_encode(['lang' => $app->lang, 'i18n' => ['confirmDelete' => t('confirm.delete'), 'confirmDeleteSel' => t('confirm.delete_sel'), 'noResults' => t('list.empty'), 'colvis' => t('dt.colvis'), 'all' => t('list.all'),
+        $s .= '<script>window.MC = ' . json_encode(['lang' => $app->lang, 'flavor' => self::flavor($app), 'i18n' => ['total' => t('chart.total'),'confirmDelete' => t('confirm.delete'), 'confirmDeleteSel' => t('confirm.delete_sel'), 'noResults' => t('list.empty'), 'colvis' => t('dt.colvis'), 'all' => t('list.all'),
             'dt' => ['search' => t('dt.search'), 'lengthMenu' => t('dt.lengthMenu'), 'info' => t('dt.info'), 'infoEmpty' => t('dt.infoEmpty'), 'infoFiltered' => t('dt.infoFiltered'), 'zeroRecords' => t('list.empty'), 'emptyTable' => t('list.empty'), 'loadingRecords' => t('dt.loading'), 'processing' => t('dt.loading'),
             'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']]]], JSON_UNESCAPED_UNICODE) . ';</script>' . "\n";
         if ($charts) $s .= '<script src="' . h($app->asset('vendor/echarts.min.js')) . '"></script><script src="' . h($app->asset('anychart-compat.js')) . '"></script>' . "\n";

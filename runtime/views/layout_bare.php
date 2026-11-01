@@ -4,7 +4,7 @@
 <title><?= h($app->title) ?> · <?= h($app->label($app->config['title'])) ?></title>
 <?= \MiB\Theme::css($app) ?>
 </head>
-<body class="mc-bare">
+<body class="mc-bare<?= \MiB\Theme::bodyClass($app) ?>">
 <div class="mc-auth-card card shadow-sm">
   <div class="card-body p-4">
     <h1 class="h4 mb-1 text-center"><?php if (is_file($app->root . '/assets/logo.png')): ?><img src="assets/logo.png" alt="" height="40" class="d-block mx-auto mb-2"><?php endif ?><?= h($app->label($app->config['title'])) ?></h1>

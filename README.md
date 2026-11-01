@@ -46,7 +46,7 @@ Documentazione completa:
 ### Aspetto
 
 - Colori, menu laterale o in alto, chiaro/scuro, multilingua
-- **Temi grafici da template acquistati** (Metronic 8, Cork/Equation, Satria, Slim, Webarch, Material Admin), con **aspetto scelto dall'utente** per Material, Webarch e Slim
+- **Temi grafici da template acquistati** (Metronic 8, Cork/Equation, Satria, Slim, Webarch, Material Admin), con **aspetto scelto dall'utente** per Material, Webarch e Slim; con **Equation** cruscotti, grafici, home, liste e accesso prendono lo stile del template, chiaro e scuro
 - Intestazione, piè di pagina e menu del progetto (file o codice)
 - **App installabile (PWA)** su telefoni e computer
 
@@ -64,6 +64,7 @@ Documentazione completa:
 |---|---|
 | ![Report crosstab](docs/screenshots/app-crosstab.png) Report a campi incrociati | ![Aggiunta in linea](docs/screenshots/app-inline-add.png) Aggiunta in linea |
 | ![Pagina a passi](docs/screenshots/app-steps.png) Pagina Nuovo a passi | ![Aspetto scelto dall'utente](docs/screenshots/app-theme-customizer.png) Aspetto scelto dall'utente (Material Admin) |
+| ![Cruscotto Equation](docs/screenshots/app-equation.png) Cruscotto con il tema Equation | ![Cruscotto Equation scuro](docs/screenshots/app-equation-dark.png) Lo stesso in modalità scura |
 | ![Cerca nel progetto](docs/screenshots/designer-search.png) Cerca nel progetto | ![PDF multilingue](docs/screenshots/pdf-lingue.png) PDF in più scritture |
 
 ## Importazione di progetti .phpr

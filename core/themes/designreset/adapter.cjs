@@ -22,6 +22,8 @@ module.exports = {
     const variants = fs.readdirSync(path.join(dir, 'layouts')).filter((v) => LABELS[v]).map((v) => ({ id: v, label: LABELS[v] }));
     return { root: dir, name, slug: `${base.toLowerCase()}${version.split('.')[0]}`, variants };
   },
+  // Equation packs get MiB-Crude's own Equation look (equation.css, chart style, widgets) on top of the template.
+  flavor(id, manifest) { return /^equation/i.test(id) || /^equation/i.test((manifest && manifest.name) || '') ? 'equation' : ''; },
   install(root, variant, dest) {
     const { copy } = require('../index.cjs');
     const skip = (p) => !/\.(scss|map|md)$/.test(p);

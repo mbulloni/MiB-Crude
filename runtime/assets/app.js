@@ -291,7 +291,50 @@
       }
       return base;
     };
-    var full = function (d) { var o = option(d); return d.js && window.mcAnyChart ? window.mcAnyChart(o, d.js) : o; };
+    // Equation templates: the look of their ApexCharts (palette, Nunito, dashed grid, gradient areas, rounded
+    // bars, donut with the total in the middle); the toolbox moves to the card's "..." menu.
+    var eq = (window.MC && window.MC.flavor) === 'equation';
+    var EQ = ['#4361ee', '#805dca', '#00ab55', '#e7515a', '#e2a03f', '#2196f3', '#009688', '#622bd7', '#ffbb44', '#888ea8'];
+    var eqStyle = function (o, d) {
+      var dk = dark(), line = dk ? '#191e3a' : '#e0e6ed', text = dk ? '#888ea8' : '#515365', t = d.type;
+      var hex = function (c, a) { var m = /^#([0-9a-f]{6})$/i.exec(c || ''); if (!m) return c; var n = parseInt(m[1], 16); return 'rgba(' + (n >> 16) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; };
+      o.color = EQ;
+      o.textStyle = { fontFamily: 'Nunito, sans-serif', color: text };
+      o.toolbox = { show: false };
+      o.legend = Object.assign(o.legend || {}, { icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 18, textStyle: { color: text, fontSize: 13 } });
+      o.tooltip = Object.assign(o.tooltip || {}, { backgroundColor: dk ? '#1b2e4b' : '#fff', borderColor: dk ? '#1b2e4b' : '#e0e6ed', textStyle: { color: dk ? '#e0e6ed' : '#3b3f5c', fontFamily: 'Nunito, sans-serif' }, extraCssText: 'box-shadow:0 6px 20px rgba(0,0,0,.12);border-radius:8px' });
+      var axis = function (a) {
+        if (!a) return;
+        a.axisLine = { show: false }; a.axisTick = { show: false };
+        a.axisLabel = Object.assign(a.axisLabel || {}, { color: text, fontSize: 12 });
+        a.splitLine = { show: a.type === 'value', lineStyle: { color: line, type: 'dashed' } };
+      };
+      axis(o.xAxis); axis(o.yAxis);
+      if (o.grid) o.grid.top = 24;
+      (o.series || []).forEach(function (s, i) {
+        var c = EQ[i % EQ.length];
+        if (s.type === 'line') {
+          s.smooth = true; s.showSymbol = d.labels.length <= 12; s.symbolSize = 7; s.lineStyle = { width: 3 };
+          if (t === 'area' || t === 'line') s.areaStyle = { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: hex(s.itemStyle && s.itemStyle.color || c, t === 'area' ? 0.4 : 0.18) }, { offset: 1, color: hex(s.itemStyle && s.itemStyle.color || c, 0) }]) };
+        } else if (s.type === 'bar') {
+          var h = t === 'hbar';
+          s.barMaxWidth = 28; s.itemStyle = Object.assign(s.itemStyle || {}, { borderRadius: s.stack ? 0 : (h ? [0, 10, 10, 0] : [10, 10, 0, 0]) });
+          if (o.series.length === 1) { s.showBackground = true; s.backgroundStyle = { color: dk ? 'rgba(224,230,237,.06)' : '#eceffe', borderRadius: 10 }; s.itemStyle.borderRadius = 10; }
+        } else if (s.type === 'pie') {
+          s.itemStyle = { borderRadius: 6, borderColor: dk ? '#0e1726' : '#fff', borderWidth: 3 };
+          if (t === 'doughnut' || t === 'pie') {
+            var total = s.data.reduce(function (a, p) { return a + (Number(p.value) || 0); }, 0);
+            s.radius = ['64%', '80%']; s.center = ['50%', '46%']; s.avoidLabelOverlap = false;
+            s.label = { show: true, position: 'center', formatter: function () { return '{t|' + (window.MC.i18n.total || 'Total') + '}\n{v|' + fmt(total) + '}'; },
+              rich: { t: { fontSize: 18, color: text, lineHeight: 30, fontFamily: 'Nunito, sans-serif' }, v: { fontSize: 26, fontWeight: 600, color: dk ? '#e0e6ed' : '#0e1726', fontFamily: 'Nunito, sans-serif' } } };
+            s.emphasis = { scale: true, scaleSize: 4, label: { show: true, formatter: function (p) { return '{t|' + p.name + '}\n{v|' + fmt(p.value) + '}'; } } };
+            s.labelLine = { show: false };
+          }
+        }
+      });
+      return o;
+    };
+    var full = function (d) { var o = option(d); if (eq) o = eqStyle(o, d); return d.js && window.mcAnyChart ? window.mcAnyChart(o, d.js) : o; };
     $$('.mc-chart').forEach(function (el) {
       fetchJson(el.getAttribute('data-src')).then(function (d) {
         var chart = echarts.init(el, dark() ? 'dark' : null, { renderer: 'canvas' });
@@ -303,11 +346,25 @@
         };
         chart.setOption(full(d));
         drill(chart);
+        el.mcChart = function () { return chart; };
         if (window.ResizeObserver) new ResizeObserver(function () { chart.resize(); }).observe(el);
         new MutationObserver(function () { chart.dispose(); chart = echarts.init(el, dark() ? 'dark' : null); chart.setOption(full(d)); drill(chart); }).observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
       });
     });
   }
+
+  // "Download image" of the chart cards' menu (Equation)
+  $$('.mc-chart-png').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var el = $('.mc-chart', a.closest('.card')), c = el && el.mcChart && el.mcChart();
+      if (!c) return;
+      var link = document.createElement('a');
+      link.href = c.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: getComputedStyle(a.closest('.card')).backgroundColor });
+      link.download = (a.getAttribute('data-name') || 'chart').replace(/[\\/:*?"<>|]+/g, '_') + '.png';
+      document.body.appendChild(link); link.click(); link.remove();
+    });
+  });
 
   // --- gallery: open image links in the modal when available ---
   $$('a.mc-preview').forEach(function (a) {

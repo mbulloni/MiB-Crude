@@ -199,7 +199,8 @@ function generate(proj, opts = {}) {
     const m = th.manifest;
     // options each user can change in the app (theme customizer), when the adapter allows it and the project does not turn it off
     const choices = adapter && adapter.choices && (proj.project.theme || {}).userChoices !== false ? adapter.choices(path.join(th.dir, 'assets')) : [];
-    return { id: packId, kind: m.kind || 'app', css: m.css, js: m.js, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {}, choices };
+    const flavor = adapter && adapter.flavor ? adapter.flavor(packId, m) : '';
+    return { id: packId, kind: m.kind || 'app', css: flavor ? [...m.css, `layouts/${flavor}.css`] : m.css, js: m.js, flavor, jsFirst: m.jsFirst || [], providesBootstrap: !!m.providesBootstrap, providesJquery: !!m.providesJquery, fonts: m.fonts || '', dark: m.dark || {}, options: m.options || {}, choices };
   };
   const themePack = installTheme(proj.project.theme && proj.project.theme.pack);
   const authPack = installTheme(proj.project.theme && proj.project.theme.authPack);

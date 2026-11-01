@@ -1,0 +1,76 @@
+/* MiB-Crude pages with the look of the Equation template (light and dark): widgets, cards, tables, buttons,
+   pagination, login. Loaded only for Equation packs (adapter flavor), on top of the template's own CSS. */
+.mc-eq { --eq-primary: #4361ee; --eq-secondary: #805dca; --eq-success: #00ab55; --eq-danger: #e7515a; --eq-warning: #e2a03f; --eq-info: #2196f3;
+  --eq-text: #3b3f5c; --eq-muted: #515365; --eq-head: #0e1726; --eq-line: #e0e6ed; --eq-card: #fff; --eq-tint: #eceffe; --eq-shadow: 0 0 40px 0 rgba(94, 92, 154, .06);
+  font-family: Nunito, sans-serif; }
+body.dark.mc-eq { --eq-text: #e0e6ed; --eq-muted: #888ea8; --eq-head: #e0e6ed; --eq-line: #191e3a; --eq-card: #0e1726; --eq-tint: #1b2e4b; --eq-shadow: none; }
+
+/* page title */
+.mc-eq h1.h4 { font-weight: 600; font-size: 1.35rem; color: var(--eq-head); letter-spacing: .2px; }
+
+/* cards */
+.mc-eq .card { border: 1px solid var(--eq-line); border-radius: 8px; box-shadow: var(--eq-shadow); }
+body.dark.mc-eq .card { background: var(--eq-card); border-color: var(--eq-line); }
+body.mc-eq .card > .card-header.mc-eq-head { background: transparent; border-bottom: 0; padding: 20px 20px 0; font-size: 18px; font-weight: 600; color: var(--eq-head); }
+body.mc-eq .btn.mc-eq-dots { color: var(--eq-muted); background: transparent; border: 0; padding: 0 4px; line-height: 1; font-size: 20px; text-decoration: none; box-shadow: none; }
+body.mc-eq .btn.mc-eq-dots:hover { color: var(--eq-primary); }
+.mc-eq .mc-eq-chart-card .card-body { padding-top: 8px; }
+.mc-eq .dropdown-menu { border-radius: 8px; border: 1px solid var(--eq-line); box-shadow: 0 10px 30px 0 rgba(31, 45, 61, .1); padding: 6px; }
+.mc-eq .dropdown-item { border-radius: 6px; padding: 7px 12px; font-size: 14px; }
+.mc-eq .dropdown-item i { margin-right: 6px; color: var(--eq-muted); }
+
+/* widgets: tinted icon circle on the left, coloured title and big number on the right, footer line */
+.mc-eq .mc-eq-widget { color: var(--eq-text); transition: transform .15s, box-shadow .15s; }
+.mc-eq .mc-eq-widget:hover { transform: translateY(-3px); box-shadow: 0 12px 30px -10px rgba(67, 97, 238, .25); }
+.mc-eq .mc-eq-widget .card-body { padding: 20px; }
+.mc-eq .mc-eq-icon { flex: 0 0 auto; width: 50px; height: 50px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 22px; color: var(--c, var(--eq-primary)); background: color-mix(in srgb, var(--c, var(--eq-primary)) 14%, transparent); }
+body.dark.mc-eq .mc-eq-icon { color: #fff; background: var(--c, var(--eq-primary)); }
+.mc-eq .mc-eq-title { color: var(--c, var(--eq-primary)); font-size: 19px; font-weight: 500; }
+.mc-eq .mc-eq-value { color: var(--eq-text); font-size: 22px; font-weight: 500; letter-spacing: 1px; line-height: 1.5; }
+.mc-eq .mc-eq-foot { margin-top: 18px; color: var(--eq-muted); font-size: 15px; letter-spacing: .5px; }
+.mc-eq .mc-eq-c0 { --c: var(--eq-secondary); }
+.mc-eq .mc-eq-c1 { --c: var(--eq-primary); }
+.mc-eq .mc-eq-c2 { --c: var(--eq-danger); }
+.mc-eq .mc-eq-c3 { --c: var(--eq-success); }
+.mc-eq .mc-eq-c4 { --c: var(--eq-warning); }
+
+/* buttons: solid primary with a soft shadow, outlines become tinted "light" buttons */
+.mc-eq .btn { border-radius: 6px; font-weight: 500; letter-spacing: .3px; }
+.mc-eq .btn-primary { background: var(--eq-primary); border-color: var(--eq-primary); box-shadow: 0 10px 20px -10px var(--eq-primary); }
+body.mc-eq .btn[class*="btn-outline-"] { --bs-btn-border-color: transparent; --bs-btn-hover-border-color: transparent; --bs-btn-active-border-color: transparent; --bs-btn-disabled-border-color: transparent; border-color: transparent !important; }
+.mc-eq .btn-outline-primary, .mc-eq .btn-outline-secondary { color: var(--eq-primary); background: var(--eq-tint); }
+.mc-eq .btn-outline-danger { color: var(--eq-danger); background: color-mix(in srgb, var(--eq-danger) 12%, transparent); }
+.mc-eq .btn-outline-success { color: var(--eq-success); background: color-mix(in srgb, var(--eq-success) 12%, transparent); }
+.mc-eq .btn-outline-primary:hover, .mc-eq .btn-outline-secondary:hover, .mc-eq .btn-outline-primary.show, .mc-eq .btn-outline-secondary.show { color: #fff; background: var(--eq-primary); }
+.mc-eq .btn-outline-danger:hover { color: #fff; background: var(--eq-danger); }
+.mc-eq [class*="btn-outline-"]:disabled { opacity: .45; }
+
+/* tables: tinted header row, light row lines */
+.mc-eq table.mc-grid thead th, .mc-eq .mc-report thead th, .mc-eq table.table > thead > tr > th { background: var(--eq-tint); color: var(--eq-head); font-weight: 600; font-size: 14px; border-bottom: 0; padding-top: 12px; padding-bottom: 12px; }
+.mc-eq table.mc-grid thead th:first-child { border-top-left-radius: 6px; }
+.mc-eq table.mc-grid thead th:last-child { border-top-right-radius: 6px; }
+.mc-eq table.mc-grid > tbody > tr > td { border-color: var(--eq-line); padding-top: 12px; padding-bottom: 12px; color: var(--eq-text); }
+.mc-eq .mc-grid-card > .card-body { padding: 16px !important; }
+.mc-eq .badge { border-radius: 6px; font-weight: 600; letter-spacing: .3px; padding: .4em .65em; }
+
+/* pagination (DataTables and Bootstrap): round pills */
+.mc-eq .pagination { gap: 6px; }
+.mc-eq .pagination .page-link { border: 0; border-radius: 50% !important; min-width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--eq-tint); color: var(--eq-muted); padding: 0 8px; }
+.mc-eq .pagination .page-item.active .page-link { background: var(--eq-primary); color: #fff; box-shadow: 0 10px 20px -10px var(--eq-primary); }
+.mc-eq .pagination .page-item.disabled .page-link { opacity: .5; }
+.mc-eq div.dt-container .dt-info { color: var(--eq-primary); border: 1px solid var(--eq-line); border-radius: 6px; padding: 6px 14px; display: inline-block; font-size: 14px; }
+
+/* forms */
+.mc-eq .form-control, .mc-eq .form-select { border-radius: 6px; border-color: var(--eq-line); }
+.mc-eq .form-control:focus, .mc-eq .form-select:focus { border-color: var(--eq-primary); box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--eq-primary) 15%, transparent); }
+
+/* login and the other pages without menu: boxed card like the template's auth-boxed */
+body.mc-bare.mc-eq { background: #fafafa; }
+body.mc-bare.mc-eq.dark { background: #060818; }
+.mc-eq.mc-bare .mc-auth-card { border-radius: 8px; border: 1px solid var(--eq-line); box-shadow: 0 0 40px 0 rgba(94, 92, 154, .06) !important; background: var(--eq-card); }
+.mc-eq.mc-bare .mc-auth-card h1 { font-size: 1.9rem; font-weight: 500; color: var(--eq-head); }
+.mc-eq.mc-bare .form-label { color: var(--eq-text); font-weight: 600; letter-spacing: .3px; }
+.mc-eq.mc-bare .form-control { padding: .7rem .9rem; }
+.mc-eq.mc-bare .btn-primary { --bs-btn-bg: var(--eq-secondary); --bs-btn-border-color: var(--eq-secondary); --bs-btn-hover-bg: #6f4cbf; --bs-btn-hover-border-color: #6f4cbf; background: var(--eq-secondary) !important; border-color: var(--eq-secondary) !important; box-shadow: 0 10px 20px -10px var(--eq-secondary); text-transform: uppercase; padding: .6rem; }

@@ -49,6 +49,13 @@ test('templates are recognised, installed and used by the generator', { skip: !f
     const layout = path.join(out, 'runtime', 'themes', m.id, m.kind === 'auth' ? 'layout_bare.php' : 'layout.php');
     assert.ok(fs.existsSync(layout));
     execFileSync('php', ['-l', layout], { stdio: 'pipe' });
+    if (m.adapter === 'designreset') {
+      // Equation packs get MiB-Crude's Equation look (CSS, charts, widgets); Cork does not
+      const eq = /^equation/.test(m.id), cfg = fs.readFileSync(path.join(out, 'config', 'app.php'), 'utf8');
+      assert.strictEqual(/'flavor' => 'equation'/.test(cfg), eq, `${m.id}: flavor`);
+      assert.strictEqual(/layouts\/equation\.css/.test(cfg), eq, `${m.id}: equation.css in the pack`);
+      if (eq) assert.ok(fs.existsSync(path.join(out, 'theme', m.id, 'layouts', 'equation.css')));
+    }
     if (m.adapter === 'material') {
       const css = fs.readFileSync(path.join(out, 'theme', m.id, 'assets', 'css', 'material.mc.css'), 'utf8');
       assert.ok(!/Bootstrap v3|AngularJS Material|normalize\.css/.test(css), 'Bootstrap 3 and Angular Material removed');
