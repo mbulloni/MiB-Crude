@@ -122,6 +122,33 @@ handle('import:phpr', async (file, parentDir) => {
   try { await git.init(dir); } catch { /* git optional */ }
   return { proj: r.proj, report: r.report, reportFile: path.join(dir, 'import-phpr', 'REPORT.md') };
 });
+// Another .phpr merged into the project (one application from several phpr projects): imported in a
+// temporary folder, merged in memory, files copied; opts.save writes the project too (import from Welcome).
+handle('import:phprMerge', async (proj, file, opts = {}) => {
+  const { importPhpr } = require('../core/phpr-import.cjs');
+  const M = require('../core/merge.cjs');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-merge-'));
+  try {
+    const label = opts.label || path.basename(file, '.phpr');
+    await importPhpr(file, path.join(tmp, 'p'), { name: label });
+    const src = P.loadProject(path.join(tmp, 'p'));
+    const r = M.mergeProjects(proj, src, { ...opts, label, secrets: (P.readSecrets(src.dir).connections || {}) });
+    r.proj.dir = proj.dir;
+    const reportFile = M.copyFiles(src.dir, proj.dir, label, r.report);
+    if (Object.keys(r.secrets).length) {
+      const sec = P.readSecrets(proj.dir);
+      P.writeSecrets(proj.dir, { ...sec, connections: { ...(sec.connections || {}), ...r.secrets } });
+    }
+    if (opts.save) P.saveProject(r.proj);
+    return { proj: r.proj, report: r.report, reportFile };
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true }); // the import holds database passwords
+  }
+});
+handle('dialog:files', async (title, filters) => {
+  const r = await dialog.showOpenDialog(win, { title, properties: ['openFile', 'multiSelections'], filters: filters || [] });
+  return r.canceled ? [] : r.filePaths;
+});
 handle('project:open', (dir) => {
   const proj = P.loadProject(dir);
   current = { dir };

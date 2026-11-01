@@ -16,8 +16,8 @@ const on = (channel) => (cb) => {
 };
 
 const channels = [
-  'app:info', 'app:settings', 'app:quit', 'shell:open', 'shell:showItem', 'shell:openPath', 'dialog:dir', 'dialog:file',
-  'project:new', 'project:open', 'import:phpr', 'project:save', 'project:close', 'project:reload', 'secrets:get', 'secrets:set', 'local:get', 'local:set',
+  'app:info', 'app:settings', 'app:quit', 'shell:open', 'shell:showItem', 'shell:openPath', 'dialog:dir', 'dialog:file', 'dialog:files',
+  'project:new', 'project:open', 'import:phpr', 'import:phprMerge', 'project:save', 'project:close', 'project:reload', 'secrets:get', 'secrets:set', 'local:get', 'local:set',
   'themes:list', 'themes:scan', 'themes:install', 'themes:remove',
   'ddl:build', 'db:columns', 'db:exec', 'ddl:script', 'file:save', 'file:read', 'tables:exportZip', 'tables:importFile',
   'db:drivers', 'db:test', 'db:tables', 'db:describe', 'db:preview', 'db:data', 'wizard:import', 'wizard:sqlview', 'wizard:procedure', 'db:procedures', 'db:procPreview', 'wizard:refresh', 'rest:sample', 'rest:add', 'templates:list', 'templates:apply', 'ai:status', 'ai:setKey', 'ai:event', 'update:check', 'update:install', 'update:restart',

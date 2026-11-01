@@ -6,6 +6,7 @@ import { call } from '../api';
 import { replaceProject, run, toast, update, useStore } from '../store';
 import type { Project, RestPaging, Table } from '../types';
 import CodeEditor from './CodeEditor';
+import PhprMergeDialog from './PhprMerge';
 import { Btn, Check, Empty, Hero, I, Modal, Row, Select, Text, ask, lbl, slug } from './ui';
 import { ConnectionDialog } from './ConnectionsPanel';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
@@ -349,6 +350,7 @@ export default function TablesPanel() {
   const [multi, setMulti] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<Menu>(null);
+  const [merging, setMerging] = useState(false);
   const [dlg, setDlg] = useState<null | { kind: 'sql' | 'proc' | 'data' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table; src?: DataSource }>(null);
 
   const load = (connId: string) => call<DbTable[]>('db:tables', p, connId).then((r) => setDbt((x) => ({ ...x, [connId]: r }))).catch((e) => toast(`${connId}: ${e.message}`, 'err'));
@@ -502,8 +504,8 @@ export default function TablesPanel() {
     </div>
   );
 
-  if (!p.connections.length) return <div className="panel"><Empty icon="database-add" title="Prima aggiungi una connessione"><Btn kind="primary" onClick={() => setDlg({ kind: 'conn' })}>Aggiungi connessione</Btn></Empty>
-    {dlg?.kind === 'conn' && <ConnectionDialog initial={null} onClose={() => setDlg(null)} />}</div>;
+  if (!p.connections.length) return <div className="panel"><Empty icon="database-add" title="Prima aggiungi una connessione"><Btn kind="primary" onClick={() => setDlg({ kind: 'conn' })}>Aggiungi connessione</Btn> <Btn icon="file-earmark-plus" onClick={() => setMerging(true)}>Unisci .phpr</Btn></Empty>
+    {dlg?.kind === 'conn' && <ConnectionDialog initial={null} onClose={() => setDlg(null)} />}{merging && <PhprMergeDialog onClose={() => setMerging(false)} />}</div>;
 
   return (
     <div className="ds-screen">
@@ -516,7 +518,7 @@ export default function TablesPanel() {
           ['diagram-3', `${p.tables.reduce((n, t) => n + t.details.length, 0)} relazioni`],
           ['database', `${p.connections.length} connessioni`],
         ]}
-        actions={<><Btn icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn><Btn kind="primary" icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn></>} />
+        actions={<><Btn icon="file-earmark-plus" title="Unisci a questo progetto le tabelle, il menu, i permessi e gli eventi di altri progetti phpr" onClick={() => setMerging(true)}>Unisci .phpr</Btn><Btn icon="box-arrow-in-down" onClick={doImport}>Importa tabelle</Btn><Btn kind="primary" icon="plus-square" onClick={() => setDlg({ kind: 'structure', conn: p.project.defaultConnection, table: null })}>Crea tabella</Btn></>} />
       <div className="ds-toolbar">
         <span className="ds-group">Nuova origine</span>
         <Btn small icon="code-square" onClick={() => setDlg({ kind: 'sql', conn: p.project.defaultConnection })}>Query SQL</Btn>
@@ -596,6 +598,7 @@ export default function TablesPanel() {
       {menu && <div className="ctx" style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
         {menu.items.map((it, i) => it === '-' ? <hr key={i} /> : <button key={i} type="button" onClick={() => { setMenu(null); it[2](); }}><I n={it[0]} /> {it[1]}</button>)}
       </div>}
+      {merging && <PhprMergeDialog onClose={() => setMerging(false)} />}
       {dlg?.kind === 'sql' && <SqlViewDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'data' && dlg.src && <DataDialog src={dlg.src} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'proc' && <ProcDialog conn={dlg.conn!} onClose={() => setDlg(null)} onCreated={(np, n) => { setProj(np, p.dir); useStore.getState().set({ nav: { kind: 'table', id: n } }); }} />}

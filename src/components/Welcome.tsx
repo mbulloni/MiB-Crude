@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
+import { MergeReports, TABLE_MODES, mergePhpr } from './PhprMerge';
 import { call } from '../api';
 import { openProject, run, toast } from '../store';
 import type { Project } from '../types';
-import { Btn, I, Modal, Row, Text } from './ui';
+import { Btn, I, Modal, Row, Select, Text } from './ui';
 import { checkUpdates } from './Updates';
 
 export default function Welcome() {
   const [info, setInfo] = useState<any>(null);
   const [dlg, setDlg] = useState<'' | 'new' | 'git' | 'team' | 'phpr'>('');
   const [report, setReport] = useState<any>(null);
+  const [extra, setExtra] = useState<string[]>([]);
+  const [mergeMode, setMergeMode] = useState('auto');
+  const [merged, setMerged] = useState<any[] | null>(null);
   const [f, setF] = useState<Record<string, string>>({});
   useEffect(() => { call('app:info').then((i) => { setInfo(i); if (i.openOnStart) open(i.openOnStart); }); }, []);
   const recent: string[] = info?.settings?.recent || [];
@@ -26,9 +30,15 @@ export default function Welcome() {
     await openProject(await call<Project>('project:new', dir, f.name));
     toast('Progetto creato: aggiungi una connessione al database', 'ok');
   });
-  const importPhpr = () => run('Importazione progetto phpr…', async () => {
+  const importPhpr = () => run(extra.length ? `Importazione e unione di ${extra.length + 1} progetti phpr…` : 'Importazione progetto phpr…', async () => {
     if (!f.phpr || !f.dir) throw new Error('Indica il file .phpr e la cartella di destinazione');
-    const r = await call('import:phpr', f.phpr, f.dir);
+    const r = await call<any>('import:phpr', f.phpr, f.dir);
+    // other .phpr files: merged into the new project, one application (saved, the project is not open yet)
+    if (extra.length) {
+      const m = await mergePhpr(r.proj, extra, mergeMode, '', true);
+      r.proj = m.proj;
+      r.merged = m.reports;
+    }
     setDlg('');
     setReport(r);
   });
@@ -72,17 +82,23 @@ export default function Welcome() {
       {dlg === 'phpr' && <Modal title="Importa un progetto phpr" onClose={() => setDlg('')} footer={<><Btn onClick={() => setDlg('')}>Annulla</Btn><Btn kind="primary" icon="box-arrow-in-down" onClick={importPhpr}>Importa</Btn></>}>
         <p className="help">Converte tabelle, query SQL, campi, lookup, pagine (dall'archivio PAGES*.sqlite accanto al file), master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi phpr funzionano grazie allo strato di compatibilità (DB::Query, Security::getUserName, $pageObject…). Il progetto originale non viene modificato.</p>
         <Row label="File .phpr"><span className="inline"><Text value={f.phpr} onChange={set('phpr')} mono /><Btn icon="file-earmark" onClick={async () => { const p = await call<string | null>('dialog:file', 'Progetto phpr', [{ name: 'phpr', extensions: ['phpr'] }]); if (p) setF({ ...f, phpr: p }); }} /></span></Row>
+        <Row label="Altri .phpr da unire" hint="Facoltativo: diventano un'unica applicazione con il primo (stesso database = stessa connessione, menu sotto il nome di ciascun progetto)"><span className="inline wrap">
+          {extra.map((x) => <span key={x} className="chip"><I n="file-earmark-code" /> {x.split('/').pop()} <button type="button" className="btn ghost sm" onClick={() => setExtra(extra.filter((y) => y !== x))}><I n="x" /></button></span>)}
+          <Btn icon="plus-lg" onClick={async () => { const fs = await call<string[]>('dialog:files', 'Progetti phpr da unire', [{ name: 'phpr', extensions: ['phpr'] }]); setExtra([...extra, ...fs.filter((x) => !extra.includes(x) && x !== f.phpr)]); }}>Aggiungi</Btn></span></Row>
+        {extra.length > 0 && <Row label="Tabelle con lo stesso nome"><Select value={mergeMode} options={TABLE_MODES} onChange={setMergeMode} /></Row>}
         <Row label="Cartella padre" hint="Verrà creata una nuova cartella con il nome del progetto"><span className="inline"><Text value={f.dir} onChange={set('dir')} /><Btn icon="folder" onClick={() => pickDir('dir', 'Cartella padre')} /></span></Row>
       </Modal>}
-      {report && <Modal wide title="Importazione completata" onClose={() => setReport(null)} footer={<><Btn icon="file-text" onClick={() => call('shell:openPath', report.reportFile)}>Apri il rapporto</Btn><Btn kind="primary" onClick={async () => { const r = report; setReport(null); await openProject(r.proj); }}>Apri il progetto</Btn></>}>
+      {report && <Modal wide title="Importazione completata" onClose={() => setReport(null)} footer={<><Btn icon="file-text" onClick={() => call('shell:openPath', report.reportFile)}>Apri il rapporto</Btn>{report.merged && <Btn icon="intersect" onClick={() => setMerged(report.merged)}>Unione ({report.merged.length})</Btn>}<Btn kind="primary" onClick={async () => { const r = report; setReport(null); await openProject(r.proj); }}>Apri il progetto</Btn></>}>
         <ul className="problems">
           <li><I n="table" /> {report.report.tables} tabelle (di cui {report.report.sqlViews} query SQL), {report.report.charts} grafici</li>
           <li><I n="lightning" /> {report.report.events} eventi convertiti, {report.report.eventsSkipped.length} da rivedere (JavaScript o non supportati, salvati in import-phpr/)</li>
           <li><I n="database" /> Connessioni: {report.report.connections.join(', ')} — password salvate solo in .mibcrude-local</li>
+          {report.merged && <li><I n="intersect" /> Uniti: {report.merged.map((m: any) => `${m.report.label} (${m.report.tablesAdded.length} tabelle)`).join(', ')} — un'unica applicazione</li>}
           <li><I n="window-stack" /> Pagine: {report.report.pagesFile ? report.report.pagesFile.split('/').pop() : 'archivio assente, tutti i campi in tutte le pagine'}</li>
         </ul>
         {report.report.warnings.length > 0 && <><h4>Avvisi ({report.report.warnings.length})</h4><ul className="problems">{report.report.warnings.slice(0, 40).map((w: string, i: number) => <li key={i} className="warning">{w}</li>)}</ul></>}
       </Modal>}
+      {merged && <MergeReports reports={merged} onClose={() => setMerged(null)} />}
       {dlg === 'git' && <Modal title="Clona un progetto da Git" onClose={() => setDlg('')} footer={<><Btn onClick={() => setDlg('')}>Annulla</Btn><Btn kind="primary" icon="download" onClick={clone}>Clona</Btn></>}>
         <Row label="URL repository"><Text value={f.url} onChange={set('url')} placeholder="git@github.com:team/gestionale.git" mono /></Row>
         <Row label="Cartella padre"><span className="inline"><Text value={f.dir} onChange={set('dir')} /><Btn icon="folder" onClick={() => pickDir('dir', 'Cartella padre')} /></span></Row>

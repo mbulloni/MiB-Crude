@@ -56,7 +56,7 @@ Documentazione completa:
 - Pubblicazione incrementale via SFTP, FTP/FTPS o cartella
 - **Docker di progetto** che replica la produzione (Linux, o Windows Server Core con l'Apache24 di produzione)
 - **Multisviluppatore**: Git o server del team in tempo reale
-- **Importazione di progetti .phpr** con strato di compatibilità per gli eventi
+- **Importazione di progetti .phpr** con strato di compatibilità per gli eventi, anche di **più progetti `.phpr` in un'unica applicazione**
 
 ![App generata](docs/screenshots/app-list.png)
 
@@ -70,6 +70,8 @@ Documentazione completa:
 ## Importazione di progetti .phpr
 
 Pulsante **Importa progetto .phpr** nella schermata iniziale: legge il file `.phpr` (phpr 10.x) e l'archivio pagine `PAGES*.sqlite` accanto, e converte connessioni (password solo in locale), tabelle, query SQL, campi, lookup (anche a cascata), pagine e campi per pagina, master-dettaglio, menu, gruppi e permessi, grafici ed eventi PHP. Gli eventi funzionano senza riscriverli grazie allo strato di compatibilità del runtime (`DB::Query`, `DB::Lookup`, `Security::getUserName()`, `$pageObject`, `$xt`, `$record` in BeforeMoveNext, `runner_mail`…). Il codice PHP 7.4 viene adeguato a PHP 8 (correzioni automatiche sicure, il resto segnalato in `import-phpr/REPORT.md`). Anche eventi JavaScript (`pageObj`, `Runner.getControl`), pulsanti personalizzati (OnBefore/OnServer/OnAfter), varianti di pagina, dashboard e personalizzazioni AnyChart dei grafici (`JS_ModifyChart`, tradotte su ECharts) vengono convertiti.
+
+**Più progetti in un'unica applicazione**: nella stessa finestra si aggiungono *Altri .phpr da unire*, oppure con il progetto aperto *Tabelle e query → Unisci .phpr*. Le connessioni allo stesso database diventano una sola, le tabelle omonime vengono condivise (se leggono la stessa tabella) o importate con un prefisso aggiornando tutti i riferimenti, il menu di ogni progetto va sotto un'intestazione con il suo nome, gruppi e permessi si sommano, gli eventi in conflitto restano da unire a mano e sono elencati in `import-phpr/<nome>/UNIONE.md`.
 
 ## Liste e grafici
 

@@ -309,6 +309,24 @@ node server/mibcrude-server.cjs --data ./team-data --add-user mario --role admin
 
 Gli eventi funzionano senza riscriverli grazie allo strato di compatibilità (`DB::Query`, `DB::Lookup`, `Security::getUserName()`, `$pageObject`, `$xt`, `runner_mail`…). Il codice PHP 7.4 viene adeguato a PHP 8 (correzioni sicure automatiche, il resto in `import-phpr/REPORT.md`). Con *URL in stile phpr* l'app risponde anche a `tabella_list.php`, `tabella_edit.php?editid1=…`.
 
+### Più progetti phpr in un'unica applicazione
+
+Due modi:
+
+- nella schermata iniziale, *Importa progetto .phpr › Altri .phpr da unire*: il primo file crea il progetto, gli altri vengono uniti;
+- con un progetto aperto, *Tabelle e query › Unisci .phpr* (anche più file insieme). L'unione si annulla con Ctrl+Z finché non si salva.
+
+Regole dell'unione (niente del progetto viene sovrascritto):
+
+- **connessioni**: stesso server, porta, database e utente = una sola connessione; le altre si aggiungono (con le password, solo in locale);
+- **tabelle con lo stesso nome**: *Automatico* le condivide se leggono la stessa tabella dello stesso database, altrimenti le importa con un prefisso (il nome del progetto); oppure *Usa sempre quella già presente* o *Importa sempre con un prefisso*. Con la rinomina si aggiornano lookup, master-dettaglio, report, grafici, dashboard, menu e permessi;
+- **menu**: le voci di ogni progetto finiscono sotto un'intestazione con il suo nome; le tabelle condivise già presenti nel menu non si ripetono;
+- **sicurezza**: gruppi con lo stesso codice = stesso gruppo, i permessi si sommano; il tipo di accesso resta quello del progetto (con avviso se diverso);
+- **eventi**: quelli mancanti si aggiungono; se lo stesso evento esiste già con codice diverso resta quello del progetto e l'altro viene salvato in `import-phpr/<nome>/eventi-in-conflitto/` da unire a mano;
+- **report, grafici, dashboard** con nome già usato vengono rinominati (`_2`); **lingue** e testi si aggiungono; i file di `custom/` e `public/` si copiano se non esistono già.
+
+Il rapporto di ogni unione è in `import-phpr/<nome>/UNIONE.md`, insieme al rapporto di importazione del progetto unito.
+
 ## 16. L'applicazione generata
 
 Per l'utente finale:
