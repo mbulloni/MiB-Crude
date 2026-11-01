@@ -170,6 +170,11 @@ handle('db:preview', async (proj, connId, sql, limit) => {
   const conn = connById(proj, connId);
   return W.withConnection(conn, pwOf(connId), (c) => D.preview(c, sql, limit || 100));
 });
+handle('db:data', async (proj, connId, src, opts) => {
+  const conn = connById(proj, connId);
+  if (conn.driver === 'rest') throw new Error('Per le origini REST i dati si vedono nell\'anteprima dell\'applicazione');
+  return W.withConnection(conn, pwOf(connId), (c) => D.tableData(c, conn, src, opts));
+});
 handle('wizard:import', async (proj, connId, names) => {
   const added = await W.importTables(proj, connById(proj, connId), pwOf(connId), names);
   return { proj, added };

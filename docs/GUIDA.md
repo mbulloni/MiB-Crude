@@ -113,6 +113,8 @@ Tipi di origine dati:
 | **Stored procedure** | *Da stored procedure* | il risultato di una procedura |
 | **Da modello** | *Da modello* | tabelle, dati di esempio, menu, report, grafici e dashboard pronti, su qualunque database: *CRM clienti* (aziende, contatti, attività con kanban e calendario), *Helpdesk ticket*, *Calendario risorse*, *Archivio documenti* |
 
+**Visualizza dati** (pulsante *Dati* nella barra con una tabella selezionata, menu contestuale, o *Dati* nel riepilogo dell'editor della tabella): i record della tabella, della query SQL o della stored procedure, a pagine da 50–500, ordinabili con un clic sull'intestazione della colonna e filtrabili con una condizione SQL (es. `status = 'new' AND total > 10`), con il conteggio dei record.
+
 Con *Crea tabella* si crea una tabella nuova sul database scelto (tipi tradotti per ogni dialetto); *Importa tabelle* / esporta in ZIP spostano tabelle tra progetti.
 
 ### Origini REST

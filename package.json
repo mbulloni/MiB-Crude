@@ -1,6 +1,6 @@
 {
   "name": "mib-crude",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "description": "MiB-Crude - generatore visuale di applicazioni web PHP per Linux, ispirato a generatori classici, multisviluppatore",
   "main": "electron/main.cjs",
   "type": "commonjs",

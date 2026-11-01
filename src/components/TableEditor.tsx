@@ -10,6 +10,7 @@ import { useItemLock } from './TeamPanel';
 import PageDesigner from './PageDesigner';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
 import { ProcParams, ProcWrite } from './ProcSection';
+import DataDialog from './DataDialog';
 
 const SHOW: [string, string][] = [['list', 'Lista'], ['view', 'Vista'], ['add', 'Nuovo'], ['edit', 'Modifica'], ['search', 'Ricerca'], ['export', 'Esporta'], ['import', 'Importa'], ['print', 'Stampa']];
 type TabKey = 'general' | 'fields' | 'pages' | 'layout' | 'details' | 'events' | 'api';
@@ -20,6 +21,7 @@ export default function TableEditor({ name }: { name: string }) {
   const nav = useStore((s) => s.nav);
   const [tab, setTab] = useState<TabKey>(((nav as any).tab as TabKey) || 'fields');
   const [fieldDlg, setFieldDlg] = useState<string | null>(null);
+  const [showData, setShowData] = useState(false);
   const lock = useItemLock(`table:${name}`);
   if (!t) return <div className="panel">Tabella non trovata</div>;
   const ro = lock.readOnly;
@@ -41,7 +43,8 @@ export default function TableEditor({ name }: { name: string }) {
           t.readOnly && ['lock', 'Sola lettura'],
           evCount > 0 && ['lightning', `${evCount} eventi`],
         ]}
-        actions={lock.banner} />
+        actions={<>{lock.banner}{t.source.type !== 'rest' && <Btn icon="table" onClick={() => setShowData(true)}>Dati</Btn>}</>} />
+      {showData && <DataDialog src={{ conn: t.connection, title: lbl(t.caption, t.name), ...(t.source.type === 'sql' ? { sql: t.source.sql } : t.source.type === 'proc' ? { procedure: t.source.procedure, params: t.source.params } : { table: t.source.table || t.name }) }} onClose={() => setShowData(false)} />}
       <fieldset disabled={ro} className="plain">
       <NavLayout id="table" value={tab} onChange={setTab} narrowOn={['fields', 'layout', 'events']} items={[['fields', 'Campi', 'list-columns', `${t.fields.length} campi, dove compaiono, controlli`], ['general', 'Generale', 'sliders', 'Origine, chiave, opzioni'], ['pages', 'Pagine', 'window-stack', 'Lista, viste, esportazione'],
         ['layout', 'Designer pagine', 'layout-text-window', 'Sezioni, schede, passi'], ['details', 'Master-dettaglio', 'diagram-3', `${t.details.length} tabelle di dettaglio`], ['events', 'Eventi', 'lightning', evCount ? `${evCount} eventi scritti` : 'Codice PHP e JavaScript'], ['api', 'API', 'braces', t.api?.enabled ? 'Esposta' : 'Non esposta']]}>{() => <>

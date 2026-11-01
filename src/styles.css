@@ -325,3 +325,17 @@ progress { width: 100%; }
 .page-tile input { margin: 0; }
 .page-tile.on { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); background: var(--accent-soft); color: var(--text); }
 .page-tile.on .bi { color: var(--accent); }
+
+/* Visualizzatore dati */
+.data-filter { margin-bottom: 10px; }
+.data-filter > .bi { color: var(--muted); }
+.data-grid { max-height: 62vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.data-grid table { width: max-content; min-width: 100%; }
+.data-grid th { position: sticky; top: 0; background: var(--head); z-index: 1; white-space: nowrap; }
+.data-grid th.sortable { cursor: pointer; }
+.data-grid th.sortable:hover { color: var(--accent); }
+.data-grid td { max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.data-grid .rownum { color: var(--muted); text-align: right; font-size: 11px; }
+.modal.wide:has(.data-grid) { width: min(1400px, 94vw); }
+.modal-foot select.inp { width: auto; }
+.modal-foot .small, .modal-foot .muted { white-space: nowrap; }

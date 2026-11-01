@@ -376,9 +376,42 @@ async function describeProcedure(c, name, params) {
   });
 }
 
+/**
+ * One page of the records of a table or of a SELECT, for the data viewer of the designer:
+ * src = { table } or { sql }; opts = { offset, limit, sort, dir, where (SQL condition), count }.
+ * Returns { columns, rows, total (null when not counted) }.
+ */
+async function tableData(c, conn, src, opts = {}) {
+  const q = (n) => (c.driver === 'mysql' ? '`' + String(n).replace(/`/g, '``') + '`' : c.driver === 'sqlsrv' ? '[' + String(n).replace(/]/g, ']]') + ']' : '"' + String(n).replace(/"/g, '""') + '"');
+  let from;
+  if (src.sql) from = `(${String(src.sql).trim().replace(/;\s*$/, '')}) mc_q`;
+  else {
+    const name = String(src.table || '');
+    const parts = name.includes('.') ? name.split('.') : (conn.schema && c.driver !== 'mysql' && c.driver !== 'sqlite' ? [conn.schema, name] : [name]);
+    from = parts.map(q).join('.');
+  }
+  const where = opts.where && String(opts.where).trim() ? ` WHERE ${opts.where}` : '';
+  const limit = Math.max(1, Math.min(1000, Number(opts.limit) || 100));
+  const offset = Math.max(0, Number(opts.offset) || 0);
+  const order = opts.sort ? `${q(opts.sort)} ${String(opts.dir).toLowerCase() === 'desc' ? 'DESC' : 'ASC'}` : '';
+  let sql = `SELECT * FROM ${from}${where}`;
+  if (c.driver === 'sqlsrv') sql += ` ORDER BY ${order || '(SELECT NULL)'} OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+  else if (c.driver === 'oracle') sql += `${order ? ` ORDER BY ${order}` : ''} OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+  else sql += `${order ? ` ORDER BY ${order}` : ''} LIMIT ${limit} OFFSET ${offset}`;
+  const rows = await c.query(sql);
+  let total = null;
+  if (opts.count !== false) {
+    const r = await c.query(`SELECT COUNT(*) AS n FROM ${from}${where}`);
+    const v = r[0] ? Object.values(r[0])[0] : 0;
+    total = Number(v);
+  }
+  const plain = rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v instanceof Date ? v.toISOString().replace('T', ' ').replace(/\.000Z$|Z$/, '') : Buffer.isBuffer(v) ? `(${v.length} byte)` : typeof v === 'bigint' ? String(v) : v])));
+  return { columns: rows.length ? Object.keys(rows[0]) : [], rows: plain, total, sql };
+}
+
 async function preview(c, sql, limit = 100) {
   const rows = await c.query(sql);
   return { columns: rows.length ? Object.keys(rows[0]) : [], rows: rows.slice(0, limit), total: rows.length };
 }
 
-module.exports = { DRIVERS, genericType, connect, listTables, describeTable, describeQuery, preview, procSql, listProcedures, callProcedure, describeProcedure, sampleParams };
+module.exports = { DRIVERS, genericType, connect, listTables, describeTable, describeQuery, preview, tableData, procSql, listProcedures, callProcedure, describeProcedure, sampleParams };

@@ -10,6 +10,7 @@ import { Btn, Check, Empty, Hero, I, Modal, Row, Select, Text, lbl, slug } from 
 import { ConnectionDialog } from './ConnectionsPanel';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
 import { ProcDialog } from './ProcSection';
+import DataDialog, { type DataSource } from './DataDialog';
 
 type DbTable = { name: string; type: string };
 type Col = { name: string; type: string; size: number | string; scale: number | string; pk: boolean; autoInc: boolean; nullable: boolean; default: string; orig?: string | null };
@@ -348,7 +349,7 @@ export default function TablesPanel() {
   const [multi, setMulti] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<Menu>(null);
-  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'proc' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table }>(null);
+  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'proc' | 'data' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table; src?: DataSource }>(null);
 
   const load = (connId: string) => call<DbTable[]>('db:tables', p, connId).then((r) => setDbt((x) => ({ ...x, [connId]: r }))).catch((e) => toast(`${connId}: ${e.message}`, 'err'));
   useEffect(() => { p.connections.forEach((c) => load(c.id)); }, [p.connections.length]);
@@ -430,6 +431,7 @@ export default function TablesPanel() {
     const isView = t.source.type === 'sql' || baseOf(t) !== t.name;
     setMenu({ x: e.clientX, y: e.clientY, items: [
       ['gear', 'Apri impostazioni', () => goTable(t.name)],
+      ['table', 'Visualizza dati', () => openData(t)],
       ...(t.source.type === 'table' ? [['pencil-square', 'Modifica struttura tabella', () => setDlg({ kind: 'structure', conn: t.connection, table: baseOf(t) })] as [string, string, () => void]] : []),
       ['window-stack', 'Crea vista personalizzata', () => customView(t)],
       ...(isView ? [['copy', 'Copia', () => customView(t)] as [string, string, () => void]] : []),
@@ -445,11 +447,18 @@ export default function TablesPanel() {
       ['x-circle', 'Rimuovi dal progetto', () => removeFromProject(t.name)],
     ] });
   };
+  // records of a project datasource or of a database table
+  const openData = (t: Table | null, connId?: string, name?: string) => {
+    if (!t) { setDlg({ kind: 'data', src: { conn: connId!, table: name, title: name! } }); return; }
+    if (t.source.type === 'rest') { toast('Per le origini REST i dati si vedono nell\'anteprima dell\'applicazione', 'info'); return; }
+    setDlg({ kind: 'data', src: { conn: t.connection, title: lbl(t.caption, t.name), ...(t.source.type === 'sql' ? { sql: t.source.sql } : t.source.type === 'proc' ? { procedure: t.source.procedure, params: t.source.params } : { table: t.source.table || t.name }) } });
+  };
   const dbMenu = (e: React.MouseEvent, connId: string, name: string) => {
     e.preventDefault(); e.stopPropagation();
     const inProj = p.tables.find((t) => t.connection === connId && t.source.type === 'table' && t.source.table === name && t.name === name);
     if (inProj) return tableMenu(e, inProj);
     setMenu({ x: e.clientX, y: e.clientY, items: [
+      ['table', 'Visualizza dati', () => openData(null, connId, name)],
       ['box-arrow-in-right', 'Aggiungi al progetto', () => addToProject(connId, [name])],
       ['pencil-square', 'Modifica struttura tabella', () => setDlg({ kind: 'structure', conn: connId, table: name })],
       '-',
@@ -515,6 +524,11 @@ export default function TablesPanel() {
         {p.connections.some((c) => c.driver === 'rest') && <Btn small icon="cloud" onClick={() => setDlg({ kind: 'rest', conn: '' })}>REST</Btn>}
         <Btn small icon="magic" onClick={() => setDlg({ kind: 'template', conn: p.project.defaultConnection })}>Da modello</Btn>
         <Btn small icon="database-add" onClick={() => setDlg({ kind: 'conn' })} title="Aggiungi connessione" />
+        <span className="sep" />
+        <Btn small icon="table" disabled={!selected} title={selected ? `Dati di ${selected}` : 'Seleziona una tabella'} onClick={() => {
+          const t = p.tables.find((x) => x.name === selected);
+          if (t) openData(t); else if (selected) { const c = p.connections.find((x) => (dbt[x.id] || []).some((y: { name: string }) => y.name === selected)); if (c) openData(null, c.id, selected); }
+        }}>Dati</Btn>
         <span className="sep" />
         <span className="ds-group">Diagramma</span>
         <Btn small icon="grid" onClick={() => update((d) => { d.tables.forEach((t) => { delete (t as any).diagram; }); d.tables.sort((a, b) => a.name.localeCompare(b.name)); })}>Disponi</Btn>
@@ -583,6 +597,7 @@ export default function TablesPanel() {
         {menu.items.map((it, i) => it === '-' ? <hr key={i} /> : <button key={i} type="button" onClick={() => { setMenu(null); it[2](); }}><I n={it[0]} /> {it[1]}</button>)}
       </div>}
       {dlg?.kind === 'sql' && <SqlViewDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
+      {dlg?.kind === 'data' && dlg.src && <DataDialog src={dlg.src} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'proc' && <ProcDialog conn={dlg.conn!} onClose={() => setDlg(null)} onCreated={(np, n) => { setProj(np, p.dir); useStore.getState().set({ nav: { kind: 'table', id: n } }); }} />}
       {dlg?.kind === 'structure' && <StructureDialog conn={dlg.conn!} table={dlg.table ?? null} onClose={() => setDlg(null)} onDone={(name, created, add) => {
         load(dlg.conn!);
