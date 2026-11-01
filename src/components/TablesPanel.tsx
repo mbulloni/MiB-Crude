@@ -6,7 +6,7 @@ import { call } from '../api';
 import { replaceProject, run, toast, update, useStore } from '../store';
 import type { Project, RestPaging, Table } from '../types';
 import CodeEditor from './CodeEditor';
-import { Btn, Check, Empty, Hero, I, Modal, Row, Select, Text, lbl, slug } from './ui';
+import { Btn, Check, Empty, Hero, I, Modal, Row, Select, Text, ask, lbl, slug } from './ui';
 import { ConnectionDialog } from './ConnectionsPanel';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
 import { ProcDialog } from './ProcSection';
@@ -393,8 +393,8 @@ export default function TablesPanel() {
     p.connections.forEach((c) => load(c.id));
     toast(changes.length ? `Differenze:\n${changes.slice(0, 12).join('\n')}` : 'Progetto e database già allineati', 'ok', 8000);
   });
-  const customView = (t: Table) => {
-    const name = prompt('Nome della vista personalizzata', `${t.name}_vista`);
+  const customView = async (t: Table) => {
+    const name = await ask('Nome della vista personalizzata', `${t.name}_vista`);
     if (!name || p.tables.some((x) => x.name === name)) return;
     update((d) => {
       // A custom view copies all settings except events and layout (as in phpr).

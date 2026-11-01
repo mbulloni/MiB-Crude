@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { update, useStore } from '../store';
+import { toast, update, useStore } from '../store';
 import type { Chart, Dashboard, DashItem, Report } from '../types';
 import CodeEditor from './CodeEditor';
-import { Btn, Check, Empty, Hero, I, LangText, Num, Row, Section, Select, lbl, slug } from './ui';
+import { Btn, Check, Empty, Hero, I, LangText, Num, Row, Section, Select, ask, lbl, slug } from './ui';
 
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
 const INTERVALS: [string, string][] = [['', 'Valore'], ['year', 'Anno'], ['quarter', 'Trimestre'], ['month', 'Mese'], ['week', 'Settimana'], ['day', 'Giorno'], ['letter', 'Iniziale'], ['tens', 'Decine']];
@@ -17,9 +17,12 @@ function ListShell<T extends { name: string; title: any }>({ kind, title, items,
   const [cur, setCur] = useState(items[0]?.name || '');
   const it = items.find((x) => x.name === cur);
   const set = (fn: (x: T) => void) => update((d) => { const x = (d[kind] as unknown as T[]).find((y) => y.name === cur); if (x) fn(x); });
-  const add = () => {
-    const name = slug(prompt('Nome (identificativo)', `${kind.slice(0, -1)}${items.length + 1}`) || '');
-    if (!name || items.some((x) => x.name === name)) return;
+  const add = async () => {
+    let n = items.length + 1;
+    while (items.some((x) => x.name === `${kind.slice(0, -1)}${n}`)) n++;
+    const name = slug((await ask(`Nuov${kind === 'reports' ? 'o report' : kind === 'charts' ? 'o grafico' : 'a dashboard'}: nome (identificativo)`, `${kind.slice(0, -1)}${n}`)) || '');
+    if (!name) return;
+    if (items.some((x) => x.name === name)) { toast(`Esiste già un elemento «${name}»`, 'err'); return; }
     update((d) => { (d[kind] as unknown as T[]).push(make(name)); });
     setCur(name);
   };

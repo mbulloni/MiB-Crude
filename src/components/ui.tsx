@@ -1,5 +1,5 @@
 // Small form primitives shared by all panels.
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
 import type { L } from '../types';
 
@@ -77,6 +77,27 @@ export function Modal({ title, children, onClose, footer, wide }: { title: React
         {footer && <div className="modal-foot">{footer}</div>}
       </div>
     </div>
+  );
+}
+
+// Text input dialog: window.prompt() does not exist in Electron, so the designer asks with its own modal.
+interface AskReq { title: string; value: string; resolve: (v: string | null) => void }
+let showAsk: ((a: AskReq | null) => void) | null = null;
+export function ask(title: string, value = ''): Promise<string | null> {
+  return new Promise((resolve) => { if (showAsk) showAsk({ title, value, resolve }); else resolve(null); });
+}
+export function AskHost() {
+  const [a, setA] = useState<AskReq | null>(null);
+  const [v, setV] = useState('');
+  useEffect(() => { showAsk = (r) => { setA(r); setV(r ? r.value : ''); }; return () => { showAsk = null; }; }, []);
+  if (!a) return null;
+  const close = (r: string | null) => { setA(null); a.resolve(r); };
+  return (
+    <Modal title={a.title} onClose={() => close(null)} footer={<><span className="grow" /><Btn onClick={() => close(null)}>Annulla</Btn><Btn kind="primary" icon="check-lg" disabled={!v.trim()} onClick={() => close(v.trim())}>OK</Btn></>}>
+      <form onSubmit={(e) => { e.preventDefault(); if (v.trim()) close(v.trim()); }}>
+        <input className="inp" autoFocus value={v} onChange={(e) => setV(e.target.value)} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
+      </form>
+    </Modal>
   );
 }
 

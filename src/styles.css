@@ -128,7 +128,13 @@ select.inp { padding: 4px 6px; }
 .split-body { min-width: 0; }
 .dash-board { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; margin-top: 10px; }
 .dash-item { border: 1px dashed var(--border); border-radius: 8px; padding: 10px; background: var(--panel); }
-.dash-item .row { grid-template-columns: 90px 1fr; }
+/* dashboard editor: label above the field, controls as wide as the box (narrow 1/4 boxes stay readable) */
+.split-body .dash-item { min-width: 0; }
+.split-body .dash-item .row { grid-template-columns: minmax(0, 1fr); gap: 3px; margin-bottom: 8px; }
+.split-body .dash-item .row-label { padding-top: 0; font-size: 12px; }
+.split-body .dash-item .row-ctl select, .split-body .dash-item .row-ctl .inp { width: 100%; min-width: 0; }
+.split-body .dash-item .row-ctl > .inline { flex-wrap: wrap; }
+.split-body .dash-item .row-ctl > .inline > select { flex: 1 1 120px; }
 .layout-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
 .lb-section { border: 1px solid var(--border); border-radius: 8px; background: var(--panel); padding: 10px; }
 .lb-section.free { border-style: dashed; }
@@ -339,3 +345,6 @@ progress { width: 100%; }
 .modal.wide:has(.data-grid) { width: min(1400px, 94vw); }
 .modal-foot select.inp { width: auto; }
 .modal-foot .small, .modal-foot .muted { white-space: nowrap; }
+.split-body .dash-item .langtext, .split-body .dash-item .lt-row { display: flex; width: 100%; min-width: 0; }
+.split-body .dash-item .langtext { flex-direction: column; }
+.split-body .dash-item .lt-row .inp { flex: 1; min-width: 0; }

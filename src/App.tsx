@@ -5,7 +5,7 @@ import { redo, reloadFromDisk, resetHistory, run, save, toast, undo, useStore } 
 import type { Nav } from './types';
 import Welcome from './components/Welcome';
 import SearchDialog from './components/SearchDialog';
-import { Btn, I, lbl } from './components/ui';
+import { AskHost, Btn, I, lbl } from './components/ui';
 import ProjectPanel from './components/ProjectPanel';
 import ConnectionsPanel from './components/ConnectionsPanel';
 import TablesPanel from './components/TablesPanel';
@@ -154,7 +154,7 @@ export default function App() {
         <Btn icon="arrow-up-circle" kind="ghost" onClick={() => checkUpdates(false)} title={`MiB-Crude ${__APP_VERSION__} · controlla aggiornamenti`} />
         <Btn icon="x-lg" kind="ghost" onClick={close} title="Chiudi progetto" />
       </header>
-      <UpdateBanner /><UpdateDialog />
+      <UpdateBanner /><UpdateDialog /><AskHost />
       {remote.length > 0 && <div className="banner warn"><I n="cloud-arrow-down" /> Modifiche ricevute dal team ({remote.slice(0, 4).join(', ')}{remote.length > 4 ? '…' : ''}).
         {dirty ? ' Hai modifiche non salvate: salva prima, poi ricarica.' : ''} <Btn small icon="arrow-clockwise" onClick={() => run('Ricarica…', reloadFromDisk)}>Ricarica</Btn></div>}
       <div className="body">
