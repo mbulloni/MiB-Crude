@@ -279,7 +279,7 @@ Lingue dell'applicazione (italiano e inglese incluse, altre aggiungibili), tradu
 ## 13. Genera e pubblica
 
 - **Genera**: scrive l'applicazione nella cartella di output (`.mibcrude-local/output` o una cartella scelta). Rigenerare non perde nulla: il codice scritto a mano vive nel progetto (`events/`, `custom/`, `public/`).
-- **Anteprima**: PHP locale o Docker; browser integrato.
+- **Anteprima**: PHP locale o Docker; browser integrato. Con l'accesso Windows l'anteprima simula l'utente (l'«utente simulato» del progetto o il tuo utente del computer), perché il server di prova non autentica.
 - **Pubblicazione**: incrementale via **SFTP**, **FTP/FTPS** o **cartella** (solo i file cambiati); profili salvati sul computer.
 - **Docker di progetto**: un ambiente come la produzione.
   - **Linux**: Apache di Debian 12/13 o Ubuntu 22.04/24.04, PHP-FPM 7.4–8.5, MariaDB 10.4–11.8 (o database esterno), script SQL iniziale, porte. L'app viene generata in `docker/app` con la connessione principale verso il contenitore del database.
