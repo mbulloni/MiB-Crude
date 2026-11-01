@@ -37,7 +37,7 @@ export default function NtlmSection({ readOnly }: { readOnly: boolean }) {
       {t('trustedHeader', 'Intestazione del proxy', 'Solo dietro un reverse proxy che autentica (es. X-Remote-User); vuoto = REMOTE_USER del server')}
       <Row label="Gruppi amministratori" hint="Accesso completo e gestione utenti/permessi"><Text value={(n.adminGroups || []).join(', ')} onChange={(v) => set({ adminGroups: v.split(',').map((x) => x.trim()).filter(Boolean) })} mono /></Row>
       <Row label="Utenti non in tabella"><Check value={n.denyUnknown} onChange={(v) => set({ denyUnknown: v })} label="Accesso negato (altrimenti entrano senza gruppi)" /></Row>
-      {t('devUser', 'Utente simulato (anteprima)', 'Solo nell\'anteprima del designer, quando REMOTE_USER manca: es. DOMINIO\\MIOUTENTE')}
+      {t('devUser', 'Utente simulato (anteprima)', 'Solo nell\'anteprima del designer (php -S non autentica): es. DOMINIO\\MIOUTENTE; vuoto = il tuo utente di questo computer')}
     </Section>
     <Section title="Tabelle di profilazione" help="Nomi e colonne delle tabelle R-LAB; vengono create se mancano (si può disattivare). La gestione è nell'app: Amministrazione › Utenti Windows e Permessi pagine.">
       {t('userTable', 'Utenti e gruppi')}

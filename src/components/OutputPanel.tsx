@@ -81,7 +81,7 @@ export default function OutputPanel() {
               {prev?.running && <><Btn icon="box-arrow-up-right" onClick={() => call('preview:open', prev.url, false)}>Browser</Btn><Btn icon="window" onClick={() => call('preview:open', prev.url, true)}>Finestra interna</Btn>
                 <Btn icon="stop-fill" onClick={async () => { await call('preview:stop'); setPrev(await call('preview:status')); }}>Ferma</Btn></>}
             </div>
-            {prev?.running && <p className="mono small">{prev.url} · {prev.mode === 'docker' ? 'Docker PHP 8.3' : `PHP ${prev.php}`}</p>}
+            {prev?.running && <p className="mono small">{prev.url} · {prev.mode === 'docker' ? 'Docker PHP 8.3' : `PHP ${prev.php}`}{prev.ntlmUser ? ` · accesso Windows simulato come ${prev.ntlmUser}` : ''}</p>}
             {prev?.log && <pre className="log">{prev.log.split('\n').slice(-12).join('\n')}</pre>}
           </Section>
         </div>

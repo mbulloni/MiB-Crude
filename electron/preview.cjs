@@ -72,16 +72,30 @@ async function start(proj, outDir) {
   const port = await freePort(8090);
   const url = `http://127.0.0.1:${port}/index.php`;
   let mode = 'php';
+  // Windows sign-in (NTLM): php -S authenticates nobody, so every page gets REMOTE_USER = the simulated user of
+  // the project or, if empty, the user of this computer (a file run before each page, outside the output)
+  const sec = proj.security || {};
+  const ntlmUser = sec.enabled && sec.mode === 'ntlm' ? String((sec.ntlm && sec.ntlm.devUser) || require('node:os').userInfo().username) : '';
+  let prepend = [];
+  let dockerPrepend = [];
+  if (ntlmUser) {
+    const dir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'mibcrude-preview-'));
+    const f = path.join(dir, 'ntlm-user.php');
+    fs.writeFileSync(f, `<?php\n// MiB-Crude preview: the web server's Windows sign-in, simulated\nif (empty($_SERVER['REMOTE_USER'])) $_SERVER['REMOTE_USER'] = ${JSON.stringify(ntlmUser).replace(/\$/g, '\\$')};\n`);
+    prepend = ['-d', `auto_prepend_file=${f}`];
+    dockerPrepend = ['-v', `${dir}:/mibcrude-preview:ro`];
+  }
   if (i.ok && !missing.length) {
-    proc = spawn(i.bin, ['-S', `127.0.0.1:${port}`, '-t', outDir], { cwd: outDir });
+    proc = spawn(i.bin, [...prepend, '-S', `127.0.0.1:${port}`, '-t', outDir], { cwd: outDir });
   } else if (i.docker) {
     mode = 'docker';
     const image = dockerImage(missing);
-    proc = spawn('docker', ['run', '--rm', '--network', 'host', '-v', `${outDir}:/app`, '-w', '/app', image, 'php', '-S', `127.0.0.1:${port}`, '-t', '/app']);
+    proc = spawn('docker', ['run', '--rm', '--network', 'host', '-v', `${outDir}:/app`, ...dockerPrepend, '-w', '/app', image, 'php',
+      ...(ntlmUser ? ['-d', 'auto_prepend_file=/mibcrude-preview/ntlm-user.php'] : []), '-S', `127.0.0.1:${port}`, '-t', '/app']);
   } else {
     throw new Error(i.ok ? `Il PHP locale (${i.version}) non ha i driver ${missing.map((d) => PDO_EXT[d]).join(', ')} e Docker non è disponibile` : i.error);
   }
-  state = { running: true, url, mode, log: '', php: mode === 'php' ? i.version : '8.3 (Docker)' };
+  state = { running: true, url, mode, log: '', php: mode === 'php' ? i.version : '8.3 (Docker)', ntlmUser };
   const onData = (d) => { state.log = (state.log + d.toString()).slice(-20000); };
   proc.stdout.on('data', onData);
   proc.stderr.on('data', onData);
