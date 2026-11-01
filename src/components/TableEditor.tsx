@@ -5,7 +5,7 @@ import type { Field, Table } from '../types';
 import CodeEditor from './CodeEditor';
 import EventEditor from './EventEditor';
 import FieldDialog, { EDIT_AS, VIEW_AS } from './FieldDialog';
-import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
+import { Btn, Check, Hero, I, LangText, NavLayout, Num, Row, Section, Select, Text, lbl } from './ui';
 import { useItemLock } from './TeamPanel';
 import PageDesigner from './PageDesigner';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
@@ -30,11 +30,21 @@ export default function TableEditor({ name }: { name: string }) {
 
   return (
     <div className="panel">
-      <div className="title-row"><h2>{lbl(t.caption, t.name)} <small className="muted mono">{t.name}</small></h2>
-        {lock.banner}</div>
-      <Tabs value={tab} onChange={setTab} tabs={[['fields', `Campi (${t.fields.length})`, 'list-columns'], ['general', 'Generale', 'sliders'], ['pages', 'Pagine', 'window-stack'], ['layout', 'Designer pagine', 'layout-text-window'],
-        ['details', `Master-dettaglio (${t.details.length})`, 'diagram-3'], ['events', `Eventi${evCount ? ` (${evCount})` : ''}`, 'lightning'], ['api', 'API', 'braces']]} />
+      <Hero icon={t.icon || (t.source.type === 'sql' ? 'code-square' : t.source.type === 'rest' ? 'cloud' : t.source.type === 'proc' ? 'gear-wide-connected' : 'table')} title={lbl(t.caption, t.name)} sub={t.name}
+        chips={[
+          [t.source.type === 'sql' ? 'code-square' : t.source.type === 'rest' ? 'cloud' : t.source.type === 'proc' ? 'gear-wide-connected' : 'table',
+            t.source.type === 'sql' ? 'Query SQL' : t.source.type === 'rest' ? `REST ${t.source.path || ''}` : t.source.type === 'proc' ? `Procedura ${t.source.procedure || ''}` : `Tabella ${t.source.table || t.name}`],
+          ['database', p.connections.find((c) => c.id === t.connection)?.name || t.connection],
+          ['list-columns', `${t.fields.length} campi`],
+          ['key', t.keys.length ? `Chiave ${t.keys.join(', ')}` : 'Senza chiave'],
+          ['window-stack', `${Object.values(t.pages || {}).filter((pg) => (pg as { enabled?: boolean }).enabled).length} pagine`],
+          t.readOnly && ['lock', 'Sola lettura'],
+          evCount > 0 && ['lightning', `${evCount} eventi`],
+        ]}
+        actions={lock.banner} />
       <fieldset disabled={ro} className="plain">
+      <NavLayout id="table" value={tab} onChange={setTab} narrowOn={['fields', 'layout', 'events']} items={[['fields', 'Campi', 'list-columns', `${t.fields.length} campi, dove compaiono, controlli`], ['general', 'Generale', 'sliders', 'Origine, chiave, opzioni'], ['pages', 'Pagine', 'window-stack', 'Lista, viste, esportazione'],
+        ['layout', 'Designer pagine', 'layout-text-window', 'Sezioni, schede, passi'], ['details', 'Master-dettaglio', 'diagram-3', `${t.details.length} tabelle di dettaglio`], ['events', 'Eventi', 'lightning', evCount ? `${evCount} eventi scritti` : 'Codice PHP e JavaScript'], ['api', 'API', 'braces', t.api?.enabled ? 'Esposta' : 'Non esposta']]}>{() => <>
       {tab === 'fields' && <div className="fields-wrap">
         <table className="grid fields">
           <thead><tr><th /><th>Campo</th><th>Etichetta</th>{SHOW.map(([k, l]) => <th key={k} className="c" title={`Mostra in: ${l}`}>{l}</th>)}<th>Visualizza come</th><th>Modifica come</th><th className="c">Obbl.</th><th /></tr>
@@ -99,8 +109,11 @@ export default function TableEditor({ name }: { name: string }) {
 
       {tab === 'pages' && <div className="cols">
         <Section title="Pagine generate">
-          {(['list', 'view', 'add', 'edit', 'delete', 'search', 'export', 'import', 'print'] as const).map((k) => <Row key={k} label={{ list: 'Lista', view: 'Visualizza', add: 'Nuovo', edit: 'Modifica', delete: 'Elimina', search: 'Ricerca avanzata', export: 'Esporta', import: 'Importa', print: 'Stampa' }[k]}>
-            <Check value={t.pages[k]?.enabled} onChange={(v) => set((x) => { x.pages[k] = { ...(x.pages[k] || {}), enabled: v }; })} /></Row>)}
+          <div className="page-tiles">{(['list', 'view', 'add', 'edit', 'delete', 'search', 'export', 'import', 'print'] as const).map((k) => {
+            const [label, icon] = ({ list: ['Lista', 'list-ul'], view: ['Visualizza', 'eye'], add: ['Nuovo', 'plus-square'], edit: ['Modifica', 'pencil-square'], delete: ['Elimina', 'trash'], search: ['Ricerca avanzata', 'funnel'], export: ['Esporta', 'download'], import: ['Importa', 'upload'], print: ['Stampa', 'printer'] } as Record<string, [string, string]>)[k];
+            const on = !!t.pages[k]?.enabled;
+            return <label key={k} className={`page-tile ${on ? 'on' : ''}`}><input type="checkbox" checked={on} onChange={(e) => set((x) => { x.pages[k] = { ...(x.pages[k] || {}), enabled: e.target.checked }; })} /><I n={icon} /> {label}</label>;
+          })}</div>
         </Section>
         <Section title="Lista">
           <Row label="Record per pagina"><Num value={t.pages.list.pageSize} onChange={(v) => set((x) => { x.pages.list.pageSize = v || 20; })} /></Row>
@@ -163,6 +176,7 @@ export default function TableEditor({ name }: { name: string }) {
         <Row label="Operazioni"><span className="chips">{[['list', 'GET lista'], ['view', 'GET record'], ['add', 'POST'], ['edit', 'PUT/PATCH'], ['delete', 'DELETE']].map(([k, l]) => <Check key={k} label={l} value={(t.api?.methods || []).includes(k)} onChange={(v) => set((x) => { const m = x.api.methods || []; x.api.methods = v ? [...m, k] : m.filter((y) => y !== k); })} />)}</span></Row>
         <p className="help">L'API rispetta permessi, record per utente ed eventi. Autenticazione: header <code>X-Api-Key</code> (chiave generata dall'utente nel profilo) oppure sessione del browser.</p>
       </Section>}
+      </>}</NavLayout>
       </fieldset>
       {fieldDlg && t.fields.find((f) => f.name === fieldDlg) && <FieldDialog t={t} field={t.fields.find((f) => f.name === fieldDlg)!} onChange={(f) => setField(fieldDlg, f)} onClose={() => setFieldDlg(null)} />}
     </div>

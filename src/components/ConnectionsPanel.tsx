@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { call } from '../api';
 import { run, saveSecrets, toast, update, useStore } from '../store';
 import type { Connection } from '../types';
-import { Btn, Check, Empty, I, Modal, Row, Section, Select, Text, slug } from './ui';
+import { Btn, Check, Empty, Hero, I, Modal, Row, Section, Select, Text, slug } from './ui';
 
 const DRIVERS: [Connection['driver'], string][] = [['mysql', 'MariaDB / MySQL'], ['pgsql', 'PostgreSQL'], ['sqlsrv', 'SQL Server'], ['oracle', 'Oracle'], ['sqlite', 'SQLite'], ['rest', 'Servizio REST (JSON)']];
 const PORTS: Record<string, number> = { mysql: 3306, pgsql: 5432, sqlsrv: 1433, oracle: 1521, sqlite: 0 };
@@ -60,8 +60,12 @@ export default function ConnectionsPanel() {
   const used = (id: string) => p.tables.filter((t) => t.connection === id).length;
   return (
     <div className="panel">
-      <h2>Connessioni</h2>
-      <Section title="Database" actions={<Btn kind="primary" icon="plus-lg" onClick={() => setEdit('new')}>Nuova connessione</Btn>}
+      <Hero icon="database" title="Connessioni" chips={[
+        ['database', `${p.connections.length} connessioni`],
+        ...[...new Set(p.connections.map((c) => c.driver))].map((d) => ['hdd-stack', ({ mysql: 'MariaDB/MySQL', pgsql: 'PostgreSQL', sqlsrv: 'SQL Server', oracle: 'Oracle', sqlite: 'SQLite', rest: 'REST' } as Record<string, string>)[d] || d] as [string, string]),
+        ['star', `Principale: ${p.connections.find((c) => c.id === p.project.defaultConnection)?.name || '—'}`],
+      ]} actions={<Btn kind="primary" icon="plus-lg" onClick={() => setEdit('new')}>Nuova connessione</Btn>} />
+      <Section title="Database"
         help="Un progetto può usare più database (anche di tipo diverso): ogni tabella sceglie la sua connessione.">
         {!p.connections.length ? <Empty icon="database-add" title="Nessuna connessione"><Btn kind="primary" icon="plus-lg" onClick={() => setEdit('new')}>Aggiungi il database</Btn></Empty> :
           <table className="grid"><thead><tr><th>ID</th><th>Nome</th><th>Tipo</th><th>Server / file</th><th>Database</th><th>Tabelle</th><th>Predefinita</th><th /></tr></thead><tbody>

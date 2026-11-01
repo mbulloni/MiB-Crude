@@ -109,3 +109,40 @@ export const lbl = (l: L | undefined, fallback = '') => {
 };
 
 export const slug = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'item';
+
+/** Summary at the top of a panel: icon (or initial) on the accent colour, title, chips, actions on the right. */
+export function Hero({ icon, letter, title, sub, chips, actions, color }: { icon?: string; letter?: string; title: ReactNode; sub?: ReactNode; chips?: ([string, ReactNode] | false | null | undefined)[]; actions?: ReactNode; color?: string }) {
+  return (
+    <div className="settings-hero" style={{ ['--pc' as string]: color || 'var(--accent)' } as React.CSSProperties}>
+      <div className="hero-logo">{letter ?? <I n={icon || 'grid'} />}</div>
+      <div className="grow">
+        <h2>{title}{sub && <small className="hero-sub"> {sub}</small>}</h2>
+        {chips && <div className="hero-chips">{chips.filter(Boolean).map((c, i) => { const [ic, txt] = c as [string, ReactNode]; return <span key={i}><I n={ic} /> {txt}</span>; })}</div>}
+      </div>
+      {actions && <div className="hero-actions">{actions}</div>}
+    </div>
+  );
+}
+
+/** Categories on the left (icon, name, one line), the content of the chosen one on the right; the choice is remembered. */
+export function NavLayout<T extends string>({ id, items, value, onChange, children, narrowOn }: { id: string; items: [T, string, string, string?][]; value?: T; onChange?: (v: T) => void; children: (cat: T) => ReactNode; narrowOn?: T[] }) {
+  const key = `mc-nav-${id}`;
+  const [own, setOwn] = useState<T>(() => {
+    try { const v = localStorage.getItem(key) as T | null; if (v && items.some(([k]) => k === v)) return v; } catch { /* private mode */ }
+    return items[0][0];
+  });
+  const cur = value !== undefined && items.some(([k]) => k === value) ? value : items.some(([k]) => k === own) ? own : items[0][0];
+  const pick = (k: T) => { setOwn(k); try { localStorage.setItem(key, k); } catch { /* private mode */ } onChange?.(k); };
+  return (
+    <div className={`settings-layout ${narrowOn?.includes(cur) ? 'narrow' : ''}`}>
+      <nav className="settings-nav">
+        {items.map(([k, label, icon, desc]) => (
+          <button type="button" key={k} className={`settings-nav-item ${cur === k ? 'on' : ''}`} onClick={() => pick(k)} title={label}>
+            <I n={icon} /><span><b>{label}</b>{desc && <small>{desc}</small>}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="settings-content">{children(cur)}</div>
+    </div>
+  );
+}

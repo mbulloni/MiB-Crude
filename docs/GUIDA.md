@@ -65,6 +65,8 @@ npm run dist       # AppImage e .deb in release/
 
 ## 3. Il designer
 
+Ogni pannello si apre con un **riepilogo** (icona, nome e i dati principali, con le azioni più usate a destra). Impostazioni e stile, Sicurezza, Genera e pubblica e l'editor della tabella hanno le **categorie a sinistra** (icona, nome e una riga di descrizione); per Campi, Designer pagine ed Eventi della tabella restano solo le icone, per lasciare tutta la larghezza alla griglia. L'ultima categoria aperta viene ricordata.
+
 Barra laterale:
 
 | Voce | Cosa contiene |

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { call, mc } from '../api';
 import { reloadFromDisk, run, save, saveSecrets, toast, useStore } from '../store';
 import type { Nav } from '../types';
-import { Btn, I, Row, Section, Text } from './ui';
+import { Btn, Hero, I, Row, Section, Text } from './ui';
 
 export function itemOfNav(nav: Nav): string | null {
   switch (nav.kind) {
@@ -88,7 +88,10 @@ export default function TeamPanel() {
 
   return (
     <div className="panel">
-      <h2>Team e versioni</h2>
+      <Hero icon="people" title="Team e versioni" chips={[
+        team.connected ? ['broadcast', `Server: ${team.project} · ${team.presence.length} online`] : ['wifi-off', 'Server del team non collegato'],
+        git?.repo ? ['git', `Git: ${git.branch}${git.files?.length ? ` · ${git.files.length} modifiche` : ''}${git.ahead ? ` · ${git.ahead} da inviare` : ''}`] : ['git', 'Nessun repository Git'],
+      ]} />
       <div className="cols">
         <Section title={<><I n="broadcast" /> Server del team (tempo reale)</>} help="Come phpr MultiDev, ma più fine: chi apre una tabella, il menu, la sicurezza o gli eventi globali li blocca per gli altri; ogni salvataggio arriva subito agli altri sviluppatori. Lo storico è versionato con Git sul server.">
           {!team.connected ? <>

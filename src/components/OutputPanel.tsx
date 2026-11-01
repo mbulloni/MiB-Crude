@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { call, mc } from '../api';
 import { run, save, saveSecrets, toast, useStore } from '../store';
-import { Btn, Check, I, Modal, Row, Section, Select, Text } from './ui';
+import { Btn, Check, Hero, I, Modal, NavLayout, Row, Section, Select, Text } from './ui';
 import DockerSection from './DockerSection';
 
 interface Profile { id: string; name: string; type: 'folder' | 'sftp' | 'ftp'; host?: string; port?: number; user?: string; remoteDir: string; keyFile?: string; secure?: boolean; insecure?: boolean; uploadSecrets?: boolean; full?: boolean }
@@ -47,8 +47,17 @@ export default function OutputPanel() {
   const errors = problems.filter((x) => x.level === 'error');
   return (
     <div className="panel">
-      <h2>Genera e pubblica</h2>
-      <div className="cols">
+      <Hero icon="rocket-takeoff" title="Genera e pubblica"
+        chips={[
+          errors.length ? ['x-octagon', `${errors.length} errori da correggere`] : ['check-circle', problems.length ? `${problems.length} avvisi` : 'Nessun problema'],
+          php?.ok ? ['filetype-php', `PHP ${php.version}`] : ['exclamation-triangle', 'PHP non trovato'],
+          php?.docker && ['box', 'Docker disponibile'],
+          prev?.running && ['play-circle', `Anteprima su ${prev.url}`],
+          ['cloud-upload', `${profiles.length} destinazioni`],
+        ]}
+        actions={<Btn kind="primary" icon="gear-wide-connected" disabled={errors.length > 0} onClick={() => generate(false)}>Genera</Btn>} />
+      <NavLayout id="output" items={[['build', 'Genera e anteprima', 'gear-wide-connected', 'Verifica, generazione, prova locale'], ['publish', 'Pubblicazione', 'cloud-upload', 'SFTP, FTP, cartella'], ['docker', 'Docker di progetto', 'box', 'Ambiente come la produzione']]}>{(cat) => <>
+      {cat === 'build' && <div className="cols">
         <div>
           <Section title="Verifica del progetto">
             {!problems.length ? <p className="ok"><I n="check-circle" /> Nessun problema</p> :
@@ -63,6 +72,8 @@ export default function OutputPanel() {
             </div>}
             <p className="help">Il codice generato è il runtime MiB-Crude (PHP 7.4 – 8.5, nessuna dipendenza) più la configurazione del progetto. Requisiti server: PHP con PDO e il driver del database, estensioni consigliate gd (miniature), zip (Excel), ldap (Active Directory).</p>
           </Section>
+        </div>
+        <div>
           <Section title="Anteprima locale">
             <p>{php?.ok ? <>PHP {php.version}{php.docker ? ' · Docker disponibile' : ''}</> : <span className="warn">{php?.error}</span>}</p>
             <div className="inline">
@@ -74,8 +85,9 @@ export default function OutputPanel() {
             {prev?.log && <pre className="log">{prev.log.split('\n').slice(-12).join('\n')}</pre>}
           </Section>
         </div>
-        <DockerSection />
-        <Section title="Pubblicazione" actions={<Btn icon="plus-lg" onClick={() => setEdit({ id: `p${Date.now().toString(36)}`, name: 'Produzione', type: 'sftp', port: 22, remoteDir: '/var/www/html/app' })}>Destinazione</Btn>}
+      </div>}
+      {cat === 'docker' && <DockerSection />}
+      {cat === 'publish' && <Section title="Pubblicazione" actions={<Btn icon="plus-lg" onClick={() => setEdit({ id: `p${Date.now().toString(36)}`, name: 'Produzione', type: 'sftp', port: 22, remoteDir: '/var/www/html/app' })}>Destinazione</Btn>}
           help="Caricamento incrementale: solo i file cambiati. La cartella dei file caricati dagli utenti non viene mai sovrascritta. Le destinazioni e le password restano su questo computer.">
           {!profiles.length && <p className="help">Nessuna destinazione.</p>}
           {profiles.map((pr) => <div className="card" key={pr.id}>
@@ -83,8 +95,8 @@ export default function OutputPanel() {
               <Btn small icon="pencil" onClick={() => setEdit(pr)} /><Btn small kind="primary" icon="cloud-upload" onClick={() => deploy(pr)}>Pubblica</Btn></div>
             {progress && <progress max={progress.total} value={progress.done} />}
           </div>)}
-        </Section>
-      </div>
+        </Section>}
+      </>}</NavLayout>
       {edit && <Modal title="Destinazione di pubblicazione" onClose={() => setEdit(null)} footer={<>
         <Btn kind="ghost" icon="trash" onClick={async () => { await saveProfiles(profiles.filter((x) => x.id !== edit.id)); setEdit(null); }}>Elimina</Btn>
         <Btn icon="plug" onClick={() => run('Test…', async () => { await call('deploy:test', edit, secrets.deploy?.[edit.id] || ''); toast('Connessione riuscita', 'ok'); })}>Prova</Btn><span className="grow" />

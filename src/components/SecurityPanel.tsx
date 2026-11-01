@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { call } from '../api';
 import { saveSecrets, toast, update, useStore } from '../store';
 import type { Security } from '../types';
-import { Btn, Check, LangText, Num, Row, Section, Select, Tabs, Text, lbl, slug } from './ui';
+import { Btn, Check, Hero, LangText, NavLayout, Num, Row, Section, Select, Text, lbl, slug } from './ui';
 import { useItemLock } from './TeamPanel';
 import NtlmSection, { NTLM_DEFAULTS } from './NtlmSection';
 
@@ -31,11 +31,18 @@ export default function SecurityPanel() {
 
   return (
     <div className="panel">
-      <div className="title-row"><h2>Sicurezza</h2>{lock.banner}</div>
+      <Hero icon="shield-lock" title="Sicurezza" sub={sec.enabled ? undefined : 'applicazione aperta a tutti'}
+        chips={sec.enabled ? [
+          ['person-badge', (sec.mode as string) === 'ntlm' ? 'Accesso Windows (NTLM)' : sec.mode === 'hardcoded' ? 'Utente fisso' : sec.users.managed ? 'Utenti gestiti dall\'app' : `Tabella ${sec.users.table || '?'}`],
+          ['people', `${sec.groups.length} gruppi`],
+          (sec as { twoFactor?: { enabled?: boolean } }).twoFactor?.enabled && ['phone', 'Verifica in due passaggi'],
+          (sec.providers.ldap.enabled || sec.providers.saml?.enabled || sec.providers.oidc.some((o) => o.enabled)) && ['building-lock', 'Accesso esterno'],
+          sec.dynamicPermissions && ['sliders', 'Permessi dinamici'],
+        ] : [['unlock', 'Nessun login']]}
+        actions={<>{lock.banner}<label className="hero-toggle"><span>Login obbligatorio</span><span className="switch"><input type="checkbox" disabled={ro} checked={!!sec.enabled} onChange={(e) => set((s) => { s.enabled = e.target.checked; if (e.target.checked && s.mode === 'none') s.mode = 'database'; })} /><i /></span></label></>} />
       <fieldset disabled={ro} className="plain">
-      <Row label="Login obbligatorio"><Check value={sec.enabled} onChange={(v) => set((s) => { s.enabled = v; if (v && s.mode === 'none') s.mode = 'database'; })} label="Protegge l'applicazione con utenti e permessi" /></Row>
-      {sec.enabled && <>
-        <Tabs value={tab} onChange={setTab} tabs={[['login', 'Accesso', 'box-arrow-in-right'], ['groups', 'Gruppi', 'people'], ['rights', 'Permessi', 'ui-checks-grid'], ['providers', 'LDAP / SSO', 'building-lock']]} />
+      {!sec.enabled && <p className="help">Attiva «Login obbligatorio» per proteggere l'applicazione con utenti, gruppi e permessi.</p>}
+      {sec.enabled && <NavLayout id="security" value={tab} onChange={setTab} items={[['login', 'Accesso', 'box-arrow-in-right', 'Origine utenti, regole, verifica'], ['groups', 'Gruppi', 'people', `${sec.groups.length} gruppi, permessi dinamici`], ['rights', 'Permessi', 'ui-checks-grid', 'Diritti per gruppo e tabella'], ['providers', 'LDAP / SSO', 'building-lock', 'Active Directory, SAML, OpenID']]}>{() => <>
         {tab === 'login' && <div className="cols">
           <Section title="Utenti">
             <Row label="Origine utenti"><Select value={(sec.mode as string) === 'ntlm' ? 'ntlm' : sec.mode === 'hardcoded' ? 'hardcoded' : sec.users.managed ? 'managed' : 'custom'} options={[['managed', 'Tabelle di sistema gestite (consigliato)'], ['custom', 'Tabella utenti esistente'], ['hardcoded', 'Un solo utente fisso'], ['ntlm', 'Windows (NTLM, come R-LAB)']]}
@@ -149,7 +156,7 @@ export default function SecurityPanel() {
             </div>)}
           </Section>
         </div>}
-      </>}
+      </>}</NavLayout>}
       </fieldset>
     </div>
   );

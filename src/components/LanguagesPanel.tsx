@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { update, useStore } from '../store';
-import { Section } from './ui';
+import { Hero, Section } from './ui';
 import it from '../../runtime/lang/it.json';
 import en from '../../runtime/lang/en.json';
 import { useItemLock } from './TeamPanel';
@@ -40,7 +40,12 @@ export default function LanguagesPanel() {
     && (!onlyMissing || langs.some((c) => !r.get(c))));
   return (
     <div className="panel">
-      <div className="title-row"><h2>Lingue</h2>{lock.banner}</div>
+      <Hero icon="translate" title="Lingue" chips={[
+        ['translate', langs.map((l) => l.toUpperCase()).join(' · ')],
+        ['star', `Predefinita: ${p.project.defaultLanguage.toUpperCase()}`],
+        ['card-text', `${rows.length} testi`],
+        ['exclamation-circle', `${rows.filter((r) => langs.some((c) => !r.get(c))).length} da tradurre`],
+      ]} actions={lock.banner} />
       <Section title={`Traduzioni (${langs.join(', ')})`} help="Etichette di tabelle e campi, e testi dell'applicazione (pulsanti, messaggi). Le stringhe modificate prevalgono su quelle predefinite.">
         <div className="inline"><input className="inp" placeholder="Cerca…" value={filter} onChange={(e) => setFilter(e.target.value)} />
           <label className="check"><input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} /> Solo mancanti</label></div>

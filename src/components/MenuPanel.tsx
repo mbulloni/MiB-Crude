@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { update, useStore } from '../store';
 import type { MenuItem } from '../types';
-import { Btn, Check, Empty, I, LangText, Row, Section, Select, Text, lbl } from './ui';
+import { Btn, Check, Empty, Hero, I, LangText, Row, Section, Select, Text, lbl } from './ui';
 import { useItemLock } from './TeamPanel';
 
 type Path = number[];
@@ -59,7 +59,11 @@ export default function MenuPanel() {
 
   return (
     <div className="panel">
-      <div className="title-row"><h2>Menu</h2>{lock.banner}</div>
+      <Hero icon="list-nested" title="Menu" chips={[
+        ['list-ul', `${p.menu.items.length} voci principali`],
+        ['folder', `${p.menu.items.filter((x) => x.type === 'group').length} gruppi`],
+        !p.menu.items.length && ['magic', 'Vuoto: l\'app elenca tutte le tabelle'],
+      ]} actions={lock.banner} />
       <div className="cols">
         <Section title="Struttura" actions={<Btn small icon="magic" onClick={auto}>Dalle tabelle</Btn>} help="Senza voci, il menu elenca automaticamente tutte le tabelle. Le voci senza permesso non vengono mostrate all'utente.">
           <div className="inline wrap">

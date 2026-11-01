@@ -303,3 +303,25 @@ progress { width: 100%; }
 .settings-content .inline:has(.swatch) { flex-wrap: wrap; row-gap: 6px; }
 .settings-content .theme-list { max-height: 360px; overflow-y: auto; padding-right: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; align-content: start; }
 .settings-content .theme-list .theme-opt { margin: 0; }
+.hero-sub { font-weight: 400; font-size: 13px; color: var(--muted); font-family: var(--mono, monospace); }
+.hero-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.hero-logo .bi { font-size: 24px; }
+.hero-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border); cursor: pointer; font-weight: 600; }
+.settings-content > .section, .settings-content > .fields-wrap { margin-bottom: 16px; }
+/* Report, grafici, dashboard: sezioni dell'editor su più colonne */
+.split-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 16px; align-content: start; }
+.split-body > :not(.section) { grid-column: 1 / -1; }
+.split-body > .section { margin-bottom: 0; }
+/* lists that need the whole width (fields, page designer, events): only the icons of the categories */
+.settings-layout.narrow { grid-template-columns: 52px minmax(0, 1fr); }
+.settings-layout.narrow .settings-nav-item { justify-content: center; padding: 10px 0; }
+.settings-layout.narrow .settings-nav-item span { display: none; }
+/* side-by-side sections: narrower labels */
+.split-body .row, .settings-content .cols .row { grid-template-columns: minmax(110px, 160px) minmax(0, 1fr); }
+.row-ctl > .inline { width: 100%; }
+.row-ctl > .inline > select { flex: 1 1 0; min-width: 0; }
+.page-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.page-tile { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; color: var(--muted); }
+.page-tile input { margin: 0; }
+.page-tile.on { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); background: var(--accent-soft); color: var(--text); }
+.page-tile.on .bi { color: var(--accent); }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { update, useStore } from '../store';
 import type { Chart, Dashboard, DashItem, Report } from '../types';
 import CodeEditor from './CodeEditor';
-import { Btn, Check, Empty, I, LangText, Num, Row, Section, Select, lbl, slug } from './ui';
+import { Btn, Check, Empty, Hero, I, LangText, Num, Row, Section, Select, lbl, slug } from './ui';
 
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
 const INTERVALS: [string, string][] = [['', 'Valore'], ['year', 'Anno'], ['quarter', 'Trimestre'], ['month', 'Mese'], ['week', 'Settimana'], ['day', 'Giorno'], ['letter', 'Iniziale'], ['tens', 'Decine']];
@@ -25,10 +25,13 @@ function ListShell<T extends { name: string; title: any }>({ kind, title, items,
   };
   return (
     <div className="panel">
-      <h2>{title}</h2>
+      <Hero icon={{ reports: 'file-earmark-bar-graph', charts: 'bar-chart-line', dashboards: 'speedometer2' }[kind]} title={title} chips={[
+        [{ reports: 'file-earmark-bar-graph', charts: 'bar-chart-line', dashboards: 'speedometer2' }[kind], `${items.length} ${title.toLowerCase()}`],
+        it ? ['pencil', lbl(it.title, it.name)] : null,
+      ]} actions={<Btn kind="primary" icon="plus-lg" onClick={add}>Nuovo</Btn>} />
       <div className="split">
         <div className="split-list">
-          <Btn kind="primary" icon="plus-lg" onClick={add}>Nuovo</Btn>
+          {!items.length && <p className="help">Nessun elemento: usa «Nuovo».</p>}
           {items.map((x) => <button key={x.name} className={`nav-item ${x.name === cur ? 'on' : ''}`} onClick={() => setCur(x.name)}>{lbl(x.title, x.name)}</button>)}
         </div>
         <div className="split-body">{it ? <>
@@ -69,9 +72,9 @@ function ReportEditor({ r, set }: { r: Report; set: (fn: (x: Report) => void) =>
     <Section title="Campi incrociati (crosstab)" help="Le colonne del report diventano i valori di un campo (per esempio i mesi o le aree): ogni cella mostra i totali per riga (raggruppamenti) e colonna, con i totali di riga e di colonna; un clic su una cella apre la lista filtrata">
       <Row label="Colonne da"><span className="inline">
         <Select value={r.crosstab?.field || ''} options={[['', 'Nessuno: report a gruppi'] as [string, string], ...fields]} onChange={(v) => set((x) => { if (v) x.crosstab = { ...(x.crosstab || {}), field: v }; else delete x.crosstab; })} />
-        {r.crosstab?.field && <><Select value={r.crosstab.interval || ''} options={INTERVALS} onChange={(v) => set((x) => { x.crosstab = { ...x.crosstab!, interval: v }; })} />
-          <Check label="Decrescente" value={r.crosstab.desc} onChange={(v) => set((x) => { x.crosstab = { ...x.crosstab!, desc: v }; })} /></>}
+        {r.crosstab?.field && <Select value={r.crosstab.interval || ''} options={INTERVALS} onChange={(v) => set((x) => { x.crosstab = { ...x.crosstab!, interval: v }; })} />}
       </span></Row>
+      {r.crosstab?.field && <Row label="Ordine colonne"><Check label="Decrescente" value={r.crosstab.desc} onChange={(v) => set((x) => { x.crosstab = { ...x.crosstab!, desc: v }; })} /></Row>}
       {r.crosstab?.field && !r.groups.length && <p className="help warn"><I n="exclamation-triangle" /> Aggiungi almeno un raggruppamento: sono le righe della tabella incrociata.</p>}
       {r.crosstab?.field && !r.aggregates.length && <p className="help warn"><I n="exclamation-triangle" /> Aggiungi almeno un totale: è il valore delle celle.</p>}
     </Section>
