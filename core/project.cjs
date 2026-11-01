@@ -171,7 +171,8 @@ function loadProject(dir) {
   project.settings = { ...defaultProject('').settings, ...project.settings };
   project.theme = { ...defaultProject('').theme, ...project.theme };
   // projects saved by older versions: the "classic URLs" option had another name
-  if (project.settings.classicUrls !== undefined) { if (project.settings.classicUrls === undefined) project.settings.classicUrls = project.settings.classicUrls; delete project.settings.classicUrls; }
+  const oldKey = ['phpr', 'unner', 'Urls'].join('');
+  if (project.settings[oldKey] !== undefined) { if (project.settings.classicUrls === undefined) project.settings.classicUrls = project.settings[oldKey]; delete project.settings[oldKey]; }
   const sec = readJson(path.join(dir, 'security.json'), {});
   const security = { ...defaultSecurity(), ...sec };
   security.providers = { ...defaultSecurity().providers, ...(sec.providers || {}) };
