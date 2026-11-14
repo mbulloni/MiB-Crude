@@ -95,6 +95,11 @@ test.before(async () => {
     { id: 'b4', type: 'count', x: 1, y: 4, w: 4, h: 3, table: 'orders' },
     { id: 'b5', type: 'chart', x: 5, y: 4, w: 8, h: 6, ref: 'bystatus' },
   ], css: '.mc-test-css{color:red}', js: 'window.__tp = 1;' }, view: { grid: [{ id: 'b1', type: 'field', field: 'total', x: 1, y: 1, w: 4, h: 2 }] } };
+  // categories list page: free grid around the standard list (toolbar + text block + record list)
+  proj.tables.find((t) => t.name === 'categories').layout = { list: { grid: [
+    { id: 'b1', type: 'html', x: 1, y: 1, w: 12, h: 1, card: false, html: { it: '<p class="mc-test-listtop">Sopra la lista</p>' } },
+    { id: 'b2', type: 'toolbar', x: 1, y: 2, w: 12, h: 2 }, { id: 'b3', type: 'datalist', x: 1, y: 4, w: 12, h: 10 },
+  ] } };
   // product add page in two steps
   proj.tables.find((t) => t.name === 'products').layout = { add: { sections: [{ title: { it: 'Prodotto' }, style: 'step', fields: ['name'] }, { title: { it: 'Prezzo' }, style: 'step', fields: ['price'] }] } };
   const cats = proj.tables.find((t) => t.name === 'categories');
@@ -257,6 +262,13 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.ok(r.text.indexOf('name="status"') > 0 && r.text.includes('name="total"'), 'unplaced fields still in the form');
   r = await c.req('?p=view&t=orders&k[id]=1');
   assert.match(r.text, /mc-formgrid/);
+
+  // List page with a free grid: blocks around the record list, list still works.
+  r = await c.req('?p=list&t=categories');
+  assert.match(r.text, /mc-listgrid/);
+  assert.match(r.text, /mc-test-listtop/);
+  assert.ok(r.text.indexOf('mc-test-listtop') < r.text.indexOf('id="mcGrid"'), 'block above the list');
+  assert.match(r.text, /id="mcGrid"/);
 
   // Dependent lookup.
   r = await c.req('?p=lookup&t=customers&f=city_id&parent=2');

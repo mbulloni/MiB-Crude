@@ -285,6 +285,7 @@ class Layout
     /** Non-field blocks of a table page grid: the same blocks (and markup) as the project pages. */
     public static function gridBlock(Table $t, array $it, $page)
     {
+        if (in_array(isset($it['type']) ? $it['type'] : '', ['toolbar', 'datalist', 'field'], true)) return '';
         if ((isset($it['type']) ? $it['type'] : '') === 'snippet') return self::block($t, ['type' => 'snippet', 'event' => isset($it['event']) ? $it['event'] : ''], $page);
         $app = $t->app;
         $i = 0;

@@ -17,6 +17,7 @@ const KINDS: Record<string, { label: string; icon: string; w: number; h: number 
   html: { label: 'Testo', icon: 'type', w: 12, h: 4 }, code: { label: 'Codice', icon: 'code-slash', w: 6, h: 5 },
   image: { label: 'Immagine', icon: 'image', w: 4, h: 6 }, frame: { label: 'Pagina web', icon: 'window', w: 12, h: 9 },
   button: { label: 'Pulsante', icon: 'cursor', w: 3, h: 2 }, snippet: { label: 'Snippet PHP', icon: 'filetype-php', w: 12, h: 3 },
+  toolbar: { label: 'Barra comandi', icon: 'tools', w: 12, h: 2 }, datalist: { label: 'Elenco record', icon: 'table', w: 12, h: 12 },
 };
 
 const HINTS: Record<string, string> = {
@@ -26,6 +27,8 @@ const HINTS: Record<string, string> = {
   list: 'Lista di una tabella con ricerca e paginazione; «Righe» = righe per pagina.', html: 'Testo formattato (HTML filtrato: niente script).',
   code: 'HTML, CSS e JavaScript scritti nella pagina senza filtri. Dai al contenuto un id e usalo dal JavaScript di pagina.',
   image: 'Immagine da un indirizzo o da un file della cartella «public/» del progetto.', frame: 'Un\'altra pagina web dentro un riquadro (alcuni siti non lo consentono).',
+  toolbar: 'Titolo, pulsanti (Nuovo, Elimina, Esporta, Stampa, Importa), ricerche salvate e ricerca avanzata della lista.',
+  datalist: 'La lista dei record di questa tabella (filtri, viste, ricerca, paginazione): quella configurata nella scheda Pagine.',
   button: 'Collegamento a una pagina dell\'app (index.php?p=list&t=tabella) o a un sito.',
 };
 
@@ -108,6 +111,7 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
     if (type === 'chart') it.ref = p.charts[0]?.name;
     if (type === 'report') it.ref = p.reports[0]?.name;
     if (type === 'html') it.html = { it: '<p>Testo</p>' };
+    if (type === 'datalist') it.h = 12;
     if (type === 'code') it.code = '<div id="mio-blocco">Ciao</div>';
     if (type === 'button') it.title = { it: 'Apri' };
     if (type === 'snippet') { let k = 1; const evs = p.events[ctx!.table.name] || {}; while (evs[`Snippet_blocco${k}`]) k++; it.event = `Snippet_blocco${k}`; setTimeout(() => update((q) => { q.events[ctx!.table.name] = { ...(q.events[ctx!.table.name] || {}), [it.event!]: "<?php\n// Codice PHP mostrato nella pagina\necho '<div class=\"alert alert-info\">Blocco personalizzato</div>';\nreturn true;\n" }; }), 0); }
@@ -139,6 +143,8 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
       case 'count': case 'kpi': return `${lbl(p.tables.find((t) => t.name === it.table)?.caption, it.table || '')} · ${it.fn || 'count'}${it.field ? ' ' + it.field : ''}`;
       case 'field': return ctx ? lbl(ctx.table.fields.find((f) => f.name === it.field)?.label, it.field || '') : `${it.table || ''}.${it.field || ''}`;
       case 'snippet': return it.event || '';
+      case 'toolbar': return 'Titolo e pulsanti della lista';
+      case 'datalist': return 'Lista dei record';
       case 'list': return it.table || '';
       case 'chart': case 'report': return it.ref || '';
       case 'html': return lbl(it.html).replace(/<[^>]+>/g, ' ').slice(0, 60);
@@ -169,8 +175,8 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
       <div className="inline wrap" style={{ margin: '8px 0' }}>
         <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
         <Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} />
-        {((ctx ? ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
-          <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || (t === 'field' && !!ctx && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
+        {((ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
+          <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || ((t === 'toolbar' || t === 'datalist') && d.items.some((q) => q.type === t)) || (t === 'field' && !!ctx && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
         {ctx && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>
       <p className="help">Trascina un blocco per spostarlo, il quadratino in basso a destra per ridimensionarlo. I blocchi non si sovrappongono: gli altri scendono.</p>

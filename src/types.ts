@@ -45,7 +45,7 @@ export interface Security {
 export interface Report { name: string; title: L; table: string; groups: { field: string; interval?: string; desc?: boolean }[]; aggregates: { field: string; fn: string }[]; columns: string[]; showDetails: boolean; crosstab?: { field: string; interval?: string; desc?: boolean } }
 export interface Chart { name: string; title: L; table: string; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean; modifyJs?: string }
 export interface DashItem {
-  type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field' | 'snippet';
+  type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field' | 'snippet' | 'toolbar' | 'datalist';
   id?: string; table?: string; ref?: string; field?: string; fn?: string; width?: number; height?: number; rows?: number; title?: L; html?: L;
   // free layout on the 12-column grid (x, w in columns; y, h in rows of 40px)
   x?: number; y?: number; w?: number; h?: number;

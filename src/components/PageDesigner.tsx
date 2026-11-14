@@ -19,6 +19,7 @@ type OldSec = { title: Record<string, string>; fields: string[]; columns?: numbe
 
 /** Section layout (or the automatic one) of a page, laid out on the grid: one row of blocks per section, fields by their old width. */
 function toGrid(t: Table, page: string, lang: string): DashItem[] {
+  if (page === 'list') return [{ id: 'b1', type: 'toolbar', x: 1, y: 1, w: 12, h: 2 }, { id: 'b2', type: 'datalist', x: 1, y: 3, w: 12, h: 12 }];
   const cols = Number(t.pages[page]?.columns) || 1;
   const visible = t.fields.filter((f) => f.show[page]);
   const secs = ((t.layout?.[page]?.sections || []) as OldSec[]);
@@ -46,7 +47,7 @@ function toGrid(t: Table, page: string, lang: string): DashItem[] {
   return items;
 }
 
-const LAYOUT_PAGES: [Page, string][] = [['edit', 'Modifica'], ['add', 'Nuovo'], ['view', 'Visualizza']];
+const LAYOUT_PAGES: [Page, string][] = [['list', 'Lista'], ['edit', 'Modifica'], ['add', 'Nuovo'], ['view', 'Visualizza']];
 
 /** Copy the design of the current page to other pages: the table's own pages, or pages of other tables (only the fields they have). */
 function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () => void }) {
@@ -62,7 +63,7 @@ function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () =>
       for (const tg of chosen) {
         const x = d.tables.find((y) => y.name === tg.table.name)!;
         const mine = tg.table.name === t.name;
-        let items = structuredClone(src).filter((i) => i.type !== 'field' || mine || x.fields.some((f) => f.name === i.field && f.show[tg.page]));
+        let items = structuredClone(src).filter((i) => (tg.page === 'list' ? i.type !== 'field' : i.type !== 'toolbar' && i.type !== 'datalist') && (i.type !== 'field' || mine || x.fields.some((f) => f.name === i.field && f.show[tg.page])));
         if (!mine) items = items.filter((i) => i.type !== 'snippet');
         x.layout = x.layout || {};
         if (mode === 'replace') { x.layout[tg.page] = { grid: items, ...(srcDef?.css ? { css: srcDef.css } : {}), ...(srcDef?.js ? { js: srcDef.js } : {}) }; continue; }
@@ -102,7 +103,7 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
   const [pageSel, setPage] = useState<Page>('edit');
   const page: Page = enabledPages.some(([k]) => k === pageSel) ? pageSel : 'edit';
   const grid = t.layout?.[page]?.grid;
-  const isLayout = ['edit', 'add', 'view'].includes(page);
+  const isLayout = ['edit', 'add', 'view', 'list'].includes(page);
 
   // First time on a page: the old section layout (or the automatic one) becomes grid blocks.
   useEffect(() => {
@@ -117,7 +118,7 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
 
   const [copy, setCopy] = useState(false);
   const tabs = <Tabs value={page} onChange={setPage} tabs={enabledPages} />;
-  if (!['edit', 'add', 'view'].includes(page)) {
+  if (!isLayout) {
     const pickable = page !== 'delete';
     return (
       <div className="pd">
@@ -130,6 +131,7 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
             </div>
             <div className="inline" style={{ marginTop: 12 }}>
               <Btn small disabled={readOnly} onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: true }; })}>Tutti</Btn>
+              <Btn small kind="ghost" icon="arrow-counterclockwise" disabled={readOnly} title="Tutti i campi, come all'importazione della tabella" onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: page === 'import' ? !x.pk : true }; })}>Ripristina standard</Btn>
               <Btn small kind="ghost" disabled={readOnly} onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: false }; })}>Nessuno</Btn>
             </div>
           </> : <p className="help">La pagina Elimina chiede conferma e rimuove il record: non ha campi né layout da configurare. I permessi stanno in Sicurezza.</p>}
@@ -152,9 +154,15 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
   return (
     <div className="pd">
       <div className="inline wrap">{tabs}<span className="grow" />
-        {!readOnly && <Btn small kind="ghost" icon="arrow-counterclockwise" onClick={() => { if (confirm('Rimettere tutti i campi nella disposizione automatica?')) update((d) => { const x = d.tables.find((y) => y.name === t.name)!; if (x.layout) delete x.layout[page]; }); }}>Disposizione automatica</Btn>}</div>
+        {!readOnly && <Btn small kind="ghost" icon="arrow-counterclockwise" title="Scarta il design di questa pagina e torna al layout standard" onClick={() => { if (confirm('Ripristinare il design standard di questa pagina? Il design personalizzato (blocchi, CSS, JavaScript) va perso.')) update((d) => { const x = d.tables.find((y) => y.name === t.name)!; if (x.layout) delete x.layout[page]; }); }}>Ripristina standard</Btn>}</div>
       {copy && <CopyDesign t={t} page={page} onClose={() => setCopy(false)} />}
       <PageBuilder d={dash} set={set} ctx={{ table: t, page, readOnly, onCopy: () => setCopy(true), onSnippet: () => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'events' } }) }} />
+      {page === 'list' && <div className="pd-canvas" style={{ padding: 16 }}>
+        <p className="help"><b>Colonne della lista</b>: {PICK_HELP.list}</p>
+        <div className="chips">
+          {t.fields.map((f) => <label key={f.name} className="check"><input type="checkbox" disabled={readOnly} checked={!!f.show.list} onChange={(e) => update((d) => { const x = d.tables.find((y) => y.name === t.name)!.fields.find((y) => y.name === f.name)!; x.show = { ...x.show, list: e.target.checked }; })} /> {lbl(f.label, f.name)}</label>)}
+        </div>
+      </div>}
     </div>
   );
 }
