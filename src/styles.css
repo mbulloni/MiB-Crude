@@ -371,3 +371,4 @@ progress { width: 100%; }
 .pb-insp .langtext { flex-direction: column; }
 .pb-insp .lt-row .inp { flex: 1; min-width: 0; }
 .pd-auto { border-style: dashed; } .pd-auto .pd-tile { opacity: .85; cursor: default; }
+.pd-preview{padding:8px 10px;border-radius:6px;background:rgba(127,127,127,.08);margin-bottom:6px;overflow:auto;max-height:200px}.pd-preview img{max-width:100%}

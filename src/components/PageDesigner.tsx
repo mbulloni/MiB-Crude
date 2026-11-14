@@ -15,7 +15,7 @@ const PICK_HELP: Partial<Record<Page, string>> = {
 };
 interface Block { type: 'html' | 'snippet'; html?: Record<string, string>; event?: string }
 interface Sec { title: Record<string, string>; style?: 'card' | 'tab' | 'step'; columns?: number; fields: string[]; blocks?: Block[] }
-type Drag = { kind: 'field'; name: string; from: number } | { kind: 'new-html' } | { kind: 'new-snippet' } | null;
+type Drag = { kind: 'field'; name: string; from: number } | { kind: 'new-html' } | { kind: 'new-image' } | { kind: 'new-snippet' } | null;
 
 const SPANS = [3, 4, 6, 8, 12];
 
@@ -64,6 +64,7 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
     } else if (si >= 0) {
       write((secs, x) => {
         if (drag.kind === 'new-html') (secs[si].blocks ||= []).push({ type: 'html', html: { [p.project.defaultLanguage]: '<p>Testo</p>' } });
+        else if (drag.kind === 'new-image') (secs[si].blocks ||= []).push({ type: 'html', html: { [p.project.defaultLanguage]: '<p><img src="https://" alt="" style="max-width:100%"></p>' } });
         else {
           let n = 1;
           const evs = p.events[t.name] || {};
@@ -80,7 +81,8 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
   };
   const addSection = () => write((secs) => {
     // First section: take the fields that are currently auto-placed.
-    secs.push({ title: { [p.project.defaultLanguage]: secs.length ? `Sezione ${secs.length + 1}` : 'Dati' }, style: 'card', fields: secs.length ? [] : visible.map((f) => f.name) });
+    // New sections go on top, so they are visible without scrolling.
+    secs.unshift({ title: { [p.project.defaultLanguage]: secs.length ? `Sezione ${secs.length + 1}` : 'Dati' }, style: 'card', fields: secs.length ? [] : visible.map((f) => f.name) });
   });
 
   const Tile = ({ f, si, secCols }: { f: Field; si: number; secCols?: number }) => {
@@ -159,7 +161,9 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
                   <Btn small kind="ghost" icon="trash" title="Elimina sezione (i campi tornano nella tavolozza)" onClick={() => write((secs) => { secs.splice(si, 1); })} />
                 </div>
                 {(s.blocks || []).map((b, bi) => <div key={bi} className="pd-block">
-                  {b.type === 'html' ? <LangText multiline value={b.html} onChange={(v) => write((secs) => { secs[si].blocks![bi].html = v; })} />
+                  {b.type === 'html' ? <>
+                    <div className="pd-preview" dangerouslySetInnerHTML={{ __html: lbl(b.html as any, '') }} />
+                    <LangText multiline value={b.html} onChange={(v) => write((secs) => { secs[si].blocks![bi].html = v; })} /></> 
                     : <div className="inline"><I n="filetype-php" /> <b>{b.event}</b><span className="muted small">codice PHP nella scheda Eventi</span>
                       <Btn small onClick={() => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'events' } })}>Apri</Btn></div>}
                   <Btn small kind="ghost" icon="x-lg" onClick={() => write((secs) => { secs[si].blocks!.splice(bi, 1); })} />
@@ -173,6 +177,7 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
         <div className="pd-palette" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); dropField(-1); }}>
           <h4>Blocchi</h4>
           <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-html' })}><I n="text-paragraph" /> Testo / HTML</div>
+          <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-image' })}><I n="image" /> Immagine</div>
           <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-snippet' })}><I n="filetype-php" /> Snippet PHP</div>
           <h4>Campi da collocare ({sections.length ? free.length : 0})</h4>
           {sections.length === 0 ? <p className="help">Layout automatico: premi «Modifica la distribuzione» per collocare i campi.</p> : free.map((f) => <div key={f.name} className="pd-pitem" draggable={!readOnly}
