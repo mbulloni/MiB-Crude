@@ -1,6 +1,6 @@
 {
   "name": "mib-crude",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "MiB-Crude - generatore visuale di applicazioni web PHP per Linux, multisviluppatore",
   "main": "electron/main.cjs",
   "type": "commonjs",
@@ -13,7 +13,8 @@
     "server": "node server/mibcrude-server.cjs",
     "dist": "vite build && electron-builder --linux AppImage deb",
     "dist:deb": "vite build && electron-builder --linux deb",
-    "test:db": "for db in mysql pgsql sqlite sqlsrv oracle; do echo \"== $db\"; MIBCRUDE_TEST_DB=$db node --test tests/e2e.test.cjs tests/proc.test.cjs || exit 1; done"
+    "test:db": "for db in mysql pgsql sqlite sqlsrv oracle; do echo \"== $db\"; MIBCRUDE_TEST_DB=$db node --test tests/e2e.test.cjs tests/proc.test.cjs || exit 1; done",
+    "dist:win": "vite build && electron-builder --win nsis zip -c.npmRebuild=false"
   },
   "author": {
     "name": "Michele",
@@ -75,7 +76,20 @@
     "asarUnpack": [
       "electron/docker/**",
       "electron/docker-oci/**"
-    ]
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "MiB-Crude-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
