@@ -139,6 +139,9 @@ Stato v0.17.1 (2026-11-14): roadmap iniziale completa (v0.2.0), origini REST com
 ## Fatto (v0.12.5, 2026-11-01)
 - **Visualizza dati** nel designer: record di tabelle del database, query SQL e stored procedure del progetto, a pagine (paginazione nella sintassi di ogni database), ordinamento per colonna, filtro con condizione SQL, conteggio; da Tabelle e query (pulsante Dati e menu contestuale) e dall'editor della tabella. Provato su MariaDB e SQLite (tests/data.test.cjs).
 
+## Prossimo
+- **Design della pagina Lista** personalizzabile (oggi nel Designer pagine la scheda Lista sceglie solo i campi): stessa griglia dei blocchi, con la tabella dati come blocco; colonne, azioni e ricerca restano configurabili. Richiesto 2026-11-14.
+
 ## Limiti aperti
 - Pagine e dashboard: il blocco Campo è di sola lettura (niente input che salva) e vale per tabelle con chiave singola; nessun evento PHP «onLoad» di pagina (solo JavaScript); l'editor mostra i blocchi come riquadri con riepilogo, senza anteprima dal vivo; il blocco Codice non è filtrato.
 - App installabile: nessun funzionamento offline dei dati (solo il messaggio); i browser la propongono solo su https o localhost.
