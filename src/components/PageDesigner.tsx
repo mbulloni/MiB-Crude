@@ -4,7 +4,15 @@ import { update, useStore } from '../store';
 import type { Field, Table } from '../types';
 import { Btn, I, LangText, Select, Tabs, lbl } from './ui';
 
-type Page = 'edit' | 'add' | 'view';
+type Page = 'list' | 'view' | 'add' | 'edit' | 'delete' | 'search' | 'export' | 'import' | 'print';
+const PAGES: [Page, string, string][] = [['list', 'Lista', 'list-ul'], ['view', 'Visualizza', 'eye'], ['add', 'Nuovo', 'plus-square'], ['edit', 'Modifica', 'pencil-square'], ['delete', 'Elimina', 'trash'], ['search', 'Ricerca avanzata', 'funnel'], ['export', 'Esporta', 'download'], ['import', 'Importa', 'upload'], ['print', 'Stampa', 'printer']];
+const PICK_HELP: Partial<Record<Page, string>> = {
+  list: 'Colonne mostrate nella lista (l\'ordine è quello della scheda Campi).',
+  search: 'Campi su cui si può filtrare nella ricerca avanzata.',
+  export: 'Campi inclusi nei file esportati.',
+  import: 'Campi che si possono compilare importando un file.',
+  print: 'Campi stampati.',
+};
 interface Block { type: 'html' | 'snippet'; html?: Record<string, string>; event?: string }
 interface Sec { title: Record<string, string>; style?: 'card' | 'tab' | 'step'; columns?: number; fields: string[]; blocks?: Block[] }
 type Drag = { kind: 'field'; name: string; from: number } | { kind: 'new-html' } | { kind: 'new-snippet' } | null;
@@ -13,7 +21,9 @@ const SPANS = [3, 4, 6, 8, 12];
 
 export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boolean }) {
   const p = useStore((s) => s.proj)!;
-  const [page, setPage] = useState<Page>('edit');
+  const enabledPages = PAGES.filter(([k]) => t.pages[k]?.enabled || k === 'edit');
+  const [pageSel, setPage] = useState<Page>('edit');
+  const page: Page = enabledPages.some(([k]) => k === pageSel) ? pageSel : 'edit';
   const [drag, setDrag] = useState<Drag>(null);
   const [over, setOver] = useState<string>('');
   const visible = t.fields.filter((f) => f.show[page]);
@@ -92,10 +102,31 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
     );
   };
 
+  const tabs = <Tabs value={page} onChange={setPage} tabs={enabledPages} />;
+  if (!['edit', 'add', 'view'].includes(page)) {
+    const pickable = page !== 'delete';
+    return (
+      <div className="pd">
+        <div className="inline wrap">{tabs}</div>
+        <div className="pd-canvas" style={{ padding: 16 }}>
+          {pickable ? <>
+            <p className="help">{PICK_HELP[page]} Qui non ci sono sezioni da disegnare: scegli i campi.</p>
+            <div className="chips">
+              {t.fields.map((f) => <label key={f.name} className="check"><input type="checkbox" disabled={readOnly} checked={!!f.show[page]} onChange={(e) => update((d) => { const x = d.tables.find((y) => y.name === t.name)!.fields.find((y) => y.name === f.name)!; x.show = { ...x.show, [page]: e.target.checked }; })} /> {lbl(f.label, f.name)}</label>)}
+            </div>
+            <div className="inline" style={{ marginTop: 12 }}>
+              <Btn small disabled={readOnly} onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: true }; })}>Tutti</Btn>
+              <Btn small kind="ghost" disabled={readOnly} onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: false }; })}>Nessuno</Btn>
+            </div>
+          </> : <p className="help">La pagina Elimina chiede conferma e rimuove il record: non ha campi né layout da configurare. I permessi stanno in Sicurezza.</p>}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="pd">
       <div className="inline wrap">
-        <Tabs value={page} onChange={setPage} tabs={[['edit', 'Modifica', 'pencil-square'], ['add', 'Nuovo', 'plus-square'], ['view', 'Visualizza', 'eye']]} />
+        {tabs}
         <span className="grow" />
         <Btn icon="plus-lg" onClick={addSection} disabled={readOnly}>Sezione</Btn>
         {sections.length > 0 && <Btn kind="ghost" icon="arrow-counterclockwise" disabled={readOnly} onClick={() => { if (confirm('Tornare al layout automatico?')) write((secs) => { secs.length = 0; }); }}>Layout automatico</Btn>}
