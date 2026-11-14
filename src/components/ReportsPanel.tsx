@@ -30,7 +30,7 @@ function ListShell<T extends { name: string; title: any }>({ kind, title, items,
   return (
     <div className="panel">
       <Hero icon={{ reports: 'file-earmark-bar-graph', charts: 'bar-chart-line', dashboards: 'speedometer2' }[kind]} title={title} chips={[
-        [{ reports: 'file-earmark-bar-graph', charts: 'bar-chart-line', dashboards: 'speedometer2' }[kind], `${items.length} ${title.toLowerCase()}`],
+        [{ reports: 'file-earmark-bar-graph', charts: 'bar-chart-line', dashboards: 'speedometer2' }[kind], `${items.length} ${items.length === 1 && title === 'Pagine' ? 'pagina' : title.toLowerCase()}`],
         it ? ['pencil', lbl(it.title, it.name)] : null,
       ]} actions={<Btn kind="primary" icon="plus-lg" onClick={add}>Nuovo</Btn>} />
       <div className="split">

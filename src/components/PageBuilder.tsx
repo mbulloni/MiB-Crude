@@ -143,7 +143,7 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
               <div className="pb-head"><I n={k.icon} /> <b>{k.label}</b><span className="grow" />
                 <button className="pb-act" title="Duplica" onClick={() => set((x) => { const c = structuredClone(x.items[i]); const ids = new Set(x.items.map((q) => q.id)); let n = x.items.length + 1; while (ids.has(`b${n}`)) n++; c.id = `b${n}`; c.y = (c.y || 1) + (c.h || 6); x.items.push(c); x.items = resolve(x.items, x.items.length - 1); })}><I n="copy" /></button>
                 <button className="pb-act" title="Elimina" onClick={() => { set((x) => { x.items.splice(i, 1); }); setSel(''); }}><I n="x-lg" /></button></div>
-              <div className="pb-body">{lbl(b.title) && <b>{lbl(b.title)}</b>} <span className="muted">{summary(b)}</span></div>
+              <div className="pb-body">{lbl(b.title) ? <b>{lbl(b.title)}</b> : <span className="muted">{summary(b)}</span>}</div>
               <div className="pb-rz" onPointerDown={(e) => start(e, i, 'resize')} />
             </div>;
           })}

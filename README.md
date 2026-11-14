@@ -66,6 +66,7 @@ Documentazione completa:
 | ![Pagina a passi](docs/screenshots/app-steps.png) Pagina Nuovo a passi | ![Aspetto scelto dall'utente](docs/screenshots/app-theme-customizer.png) Aspetto scelto dall'utente (Material Admin) |
 | ![Cruscotto Equation](docs/screenshots/app-equation.png) Cruscotto con il tema Equation | ![Cruscotto Equation scuro](docs/screenshots/app-equation-dark.png) Lo stesso in modalità scura |
 | ![Cerca nel progetto](docs/screenshots/designer-search.png) Cerca nel progetto | ![PDF multilingue](docs/screenshots/pdf-lingue.png) PDF in più scritture |
+| ![Editor pagine](docs/screenshots/designer-pagine.png) Editor di pagine e dashboard a griglia libera | ![Pagina libera](docs/screenshots/app-pagina-libera.png) La pagina generata (codice, indicatori, campo, pulsante, grafico, tabella) |
 
 ## Importazione di progetti .phpr
 
