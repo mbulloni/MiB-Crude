@@ -23,8 +23,8 @@ Documentazione completa:
 
 ### Pagine
 
-- **Lista**: ricerca rapida e avanzata, pannello filtri, **ricerche salvate**, ordinamento, totali, colonne visibili, **modifica e aggiunta in linea**, **modifica selezionati**, viste **calendario, kanban, galleria, mappa** (con **geocodifica** degli indirizzi)
-- **Nuovo / modifica / visualizza**: designer delle pagine a sezioni (riquadri, schede o **passi** con Avanti/Indietro), blocchi HTML e PHP, finestre popup, copia, blocco del record durante la modifica
+- **Lista**: **disegnata come schema della pagina** (bande con titolo, ricerca, pulsanti, tabella, paginazione; elementi che si tolgono e si rimettono) e, a richiesta, **layout libero** con blocchi e campi usati come filtri; ricerca rapida e avanzata, pannello filtri, **ricerche salvate**, ordinamento, totali, colonne visibili, **modifica e aggiunta in linea**, **modifica selezionati**, viste **calendario, kanban, galleria, mappa** (con **geocodifica** degli indirizzi)
+- **Nuovo / modifica / visualizza**: **designer delle pagine a griglia libera** (lo stesso editor delle pagine del progetto: campi, testi, immagini, grafici, indicatori, codice, pulsanti, snippet PHP, CSS e JavaScript di pagina), **applica il design ad altre pagine** (tutte o alcune), **ripristina standard**, finestre popup, copia, blocco del record durante la modifica
 - **Esportazione** CSV, XLSX, JSON e **PDF** in quasi tutte le lingue (anche cinese, giapponese, arabo, ebraico, tailandese) con le immagini dei campi; **stampa**; **importazione** CSV/XLSX
 - **Report** con raggruppamenti e totali, report **a campi incrociati (crosstab)**; **grafici** Apache ECharts con clic che apre la lista filtrata; **dashboard e pagine libere** (griglia drag & drop con indicatori, campi, grafici, tabelle, report, testi, immagini, pulsanti, codice HTML/JS e CSS/JavaScript di pagina, wizard di creazione, guida a passi e copia del layout su altre pagine); **Report & Chart Builder** per gli utenti
 - **API REST** per tabella con chiave API e descrizione **OpenAPI**
@@ -63,9 +63,11 @@ Documentazione completa:
 | | |
 |---|---|
 | ![Report crosstab](docs/screenshots/app-crosstab.png) Report a campi incrociati | ![Aggiunta in linea](docs/screenshots/app-inline-add.png) Aggiunta in linea |
-| ![Pagina a passi](docs/screenshots/app-steps.png) Pagina Nuovo a passi | ![Aspetto scelto dall'utente](docs/screenshots/app-theme-customizer.png) Aspetto scelto dall'utente (Material Admin) |
+| ![Lista con filtro](docs/screenshots/app-lista-filtro.png) Lista con layout libero e campo usato come filtro | ![Aspetto scelto dall'utente](docs/screenshots/app-theme-customizer.png) Aspetto scelto dall'utente (Material Admin) |
 | ![Cruscotto Equation](docs/screenshots/app-equation.png) Cruscotto con il tema Equation | ![Cruscotto Equation scuro](docs/screenshots/app-equation-dark.png) Lo stesso in modalità scura |
 | ![Cerca nel progetto](docs/screenshots/designer-search.png) Cerca nel progetto | ![PDF multilingue](docs/screenshots/pdf-lingue.png) PDF in più scritture |
+| ![Designer pagine di una tabella](docs/screenshots/designer-tabella-modifica.png) Designer pagine di una tabella (Modifica a griglia) | ![Pagina Modifica generata](docs/screenshots/app-modifica-griglia.png) La pagina Modifica generata |
+| ![Lista come schema](docs/screenshots/designer-lista-schema.png) La Lista come schema della pagina | ![Lista layout libero](docs/screenshots/designer-lista-libera.png) Layout libero della Lista, con il blocco Campo |
 | ![Editor pagine](docs/screenshots/designer-pagine.png) Editor di pagine e dashboard a griglia libera | ![Pagina libera](docs/screenshots/app-pagina-libera.png) La pagina generata (codice, indicatori, campo, pulsante, grafico, tabella) |
 
 ## Importazione di progetti .phpr

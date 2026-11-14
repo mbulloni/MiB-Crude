@@ -355,3 +355,6 @@ Per l'utente finale:
 
 ## Design delle pagine di una tabella
 Tabella › Designer pagine: una scheda per ogni pagina attiva. Modifica, Nuovo e Visualizza si disegnano con lo stesso editor a griglia delle pagine del progetto (trascina e ridimensiona i blocchi; tutti i blocchi delle pagine più il Campo della tabella, Guida, schede CSS e JavaScript). **Applica ad altre pagine** applica il design alle pagine che scegli (tutte o alcune, anche di altre tabelle). Le altre pagine (Lista, Ricerca, Esporta, Importa, Stampa) scelgono i campi.
+
+### Design della Lista
+Designer pagine › **Lista**: la pagina è disegnata come uno schema a bande (titolo, ricerca, pulsanti, tabella con le colonne, totali e paginazione). Clic su un elemento per le sue proprietà; **×** lo toglie dalla pagina, **+** sugli elementi sbiaditi lo rimette. Le colonne sono i campi con «Lista» spuntato nella scheda Campi. In fondo, **Layout libero (avanzato)** aggiunge blocchi (testi, grafici, indicatori, codice, immagini) intorno alla lista e il blocco **Campo**, che fa da filtro su un campo della tabella nel punto scelto. **Ripristina standard** torna alla lista di prima.
