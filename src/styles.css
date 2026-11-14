@@ -370,3 +370,4 @@ progress { width: 100%; }
 .pb-insp .langtext, .pb-insp .lt-row { display: flex; width: 100%; min-width: 0; }
 .pb-insp .langtext { flex-direction: column; }
 .pb-insp .lt-row .inp { flex: 1; min-width: 0; }
+.pd-auto { border-style: dashed; } .pd-auto .pd-tile { opacity: .85; cursor: default; }

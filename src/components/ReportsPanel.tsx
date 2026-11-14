@@ -3,6 +3,7 @@ import { toast, update, useStore } from '../store';
 import type { Chart, Dashboard, DashItem, Report } from '../types';
 import CodeEditor from './CodeEditor';
 import PageBuilder from './PageBuilder';
+import { PageWizard } from './PageHelp';
 import { Btn, Check, Empty, Hero, I, LangText, Num, Row, Section, Select, ask, lbl, slug } from './ui';
 
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
@@ -14,8 +15,9 @@ function useFieldsOf(table: string) {
   return (t?.fields || []).map((f) => [f.name, lbl(f.label, f.name)] as [string, string]);
 }
 
-function ListShell<T extends { name: string; title: any }>({ kind, title, items, make, editor, all }: { kind: 'reports' | 'charts' | 'dashboards'; title: string; items: T[]; all?: T[]; make: (name: string) => T; editor: (it: T, set: (fn: (x: T) => void) => void) => React.ReactNode }) {
+function ListShell<T extends { name: string; title: any }>({ kind, title, items, make, editor, all, wizard }: { kind: 'reports' | 'charts' | 'dashboards'; title: string; items: T[]; all?: T[]; wizard?: (close: () => void, created: (name: string) => void) => React.ReactNode; make: (name: string) => T; editor: (it: T, set: (fn: (x: T) => void) => void) => React.ReactNode }) {
   const [cur, setCur] = useState(items[0]?.name || '');
+  const [wiz, setWiz] = useState(false);
   const it = items.find((x) => x.name === cur);
   const set = (fn: (x: T) => void) => update((d) => { const x = (d[kind] as unknown as T[]).find((y) => y.name === cur); if (x) fn(x); });
   const add = async () => {
@@ -32,7 +34,8 @@ function ListShell<T extends { name: string; title: any }>({ kind, title, items,
       <Hero icon={{ reports: 'file-earmark-bar-graph', charts: 'bar-chart-line', dashboards: 'speedometer2' }[kind]} title={title} chips={[
         [{ reports: 'file-earmark-bar-graph', charts: 'bar-chart-line', dashboards: 'speedometer2' }[kind], `${items.length} ${items.length === 1 && title === 'Pagine' ? 'pagina' : title.toLowerCase()}`],
         it ? ['pencil', lbl(it.title, it.name)] : null,
-      ]} actions={<Btn kind="primary" icon="plus-lg" onClick={add}>Nuovo</Btn>} />
+      ]} actions={<Btn kind="primary" icon="plus-lg" onClick={wizard ? () => setWiz(true) : add}>Nuovo</Btn>} />
+      {wiz && wizard && wizard(() => setWiz(false), (n) => { setWiz(false); setCur(n); })}
       <div className="split">
         <div className="split-list">
           {!items.length && <p className="help">Nessun elemento: usa «Nuovo».</p>}
@@ -125,6 +128,7 @@ export function DashboardsPanel({ pages }: { pages?: boolean } = {}) {
   const p = useStore((s) => s.proj)!;
   return <ListShell kind="dashboards" title={pages ? 'Pagine' : 'Dashboard'} items={p.dashboards.filter((d) => !!d.page === !!pages)} all={p.dashboards}
     make={(name) => ({ name, title: { it: name }, items: [], ...(pages ? { page: true } : {}) } as Dashboard)}
+    wizard={(close, created) => <PageWizard pages={!!pages} onClose={close} onCreated={created} />}
     editor={(d, set) => <PageBuilder d={d} set={set} />} />;
 }
 

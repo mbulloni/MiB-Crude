@@ -103,7 +103,16 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
       </div>
       <div className="pd-body">
         <div className="pd-canvas">
-          {!sections.length && <div className="pd-empty"><I n="layout-text-window" className="big" /><p>Layout automatico: tutti i campi in un unico riquadro, nell'ordine della scheda Campi.<br />Aggiungi una <b>Sezione</b> per disegnare la pagina.</p></div>}
+          {!sections.length && <div className="pd-section pd-auto">
+            <div className="pd-shead"><I n="layout-text-window" /> <b>Layout automatico</b><span className="muted small">{visible.length} campi, {cols} {cols === 1 ? 'colonna' : 'colonne'}, nell'ordine della scheda Campi</span><span className="grow" />
+              <Btn kind="primary" icon="arrows-move" disabled={readOnly} onClick={addSection}>Modifica la distribuzione</Btn></div>
+            <p className="help">Così appaiono ora i campi nella pagina. Premi <b>Modifica la distribuzione</b> per poterli spostare, ridimensionare, dividere in sezioni, schede o passi.</p>
+            <div className="pd-grid">{visible.map((f) => <div key={f.name} className="pd-tile" style={{ gridColumn: `span ${spanOf(f)}` }}>
+              <div className="pd-label">{lbl(f.label, f.name)}{f.validation?.required && <span className="req">*</span>}</div>
+              <div className={`pd-control ${f.editAs.type}`}>{page === 'view' ? <span className="muted small">{f.viewAs.type}</span> : f.editAs.type === 'checkbox' ? <I n="toggle-on" /> : f.editAs.type === 'textarea' || f.editAs.type === 'richtext' ? '' : <span className="muted small">{f.editAs.type}</span>}</div></div>)}
+              {!visible.length && <div className="pd-drop">Nessun campo visibile in questa pagina (scheda Campi).</div>}</div>
+          </div>}
+          {sections.length > 0 && !readOnly && <p className="help"><I n="lightbulb" /> Trascina un campo per spostarlo (anche in un'altra sezione) · <b>−</b> / <b>+</b> sul campo ne cambiano la larghezza · <b>✕</b> lo toglie dalla sezione e lo rimette nella tavolozza a destra · per affiancare i campi scegli 2 o 3 «Colonne» nella sezione · le frecce nell'intestazione spostano la sezione.</p>}
           {sections.map((s, si) => {
             const fields = s.fields.map((n) => visible.find((f) => f.name === n)).filter(Boolean) as Field[];
             return (
@@ -134,8 +143,8 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
           <h4>Blocchi</h4>
           <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-html' })}><I n="text-paragraph" /> Testo / HTML</div>
           <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-snippet' })}><I n="filetype-php" /> Snippet PHP</div>
-          <h4>Campi da collocare ({free.length})</h4>
-          {sections.length === 0 ? <p className="help">Prima aggiungi una sezione.</p> : free.map((f) => <div key={f.name} className="pd-pitem" draggable={!readOnly}
+          <h4>Campi da collocare ({sections.length ? free.length : 0})</h4>
+          {sections.length === 0 ? <p className="help">Layout automatico: premi «Modifica la distribuzione» per collocare i campi.</p> : free.map((f) => <div key={f.name} className="pd-pitem" draggable={!readOnly}
             onDragStart={() => setDrag({ kind: 'field', name: f.name, from: -1 })}><I n="grip-vertical" /> {lbl(f.label, f.name)}</div>)}
           {sections.length > 0 && !free.length && <p className="help">Tutti i campi sono collocati. Trascina qui un campo per toglierlo.</p>}
         </div>

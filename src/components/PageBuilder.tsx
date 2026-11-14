@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import type { Dashboard, DashItem } from '../types';
 import CodeEditor from './CodeEditor';
+import { PageGuide, PropagateDialog } from './PageHelp';
 import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
 
 const COLS = 12, ROW = 40, GAP = 12;
@@ -15,6 +16,16 @@ const KINDS: Record<string, { label: string; icon: string; w: number; h: number 
   html: { label: 'Testo', icon: 'type', w: 12, h: 4 }, code: { label: 'Codice', icon: 'code-slash', w: 6, h: 5 },
   image: { label: 'Immagine', icon: 'image', w: 4, h: 6 }, frame: { label: 'Pagina web', icon: 'window', w: 12, h: 9 },
   button: { label: 'Pulsante', icon: 'cursor', w: 3, h: 2 },
+};
+
+const HINTS: Record<string, string> = {
+  count: 'Numero grande: conteggio dei record o somma/media/minimo/massimo di un campo. Il clic apre la lista.', kpi: 'Numero grande.',
+  field: 'Valore di un campo di un record. Con «Parametro URL» il record arriva dall\'indirizzo della pagina.',
+  chart: 'Un grafico del progetto (si crea in «Grafici»). Dal JavaScript: mcPage.chart(id).', report: 'Un report del progetto (si crea in «Report»).',
+  list: 'Lista di una tabella con ricerca e paginazione; «Righe» = righe per pagina.', html: 'Testo formattato (HTML filtrato: niente script).',
+  code: 'HTML, CSS e JavaScript scritti nella pagina senza filtri. Dai al contenuto un id e usalo dal JavaScript di pagina.',
+  image: 'Immagine da un indirizzo o da un file della cartella «public/» del progetto.', frame: 'Un\'altra pagina web dentro un riquadro (alcuni siti non lo consentono).',
+  button: 'Collegamento a una pagina dell\'app (index.php?p=list&t=tabella) o a un sito.',
 };
 
 type Box = { x: number; y: number; w: number; h: number };
@@ -62,6 +73,10 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
   const p = useStore((s) => s.proj)!;
   const [tab, setTab] = useState<'layout' | 'css' | 'js'>('layout');
   const [sel, setSel] = useState('');
+  const [dlg, setDlg] = useState<'' | 'guide' | 'propagate'>('');
+  const seen = () => { try { return localStorage.getItem('mc-pb-guide') === '1'; } catch { return true; } };
+  const closeGuide = () => { try { localStorage.setItem('mc-pb-guide', '1'); } catch { /* ignore */ } setDlg(''); };
+  useEffect(() => { if (!d.items.length && !seen()) setDlg('guide'); }, [d.name]);
   const [prev, setPrev] = useState<DashItem[] | null>(null);
   const drag = useRef<Drag | null>(null);
   const canvas = useRef<HTMLDivElement>(null);
@@ -129,10 +144,13 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
     <Tabs tabs={[['layout', 'Layout', 'layout-wtf'], ['css', 'Stile (CSS)', 'palette'], ['js', 'JavaScript', 'braces']]} value={tab} onChange={setTab} />
     {tab === 'layout' && <>
       <div className="inline wrap" style={{ margin: '8px 0' }}>
+        <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
+        <Btn small icon="files" onClick={() => setDlg('propagate')}>Applica ad altre pagine</Btn><span style={{ width: 12 }} />
         {(['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button'] as Type[]).map((t) =>
           <Btn key={t} small icon={KINDS[t].icon} disabled={(t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
       </div>
       <p className="help">Trascina un blocco per spostarlo, il quadratino in basso a destra per ridimensionarlo. I blocchi non si sovrappongono: gli altri scendono.</p>
+      {!d.items.length && <p className="help"><I n="lightbulb" /> Pagina vuota: aggiungi un blocco con i pulsanti qui sopra, oppure apri la <b>Guida</b>.</p>}
       <div className="pb-wrap">
         <div className="pb-canvas" ref={canvas} style={{ gridAutoRows: ROW, gap: GAP, minHeight: rows * (ROW + GAP) }} onPointerDown={() => setSel('')}>
           {items.map((b, i) => {
@@ -149,7 +167,7 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
           })}
         </div>
         {it && <div className="pb-insp">
-          <Section title={`${(KINDS[it.type] || KINDS.html).label} · ${it.id}`}>
+          <Section title={`${(KINDS[it.type] || KINDS.html).label} · ${it.id}`} help={HINTS[it.type]}>
             {['count', 'kpi', 'list', 'field'].includes(it.type) && <Row label="Tabella"><Select value={it.table} options={tables} onChange={(v) => edit((q) => { q.table = v; if (q.type === 'field') q.field = fieldsOf(v)[0]?.[0]; })} /></Row>}
             {(it.type === 'count' || it.type === 'kpi') && <Row label="Valore"><span className="inline"><Select value={it.fn || 'count'} options={FNS} onChange={(v) => edit((q) => { q.fn = v; })} />
               {it.fn && it.fn !== 'count' && <Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} />}</span></Row>}
@@ -181,5 +199,7 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
     {tab === 'js' && <Section title="JavaScript della pagina" help="Eseguito a pagina caricata. Disponibile mcPage: mcPage.items[id].value (indicatori e campi), mcPage.el(id) (elemento del blocco), mcPage.chart(id) (Promise dell'istanza ECharts), mcPage.ready(fn).">
       <CodeEditor language="javascript" value={d.js || ''} onChange={(v) => set((x) => { x.js = v; })} height={360} /></Section>}
     <Row label="Titolo"><Check value={!d.hideTitle} onChange={(v) => set((x) => { x.hideTitle = !v; })} label="Mostra il titolo in cima alla pagina" /></Row>
+    {dlg === 'guide' && <PageGuide onClose={closeGuide} onInsertJs={(code) => set((x) => { x.js = (x.js ? x.js + '\n\n' : '') + code; })} />}
+    {dlg === 'propagate' && <PropagateDialog d={d} selected={sel} onClose={() => setDlg('')} />}
   </>;
 }
