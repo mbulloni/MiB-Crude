@@ -87,6 +87,12 @@ test.before(async () => {
   orders.api = { enabled: true, methods: ['list', 'view', 'add', 'edit', 'delete'] };
   orders.pages.list.filterPanel = true;
   orders.pages.list.inlineEdit = true;
+  // orders: free-grid layout (same blocks as the project pages): fields placed on the grid, text and image blocks, unplaced fields appended
+  orders.layout = { edit: { grid: [
+    { id: 'b1', type: 'html', x: 1, y: 1, w: 12, h: 1, card: false, html: { it: '<h5 class="mc-test-grid">Ordine</h5>' } },
+    { id: 'b2', type: 'field', field: 'status', x: 7, y: 2, w: 6, h: 2 },
+    { id: 'b3', type: 'image', x: 1, y: 2, w: 6, h: 2, url: 'img/o.png', alt: 'logo' },
+  ] }, view: { grid: [{ id: 'b1', type: 'field', field: 'total', x: 1, y: 1, w: 4, h: 2 }] } };
   // product add page in two steps
   proj.tables.find((t) => t.name === 'products').layout = { add: { sections: [{ title: { it: 'Prodotto' }, style: 'step', fields: ['name'] }, { title: { it: 'Prezzo' }, style: 'step', fields: ['price'] }] } };
   const cats = proj.tables.find((t) => t.name === 'categories');
@@ -234,6 +240,16 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.match(r.text, /data-bs-toggle="tab"[^>]*>Anagrafica/);
   assert.match(r.text, /mc-test-block/);
   assert.ok(r.text.indexOf('name="email"') < r.text.indexOf('name="name"'), 'designed field order');
+
+  // Free-grid layout: placed field in its cell, blocks rendered, unplaced fields still present.
+  r = await c.req('?p=edit&t=orders&k[id]=1');
+  assert.match(r.text, /mc-formgrid/);
+  assert.match(r.text, /mc-test-grid/);
+  assert.match(r.text, /grid-column:7 \/ span 6;grid-row:2 \/ span 2/);
+  assert.match(r.text, /src="img\/o\.png"/);
+  assert.ok(r.text.indexOf('name="status"') > 0 && r.text.includes('name="total"'), 'unplaced fields still in the form');
+  r = await c.req('?p=view&t=orders&k[id]=1');
+  assert.match(r.text, /mc-formgrid/);
 
   // Dependent lookup.
   r = await c.req('?p=lookup&t=customers&f=city_id&parent=2');

@@ -1,8 +1,9 @@
-// Page designer: sections (cards or tabs) on a 12-column grid, fields and blocks placed by drag & drop.
-import { useState } from 'react';
-import { update, useStore } from '../store';
-import type { Field, Table } from '../types';
-import { Btn, I, LangText, Select, Tabs, lbl } from './ui';
+// Page designer of a table: Modifica/Nuovo/Visualizza use the same free-grid editor as the project pages; the other pages pick fields.
+import { useEffect, useState } from 'react';
+import { toast, update, useStore } from '../store';
+import type { DashItem, Dashboard, Field, Table } from '../types';
+import PageBuilder, { FIELD_H, normalize } from './PageBuilder';
+import { Btn, Check, Modal, Row, Tabs, lbl } from './ui';
 
 type Page = 'list' | 'view' | 'add' | 'edit' | 'delete' | 'search' | 'export' | 'import' | 'print';
 const PAGES: [Page, string, string][] = [['list', 'Lista', 'list-ul'], ['view', 'Visualizza', 'eye'], ['add', 'Nuovo', 'plus-square'], ['edit', 'Modifica', 'pencil-square'], ['delete', 'Elimina', 'trash'], ['search', 'Ricerca avanzata', 'funnel'], ['export', 'Esporta', 'download'], ['import', 'Importa', 'upload'], ['print', 'Stampa', 'printer']];
@@ -13,97 +14,107 @@ const PICK_HELP: Partial<Record<Page, string>> = {
   import: 'Campi che si possono compilare importando un file.',
   print: 'Campi stampati.',
 };
-interface Block { type: 'html' | 'snippet'; html?: Record<string, string>; event?: string }
-interface Sec { title: Record<string, string>; style?: 'card' | 'tab' | 'step'; columns?: number; fields: string[]; blocks?: Block[] }
-type Drag = { kind: 'field'; name: string; from: number } | { kind: 'new-html' } | { kind: 'new-image' } | { kind: 'new-snippet' } | null;
 
-const SPANS = [3, 4, 6, 8, 12];
+type OldSec = { title: Record<string, string>; fields: string[]; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: Record<string, string>; event?: string }[] };
+
+/** Section layout (or the automatic one) of a page, laid out on the grid: one row of blocks per section, fields by their old width. */
+function toGrid(t: Table, page: string, lang: string): DashItem[] {
+  const cols = Number(t.pages[page]?.columns) || 1;
+  const visible = t.fields.filter((f) => f.show[page]);
+  const secs = ((t.layout?.[page]?.sections || []) as OldSec[]);
+  const placed = new Set(secs.flatMap((s) => s.fields));
+  const list: OldSec[] = secs.length ? [...secs, ...(visible.some((f) => !placed.has(f.name)) ? [{ title: {}, fields: visible.filter((f) => !placed.has(f.name)).map((f) => f.name) }] : [])] : [{ title: {}, fields: visible.map((f) => f.name) }];
+  const items: DashItem[] = [];
+  let y = 1, n = 0;
+  const id = () => `b${++n}`;
+  const spanOf = (f: Field, c: number) => f.layout?.[page]?.span || (['textarea', 'richtext', 'signature'].includes(f.editAs.type) ? 12 : Math.floor(12 / c));
+  for (const s of list) {
+    const title = lbl(s.title, '');
+    if (title) { items.push({ id: id(), type: 'html', x: 1, y, w: 12, h: 1, card: false, html: { [lang]: `<h5>${title.replace(/</g, '&lt;')}</h5>` } }); y += 1; }
+    for (const b of s.blocks || []) { items.push(b.type === 'html' ? { id: id(), type: 'html', x: 1, y, w: 12, h: 2, card: false, html: b.html } : { id: id(), type: 'snippet', x: 1, y, w: 12, h: 3, event: b.event }); y += b.type === 'html' ? 2 : 3; }
+    let cx = 1, rowH = 0;
+    for (const name of s.fields) {
+      const f = t.fields.find((q) => q.name === name);
+      if (!f || !f.show[page]) continue;
+      const w = Math.min(12, spanOf(f, s.columns || cols)), h = FIELD_H(f);
+      if (cx + w - 1 > 12) { y += rowH; cx = 1; rowH = 0; }
+      items.push({ id: id(), type: 'field', field: name, x: cx, y, w, h });
+      cx += w; rowH = Math.max(rowH, h);
+    }
+    y += rowH;
+  }
+  return items;
+}
+
+const LAYOUT_PAGES: [Page, string][] = [['edit', 'Modifica'], ['add', 'Nuovo'], ['view', 'Visualizza']];
+
+/** Copy the design of the current page to other pages: the table's own pages, or pages of other tables (only the fields they have). */
+function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () => void }) {
+  const p = useStore((s) => s.proj)!;
+  const [to, setTo] = useState<Record<string, boolean>>({});
+  const [mode, setMode] = useState<'replace' | 'append'>('replace');
+  const targets = p.tables.flatMap((x) => LAYOUT_PAGES.filter(([k]) => (x.name !== t.name || k !== page) && (x.pages[k]?.enabled || k === 'edit')).map(([k, l]) => ({ key: `${x.name}:${k}`, table: x, page: k, label: l })));
+  const chosen = targets.filter((x) => to[x.key]);
+  const src = (t.layout?.[page]?.grid || []) as DashItem[];
+  const apply = () => {
+    update((d) => {
+      for (const tg of chosen) {
+        const x = d.tables.find((y) => y.name === tg.table.name)!;
+        const mine = tg.table.name === t.name;
+        let items = structuredClone(src).filter((i) => i.type !== 'field' || mine || x.fields.some((f) => f.name === i.field && f.show[tg.page]));
+        if (!mine) items = items.filter((i) => i.type !== 'snippet');
+        x.layout = x.layout || {};
+        if (mode === 'replace') { x.layout[tg.page] = { grid: items }; continue; }
+        const cur = structuredClone(x.layout[tg.page]?.grid || []);
+        const have = new Set(cur.map((i) => i.id)), taken = new Set(cur.filter((i) => i.type === 'field').map((i) => i.field));
+        const base = Math.max(0, ...cur.map((i) => (i.y || 1) + (i.h || 6) - 1)), top = Math.min(1e9, ...items.map((i) => i.y || 1));
+        let n = cur.length;
+        for (const it of items) {
+          if (it.type === 'field' && taken.has(it.field)) continue;
+          do n++; while (have.has(`b${n}`));
+          it.id = `b${n}`; have.add(it.id); it.y = base + 1 + ((it.y || 1) - top);
+          cur.push(it);
+        }
+        x.layout[tg.page] = { grid: cur };
+      }
+    });
+    toast(`Design copiato su ${chosen.length} ${chosen.length === 1 ? 'pagina' : 'pagine'}`, 'ok');
+    onClose();
+  };
+  const tables = [...new Set(targets.map((x) => x.table.name))];
+  return <Modal title="Copia il design su altre pagine" onClose={onClose} footer={<><span className="grow" /><Btn onClick={onClose}>Annulla</Btn><Btn kind="primary" icon="check-lg" disabled={!chosen.length} onClick={apply}>Copia su {chosen.length}</Btn></>}>
+    <p className="help">Copia il design di «{PAGES.find(([k]) => k === page)![1]}» di {lbl(t.caption, t.name)}. Le pagine di destinazione restano indipendenti. Su altre tabelle vengono copiati solo i campi che hanno lo stesso nome (e i blocchi non-campo).</p>
+    <Row label="Pagine"><div>
+      <Check value={chosen.length === targets.length} onChange={(v) => setTo(Object.fromEntries(targets.map((x) => [x.key, v])))} label="Tutte" />
+      {tables.map((tn) => { const own = targets.filter((x) => x.table.name === tn); return <div key={tn} style={{ marginTop: 6 }}>
+        <Check value={own.every((x) => to[x.key])} onChange={(v) => setTo({ ...to, ...Object.fromEntries(own.map((x) => [x.key, v])) })} label={<b>{lbl(own[0].table.caption, tn)}{tn === t.name ? ' (questa tabella)' : ''}</b>} />
+        <div style={{ paddingLeft: 22 }}>{own.map((x) => <Check key={x.key} value={!!to[x.key]} onChange={(v) => setTo({ ...to, [x.key]: v })} label={x.label} />)}</div></div>; })}</div></Row>
+    <Row label="Come"><div>
+      <Check value={mode === 'replace'} onChange={() => setMode('replace')} label="Sostituisci il design esistente" />
+      <Check value={mode === 'append'} onChange={() => setMode('append')} label="Aggiungi in fondo (i campi già collocati non si duplicano)" /></div></Row>
+  </Modal>;
+}
 
 export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boolean }) {
   const p = useStore((s) => s.proj)!;
   const enabledPages = PAGES.filter(([k]) => t.pages[k]?.enabled || k === 'edit');
   const [pageSel, setPage] = useState<Page>('edit');
   const page: Page = enabledPages.some(([k]) => k === pageSel) ? pageSel : 'edit';
-  const [drag, setDrag] = useState<Drag>(null);
-  const [over, setOver] = useState<string>('');
-  const visible = t.fields.filter((f) => f.show[page]);
-  const sections: Sec[] = (t.layout?.[page]?.sections as Sec[]) || [];
-  const placed = new Set(sections.flatMap((s) => s.fields));
-  const free = visible.filter((f) => !placed.has(f.name));
-  const cols = Number(t.pages[page === 'view' ? 'view' : page]?.columns) || 1;
+  const grid = t.layout?.[page]?.grid;
+  const isLayout = ['edit', 'add', 'view'].includes(page);
 
-  const write = (fn: (secs: Sec[], tbl: Table) => void) => {
-    if (readOnly) return;
+  // First time on a page: the old section layout (or the automatic one) becomes grid blocks.
+  useEffect(() => {
+    if (readOnly || !isLayout || grid) return;
     update((d) => {
       const x = d.tables.find((y) => y.name === t.name)!;
+      const items = toGrid(x, page, p.project.defaultLanguage);
       x.layout = x.layout || {};
-      const secs: Sec[] = structuredClone((x.layout[page]?.sections as Sec[]) || []);
-      fn(secs, x);
-      x.layout[page] = { sections: secs as any };
+      x.layout[page] = { grid: items };
     });
-  };
-  const spanOf = (f: Field, secCols?: number) => f.layout?.[page]?.span || (['textarea', 'richtext', 'signature'].includes(f.editAs.type) ? 12 : Math.floor(12 / (secCols || cols)));
-  const setSpan = (name: string, dir: 1 | -1, secCols?: number) => write((_, x) => {
-    const f = x.fields.find((y) => y.name === name)!;
-    const cur = spanOf(f, secCols);
-    const i = Math.max(0, SPANS.findIndex((s) => s >= cur));
-    const next = SPANS[Math.min(SPANS.length - 1, Math.max(0, i + dir))];
-    f.layout = { ...(f.layout || {}), [page]: { span: next } };
-  });
-  // Drop a field into section `si` before field `before` (or at the end).
-  const dropField = (si: number, before?: string) => {
-    if (!drag) return;
-    if (drag.kind === 'field') {
-      write((secs) => {
-        for (const s of secs) s.fields = s.fields.filter((n) => n !== drag.name);
-        if (si < 0) return; // back to the palette
-        const list = secs[si].fields;
-        const at = before ? list.indexOf(before) : -1;
-        if (at >= 0) list.splice(at, 0, drag.name); else list.push(drag.name);
-      });
-    } else if (si >= 0) {
-      write((secs, x) => {
-        if (drag.kind === 'new-html') (secs[si].blocks ||= []).push({ type: 'html', html: { [p.project.defaultLanguage]: '<p>Testo</p>' } });
-        else if (drag.kind === 'new-image') (secs[si].blocks ||= []).push({ type: 'html', html: { [p.project.defaultLanguage]: '<p><img src="https://" alt="" style="max-width:100%"></p>' } });
-        else {
-          let n = 1;
-          const evs = p.events[t.name] || {};
-          while (evs[`Snippet_blocco${n}`]) n++;
-          const ev = `Snippet_blocco${n}`;
-          (secs[si].blocks ||= []).push({ type: 'snippet', event: ev });
-          void x;
-          setTimeout(() => update((d) => { d.events[t.name] = { ...(d.events[t.name] || {}), [ev]: "<?php\n// Codice PHP mostrato nella pagina ($page = add, edit o view)\necho '<div class=\"alert alert-info\">Blocco personalizzato</div>';\nreturn true;\n" }; }), 0);
-        }
-      });
-    }
-    setDrag(null);
-    setOver('');
-  };
-  const addSection = () => write((secs) => {
-    // First section: take the fields that are currently auto-placed.
-    // New sections go on top, so they are visible without scrolling.
-    secs.unshift({ title: { [p.project.defaultLanguage]: secs.length ? `Sezione ${secs.length + 1}` : 'Dati' }, style: 'card', fields: secs.length ? [] : visible.map((f) => f.name) });
-  });
+  }, [t.name, page, !!grid]);
 
-  const Tile = ({ f, si, secCols }: { f: Field; si: number; secCols?: number }) => {
-    const span = spanOf(f, secCols);
-    return (
-      <div className={`pd-tile ${over === `${si}:${f.name}` ? 'over' : ''}`} style={{ gridColumn: `span ${span}` }} draggable={!readOnly}
-        onDragStart={(e) => { e.dataTransfer.setData('text/plain', f.name); setDrag({ kind: 'field', name: f.name, from: si }); }}
-        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setOver(`${si}:${f.name}`); }}
-        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); dropField(si, f.name); }}>
-        <div className="pd-label">{lbl(f.label, f.name)}{f.validation?.required && <span className="req">*</span>}</div>
-        <div className={`pd-control ${f.editAs.type}`}>{page === 'view' ? <span className="muted small">{f.viewAs.type}</span> : f.editAs.type === 'checkbox' ? <I n="toggle-on" /> : f.editAs.type === 'textarea' || f.editAs.type === 'richtext' ? '' : <span className="muted small">{f.editAs.type}</span>}</div>
-        {!readOnly && <div className="pd-tools">
-          <button type="button" title="Più stretto" onClick={() => setSpan(f.name, -1, secCols)}><I n="dash" /></button>
-          <span>{span}/12</span>
-          <button type="button" title="Più largo" onClick={() => setSpan(f.name, 1, secCols)}><I n="plus" /></button>
-          <button type="button" title="Togli dalla sezione" onClick={() => write((secs) => { secs[si].fields = secs[si].fields.filter((n) => n !== f.name); })}><I n="x" /></button>
-        </div>}
-      </div>
-    );
-  };
-
+  const [copy, setCopy] = useState(false);
   const tabs = <Tabs value={page} onChange={setPage} tabs={enabledPages} />;
   if (!['edit', 'add', 'view'].includes(page)) {
     const pickable = page !== 'delete';
@@ -125,66 +136,25 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
       </div>
     );
   }
+  const dash: Dashboard = { name: `${t.name}:${page}`, title: {}, items: grid || [] };
+  const set = (fn: (x: Dashboard) => void) => {
+    if (readOnly) return;
+    update((d) => {
+      const x = d.tables.find((y) => y.name === t.name)!;
+      const tmp: Dashboard = { name: dash.name, title: {}, items: structuredClone(x.layout?.[page]?.grid || []) };
+      fn(tmp);
+      normalize(tmp);
+      x.layout = x.layout || {};
+      x.layout[page] = { grid: tmp.items };
+    });
+  };
   return (
     <div className="pd">
-      <div className="inline wrap">
-        {tabs}
-        <span className="grow" />
-        <Btn icon="plus-lg" onClick={addSection} disabled={readOnly}>Sezione</Btn>
-        {sections.length > 0 && <Btn kind="ghost" icon="arrow-counterclockwise" disabled={readOnly} onClick={() => { if (confirm('Tornare al layout automatico?')) write((secs) => { secs.length = 0; }); }}>Layout automatico</Btn>}
-        {page !== 'edit' && sections.length === 0 && (t.layout?.edit?.sections?.length || 0) > 0 && <Btn icon="copy" onClick={() => write((secs) => { secs.push(...structuredClone(t.layout!.edit.sections as Sec[])); })}>Copia da Modifica</Btn>}
-      </div>
-      <div className="pd-body">
-        <div className="pd-canvas">
-          {!sections.length && <div className="pd-section pd-auto">
-            <div className="pd-shead"><I n="layout-text-window" /> <b>Layout automatico</b><span className="muted small">{visible.length} campi, {cols} {cols === 1 ? 'colonna' : 'colonne'}, nell'ordine della scheda Campi</span><span className="grow" />
-              <Btn kind="primary" icon="arrows-move" disabled={readOnly} onClick={addSection}>Modifica la distribuzione</Btn></div>
-            <p className="help">Così appaiono ora i campi nella pagina. Premi <b>Modifica la distribuzione</b> per poterli spostare, ridimensionare, dividere in sezioni, schede o passi.</p>
-            <div className="pd-grid">{visible.map((f) => <div key={f.name} className="pd-tile" style={{ gridColumn: `span ${spanOf(f)}` }}>
-              <div className="pd-label">{lbl(f.label, f.name)}{f.validation?.required && <span className="req">*</span>}</div>
-              <div className={`pd-control ${f.editAs.type}`}>{page === 'view' ? <span className="muted small">{f.viewAs.type}</span> : f.editAs.type === 'checkbox' ? <I n="toggle-on" /> : f.editAs.type === 'textarea' || f.editAs.type === 'richtext' ? '' : <span className="muted small">{f.editAs.type}</span>}</div></div>)}
-              {!visible.length && <div className="pd-drop">Nessun campo visibile in questa pagina (scheda Campi).</div>}</div>
-          </div>}
-          {sections.length > 0 && !readOnly && <p className="help"><I n="lightbulb" /> Trascina un campo per spostarlo (anche in un'altra sezione) · <b>−</b> / <b>+</b> sul campo ne cambiano la larghezza · <b>✕</b> lo toglie dalla sezione e lo rimette nella tavolozza a destra · per affiancare i campi scegli 2 o 3 «Colonne» nella sezione · le frecce nell'intestazione spostano la sezione.</p>}
-          {sections.map((s, si) => {
-            const fields = s.fields.map((n) => visible.find((f) => f.name === n)).filter(Boolean) as Field[];
-            return (
-              <div key={si} className={`pd-section ${s.style === 'tab' ? 'tab' : ''} ${over === `${si}:` ? 'over' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setOver(`${si}:`); }} onDrop={(e) => { e.preventDefault(); dropField(si); }}>
-                <div className="pd-shead">
-                  <I n={s.style === 'tab' ? 'folder2' : s.style === 'step' ? 'signpost-split' : 'card-heading'} />
-                  <LangText value={s.title} onChange={(v) => write((secs) => { secs[si].title = v; })} />
-                  <Select value={s.style || 'card'} options={[['card', 'Riquadro'], ['tab', 'Scheda'], ['step', 'Passo (Avanti/Indietro)']]} onChange={(v) => write((secs) => { secs[si].style = v as any; })} />
-                  <Select value={String(s.columns || '')} options={[['', `Colonne: ${cols}`], ['1', '1 colonna'], ['2', '2 colonne'], ['3', '3 colonne'], ['4', '4 colonne']]} onChange={(v) => write((secs) => { secs[si].columns = v ? Number(v) : undefined; })} />
-                  <Btn small kind="ghost" icon="chevron-up" title="Sposta su" onClick={() => write((secs) => { if (si > 0) [secs[si - 1], secs[si]] = [secs[si], secs[si - 1]]; })} />
-                  <Btn small kind="ghost" icon="chevron-down" title="Sposta giù" onClick={() => write((secs) => { if (si < secs.length - 1) [secs[si + 1], secs[si]] = [secs[si], secs[si + 1]]; })} />
-                  <Btn small kind="ghost" icon="trash" title="Elimina sezione (i campi tornano nella tavolozza)" onClick={() => write((secs) => { secs.splice(si, 1); })} />
-                </div>
-                {(s.blocks || []).map((b, bi) => <div key={bi} className="pd-block">
-                  {b.type === 'html' ? <>
-                    <div className="pd-preview" dangerouslySetInnerHTML={{ __html: lbl(b.html as any, '') }} />
-                    <LangText multiline value={b.html} onChange={(v) => write((secs) => { secs[si].blocks![bi].html = v; })} /></> 
-                    : <div className="inline"><I n="filetype-php" /> <b>{b.event}</b><span className="muted small">codice PHP nella scheda Eventi</span>
-                      <Btn small onClick={() => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'events' } })}>Apri</Btn></div>}
-                  <Btn small kind="ghost" icon="x-lg" onClick={() => write((secs) => { secs[si].blocks!.splice(bi, 1); })} />
-                </div>)}
-                <div className="pd-grid">{fields.map((f) => <Tile key={f.name} f={f} si={si} secCols={s.columns} />)}
-                  {!fields.length && <div className="pd-drop">Trascina qui i campi</div>}</div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="pd-palette" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); dropField(-1); }}>
-          <h4>Blocchi</h4>
-          <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-html' })}><I n="text-paragraph" /> Testo / HTML</div>
-          <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-image' })}><I n="image" /> Immagine</div>
-          <div className="pd-pitem" draggable={!readOnly} onDragStart={() => setDrag({ kind: 'new-snippet' })}><I n="filetype-php" /> Snippet PHP</div>
-          <h4>Campi da collocare ({sections.length ? free.length : 0})</h4>
-          {sections.length === 0 ? <p className="help">Layout automatico: premi «Modifica la distribuzione» per collocare i campi.</p> : free.map((f) => <div key={f.name} className="pd-pitem" draggable={!readOnly}
-            onDragStart={() => setDrag({ kind: 'field', name: f.name, from: -1 })}><I n="grip-vertical" /> {lbl(f.label, f.name)}</div>)}
-          {sections.length > 0 && !free.length && <p className="help">Tutti i campi sono collocati. Trascina qui un campo per toglierlo.</p>}
-        </div>
-      </div>
+      <div className="inline wrap">{tabs}<span className="grow" />
+        {!readOnly && <Btn small icon="files" onClick={() => setCopy(true)}>Copia su altre pagine</Btn>}
+        {!readOnly && <Btn small kind="ghost" icon="arrow-counterclockwise" onClick={() => { if (confirm('Rimettere tutti i campi nella disposizione automatica?')) update((d) => { const x = d.tables.find((y) => y.name === t.name)!; if (x.layout) delete x.layout[page]; }); }}>Disposizione automatica</Btn>}</div>
+      {copy && <CopyDesign t={t} page={page} onClose={() => setCopy(false)} />}
+      <PageBuilder d={dash} set={set} ctx={{ table: t, page, readOnly, onSnippet: () => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'events' } }) }} />
     </div>
   );
 }

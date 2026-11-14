@@ -1,12 +1,13 @@
 // Free-layout editor for dashboards and pages: blocks dragged and resized on a 12-column grid (rows of 40px).
 import { useEffect, useRef, useState } from 'react';
-import { useStore } from '../store';
-import type { Dashboard, DashItem } from '../types';
+import { update, useStore } from '../store';
+import type { Dashboard, DashItem, Table } from '../types';
 import CodeEditor from './CodeEditor';
 import { PageGuide, PropagateDialog } from './PageHelp';
 import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
 
 const COLS = 12, ROW = 40, GAP = 12;
+export const FIELD_H = (f: { editAs: { type: string } }) => (f.editAs.type === 'richtext' ? 6 : f.editAs.type === 'textarea' ? 4 : 2);
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
 type Type = DashItem['type'];
 const KINDS: Record<string, { label: string; icon: string; w: number; h: number }> = {
@@ -15,7 +16,7 @@ const KINDS: Record<string, { label: string; icon: string; w: number; h: number 
   report: { label: 'Report', icon: 'file-earmark-bar-graph', w: 12, h: 9 }, list: { label: 'Tabella', icon: 'table', w: 6, h: 9 },
   html: { label: 'Testo', icon: 'type', w: 12, h: 4 }, code: { label: 'Codice', icon: 'code-slash', w: 6, h: 5 },
   image: { label: 'Immagine', icon: 'image', w: 4, h: 6 }, frame: { label: 'Pagina web', icon: 'window', w: 12, h: 9 },
-  button: { label: 'Pulsante', icon: 'cursor', w: 3, h: 2 },
+  button: { label: 'Pulsante', icon: 'cursor', w: 3, h: 2 }, snippet: { label: 'Snippet PHP', icon: 'filetype-php', w: 12, h: 3 },
 };
 
 const HINTS: Record<string, string> = {
@@ -69,14 +70,17 @@ export function normalize(d: Dashboard): boolean {
 
 type Drag = { i: number; mode: 'move' | 'resize'; x0: number; y0: number; orig: Box };
 
-export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void }) {
+/** Table page mode: same editor, blocks plus the editable fields of the table (no CSS/JS tabs, no other-page propagation). */
+export interface TableCtx { table: Table; page: string; readOnly?: boolean; onSnippet: () => void }
+
+export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void; ctx?: TableCtx }) {
   const p = useStore((s) => s.proj)!;
   const [tab, setTab] = useState<'layout' | 'css' | 'js'>('layout');
   const [sel, setSel] = useState('');
   const [dlg, setDlg] = useState<'' | 'guide' | 'propagate'>('');
   const seen = () => { try { return localStorage.getItem('mc-pb-guide') === '1'; } catch { return true; } };
   const closeGuide = () => { try { localStorage.setItem('mc-pb-guide', '1'); } catch { /* ignore */ } setDlg(''); };
-  useEffect(() => { if (!d.items.length && !seen()) setDlg('guide'); }, [d.name]);
+  useEffect(() => { if (!ctx && !d.items.length && !seen()) setDlg('guide'); }, [d.name]);
   const [prev, setPrev] = useState<DashItem[] | null>(null);
   const drag = useRef<Drag | null>(null);
   const canvas = useRef<HTMLDivElement>(null);
@@ -96,12 +100,17 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
     const it: DashItem = { id: `b${n}`, type, x: 1, y: Math.max(0, ...x.items.map((i) => (i.y || 1) + (i.h || 6) - 1)) + 1, w: k.w, h: k.h };
     if (type === 'count') it.table = p.tables[0]?.name;
     if (type === 'list') { it.table = p.tables[0]?.name; it.rows = 10; }
-    if (type === 'field') { it.table = p.tables[0]?.name; it.field = p.tables[0]?.fields[0]?.name; it.record = { mode: 'first' }; }
+    if (type === 'field' && ctx) {
+      const free = ctx.table.fields.find((f) => f.show[ctx.page] && !x.items.some((q) => q.type === 'field' && q.field === f.name));
+      if (!free) return;
+      it.field = free.name; it.w = 6; it.h = FIELD_H(free);
+    } else if (type === 'field') { it.table = p.tables[0]?.name; it.field = p.tables[0]?.fields[0]?.name; it.record = { mode: 'first' }; }
     if (type === 'chart') it.ref = p.charts[0]?.name;
     if (type === 'report') it.ref = p.reports[0]?.name;
     if (type === 'html') it.html = { it: '<p>Testo</p>' };
     if (type === 'code') it.code = '<div id="mio-blocco">Ciao</div>';
     if (type === 'button') it.title = { it: 'Apri' };
+    if (type === 'snippet') { let k = 1; const evs = p.events[ctx!.table.name] || {}; while (evs[`Snippet_blocco${k}`]) k++; it.event = `Snippet_blocco${k}`; setTimeout(() => update((q) => { q.events[ctx!.table.name] = { ...(q.events[ctx!.table.name] || {}), [it.event!]: "<?php\n// Codice PHP mostrato nella pagina\necho '<div class=\"alert alert-info\">Blocco personalizzato</div>';\nreturn true;\n" }; }), 0); }
     x.items.push(it); setSel(it.id!);
   });
 
@@ -128,7 +137,8 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
   const summary = (it: DashItem) => {
     switch (it.type) {
       case 'count': case 'kpi': return `${lbl(p.tables.find((t) => t.name === it.table)?.caption, it.table || '')} · ${it.fn || 'count'}${it.field ? ' ' + it.field : ''}`;
-      case 'field': return `${it.table || ''}.${it.field || ''}`;
+      case 'field': return ctx ? lbl(ctx.table.fields.find((f) => f.name === it.field)?.label, it.field || '') : `${it.table || ''}.${it.field || ''}`;
+      case 'snippet': return it.event || '';
       case 'list': return it.table || '';
       case 'chart': case 'report': return it.ref || '';
       case 'html': return lbl(it.html).replace(/<[^>]+>/g, ' ').slice(0, 60);
@@ -137,17 +147,31 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
     }
     return '';
   };
+  const unplaced = ctx ? ctx.table.fields.filter((f) => f.show[ctx.page] && !d.items.some((q) => q.type === 'field' && q.field === f.name)) : [];
+  const addAllFields = () => set((x) => {
+    let y = Math.max(0, ...x.items.map((i) => (i.y || 1) + (i.h || 6) - 1)) + 1, cx = 1, rowH = 0, n = x.items.length + 1;
+    const ids = new Set(x.items.map((i) => i.id));
+    for (const f of unplaced) {
+      const w = FIELD_H(f) > 2 ? 12 : 6, h = FIELD_H(f);
+      if (cx + w - 1 > COLS) { y += rowH; cx = 1; rowH = 0; }
+      while (ids.has(`b${n}`)) n++;
+      ids.add(`b${n}`);
+      x.items.push({ id: `b${n}`, type: 'field', field: f.name, x: cx, y, w, h });
+      cx += w; rowH = Math.max(rowH, h);
+    }
+  });
   const rows = Math.max(8, ...items.map((i) => (i.y || 1) + (i.h || 6))) + 2;
   const it = d.items[cur];
 
   return <>
-    <Tabs tabs={[['layout', 'Layout', 'layout-wtf'], ['css', 'Stile (CSS)', 'palette'], ['js', 'JavaScript', 'braces']]} value={tab} onChange={setTab} />
+    {!ctx && <Tabs tabs={[['layout', 'Layout', 'layout-wtf'], ['css', 'Stile (CSS)', 'palette'], ['js', 'JavaScript', 'braces']]} value={tab} onChange={setTab} />}
     {tab === 'layout' && <>
       <div className="inline wrap" style={{ margin: '8px 0' }}>
-        <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
-        <Btn small icon="files" onClick={() => setDlg('propagate')}>Applica ad altre pagine</Btn><span style={{ width: 12 }} />
-        {(['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button'] as Type[]).map((t) =>
-          <Btn key={t} small icon={KINDS[t].icon} disabled={(t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
+        {!ctx && <><Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
+        <Btn small icon="files" onClick={() => setDlg('propagate')}>Applica ad altre pagine</Btn><span style={{ width: 12 }} /></>}
+        {((ctx ? ['field', 'html', 'image', 'code', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
+          <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || (t === 'field' && !!ctx && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
+        {ctx && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>
       <p className="help">Trascina un blocco per spostarlo, il quadratino in basso a destra per ridimensionarlo. I blocchi non si sovrappongono: gli altri scendono.</p>
       {!d.items.length && <p className="help"><I n="lightbulb" /> Pagina vuota: aggiungi un blocco con i pulsanti qui sopra, oppure apri la <b>Guida</b>.</p>}
@@ -168,10 +192,13 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
         </div>
         {it && <div className="pb-insp">
           <Section title={`${(KINDS[it.type] || KINDS.html).label} · ${it.id}`} help={HINTS[it.type]}>
-            {['count', 'kpi', 'list', 'field'].includes(it.type) && <Row label="Tabella"><Select value={it.table} options={tables} onChange={(v) => edit((q) => { q.table = v; if (q.type === 'field') q.field = fieldsOf(v)[0]?.[0]; })} /></Row>}
+            {['count', 'kpi', 'list', 'field'].includes(it.type) && !ctx && <Row label="Tabella"><Select value={it.table} options={tables} onChange={(v) => edit((q) => { q.table = v; if (q.type === 'field') q.field = fieldsOf(v)[0]?.[0]; })} /></Row>}
             {(it.type === 'count' || it.type === 'kpi') && <Row label="Valore"><span className="inline"><Select value={it.fn || 'count'} options={FNS} onChange={(v) => edit((q) => { q.fn = v; })} />
               {it.fn && it.fn !== 'count' && <Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} />}</span></Row>}
-            {it.type === 'field' && <>
+            {it.type === 'field' && ctx && <Row label="Campo" hint="Campo editabile (Modifica/Nuovo) o in sola lettura (Visualizza) di questa tabella.">
+              <Select value={it.field} options={ctx.table.fields.filter((f) => f.name === it.field || (f.show[ctx.page] && !d.items.some((q) => q.type === 'field' && q.field === f.name))).map((f) => [f.name, lbl(f.label, f.name)] as [string, string])} onChange={(v) => edit((q) => { q.field = v; })} /></Row>}
+            {it.type === 'snippet' && <Row label="Evento" hint="Il codice PHP del blocco è nella scheda Eventi."><span className="inline"><b>{it.event}</b><Btn small onClick={ctx!.onSnippet}>Apri</Btn></span></Row>}
+            {it.type === 'field' && !ctx && <>
               <Row label="Campo"><Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} /></Row>
               <Row label="Record" hint="Chiave singola. «Parametro URL»: il valore arriva da index.php?p=dashboard&d=…&NOME=…"><span className="inline">
                 <Select value={it.record?.mode || 'first'} options={[['first', 'Primo'], ['last', 'Ultimo'], ['key', 'Chiave fissa'], ['param', 'Parametro URL']]} onChange={(v) => edit((q) => { q.record = { mode: v as any, value: q.record?.value }; })} />
@@ -186,7 +213,7 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
             {it.type === 'image' && <Row label="Testo alternativo"><Text value={it.alt} onChange={(v) => edit((q) => { q.alt = v; })} /></Row>}
             {it.type === 'button' && <><Row label="Icona" hint="Nome Bootstrap Icons, es. arrow-right"><Text value={it.icon} onChange={(v) => edit((q) => { q.icon = v; })} /></Row>
               <Row label="Apri"><Check value={it.newWindow} onChange={(v) => edit((q) => { q.newWindow = v; })} label="In una nuova scheda" /></Row></>}
-            {it.type !== 'code' && it.type !== 'image' && it.type !== 'frame' && <Row label={it.type === 'button' ? 'Etichetta' : 'Titolo'}><LangText value={it.title} onChange={(v) => edit((q) => { q.title = v; })} /></Row>}
+            {it.type !== 'code' && it.type !== 'image' && it.type !== 'frame' && it.type !== 'snippet' && !(it.type === 'field' && ctx) && <Row label={it.type === 'button' ? 'Etichetta' : 'Titolo'}><LangText value={it.title} onChange={(v) => edit((q) => { q.title = v; })} /></Row>}
             {['html', 'code', 'image'].includes(it.type) && <Row label="Stile CSS" hint="Es. background:#eef; padding:12px"><Text value={it.style} mono onChange={(v) => edit((q) => { q.style = v; })} /></Row>}
             <Row label="Posizione"><span className="inline">
               {(['x', 'y', 'w', 'h'] as const).map((k) => <span key={k} className="inline">{{ x: 'Col', y: 'Riga', w: 'Largh.', h: 'Alt.' }[k]} <Num value={it[k]} min={1} max={k === 'y' || k === 'h' ? 200 : COLS} onChange={(v) => edit((q) => { q[k] = Number(v) || 1; })} /></span>)}</span></Row>
@@ -198,8 +225,8 @@ export default function PageBuilder({ d, set }: { d: Dashboard; set: (fn: (x: Da
       <CodeEditor language="css" value={d.css || ''} onChange={(v) => set((x) => { x.css = v; })} height={360} /></Section>}
     {tab === 'js' && <Section title="JavaScript della pagina" help="Eseguito a pagina caricata. Disponibile mcPage: mcPage.items[id].value (indicatori e campi), mcPage.el(id) (elemento del blocco), mcPage.chart(id) (Promise dell'istanza ECharts), mcPage.ready(fn).">
       <CodeEditor language="javascript" value={d.js || ''} onChange={(v) => set((x) => { x.js = v; })} height={360} /></Section>}
-    <Row label="Titolo"><Check value={!d.hideTitle} onChange={(v) => set((x) => { x.hideTitle = !v; })} label="Mostra il titolo in cima alla pagina" /></Row>
-    {dlg === 'guide' && <PageGuide onClose={closeGuide} onInsertJs={(code) => set((x) => { x.js = (x.js ? x.js + '\n\n' : '') + code; })} />}
+    {!ctx && <Row label="Titolo"><Check value={!d.hideTitle} onChange={(v) => set((x) => { x.hideTitle = !v; })} label="Mostra il titolo in cima alla pagina" /></Row>}
+    {!ctx && dlg === 'guide' && <PageGuide onClose={closeGuide} onInsertJs={(code) => set((x) => { x.js = (x.js ? x.js + '\n\n' : '') + code; })} />}
     {dlg === 'propagate' && <PropagateDialog d={d} selected={sel} onClose={() => setDlg('')} />}
   </>;
 }

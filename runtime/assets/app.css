@@ -123,3 +123,6 @@ td.mc-saved { background: color-mix(in srgb, var(--bs-success) 18%, transparent)
 .mc-cell > .mc-code { overflow: auto; }
 @media (max-width: 767px) { .mc-grid { grid-auto-rows: auto; } .mc-cell { grid-column: 1 / -1 !important; grid-row: auto !important; min-height: 120px; } .mc-cell:has(.mc-chart-box) { min-height: 280px; } }
 .mc-cell .mc-kpi .display-6 { font-size: clamp(1.3rem, 2.4vw, 2rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.mc-formgrid { grid-auto-rows: minmax(40px, auto); }
+.mc-formgrid .mc-cell { overflow: visible; }

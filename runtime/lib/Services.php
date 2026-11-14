@@ -269,6 +269,38 @@ class Layout
         return $out;
     }
 
+    /** Free grid of the page designer (same blocks as the project pages): items with x/y/w/h on 12 columns, or null for the section layout. */
+    public static function grid(Table $t, $page)
+    {
+        $g = isset($t->def['layout'][$page]['grid']) ? $t->def['layout'][$page]['grid'] : null;
+        return is_array($g) && $g ? array_values($g) : null;
+    }
+
+    public static function cellStyle(array $it)
+    {
+        return 'grid-column:' . max(1, min(12, (int)(isset($it['x']) ? $it['x'] : 1))) . ' / span ' . max(1, min(12, (int)(isset($it['w']) ? $it['w'] : 12)))
+            . ';grid-row:' . max(1, (int)(isset($it['y']) ? $it['y'] : 1)) . ' / span ' . max(1, (int)(isset($it['h']) ? $it['h'] : 2));
+    }
+
+    /** Non-field blocks of a table page grid. */
+    public static function gridBlock(Table $t, array $it, $page)
+    {
+        $style = !empty($it['style']) ? ' style="' . h($it['style']) . '"' : '';
+        switch (isset($it['type']) ? $it['type'] : '') {
+            case 'html': return '<div class="h-100"' . $style . '>' . Sanitizer::clean($t->app->label(isset($it['html']) ? $it['html'] : '')) . '</div>';
+            case 'code': return '<div class="mc-code h-100"' . $style . '>' . (isset($it['code']) ? $it['code'] : '') . '</div>';
+            case 'image': return '<img class="mc-img" src="' . h(isset($it['url']) ? $it['url'] : '') . '" alt="' . h(isset($it['alt']) ? $it['alt'] : '') . '"' . $style . '>';
+            case 'frame': return '<iframe class="mc-embed" style="height:100%;min-height:120px" src="' . h(isset($it['url']) ? $it['url'] : '') . '"></iframe>';
+            case 'button':
+                $u = isset($it['url']) ? (string)$it['url'] : '#';
+                if (preg_match('/^\s*(javascript|vbscript|data):/i', $u)) $u = '#';
+                return '<a class="btn btn-primary w-100 h-100 d-flex align-items-center justify-content-center gap-2" href="' . h($u) . '"' . (!empty($it['newWindow']) ? ' target="_blank" rel="noopener"' : '') . '>'
+                    . (!empty($it['icon']) ? '<i class="bi bi-' . h($it['icon']) . '"></i>' : '') . h($t->app->label(isset($it['title']) ? $it['title'] : '', '')) . '</a>';
+            case 'snippet': return self::block($t, ['type' => 'snippet', 'event' => isset($it['event']) ? $it['event'] : ''], $page);
+        }
+        return '';
+    }
+
     /** Free blocks of the page designer: HTML text or a PHP snippet event. */
     public static function block(Table $t, array $b, $page)
     {

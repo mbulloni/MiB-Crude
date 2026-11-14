@@ -4,7 +4,8 @@ $sec = $app->security;
 $qs = ['t' => $t->name, 'k' => $keys];
 if ($master) $qs = array_merge($qs, $master['qs']);
 $fields = $t->fields('view');
-$sections = \MiB\Layout::sections($t, 'view', $fields);
+$grid = \MiB\Layout::grid($t, 'view');
+$sections = $grid ? [] : \MiB\Layout::sections($t, 'view', $fields);
 ?>
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3 mc-pagehead">
   <h1 class="h4 m-0 me-2"><?= h($t->caption()) ?></h1>
@@ -20,6 +21,18 @@ $sections = \MiB\Layout::sections($t, 'view', $fields);
   <?php if ($t->enabled('export') && in_array('pdf', $t->def['pages']['export']['formats'], true) && $sec->can($t->name, 'P')): ?><a class="btn btn-outline-secondary btn-sm" target="_blank" href="<?= h($app->url('pdf', $qs)) ?>"><i class="bi bi-filetype-pdf"></i> PDF</a><?php endif ?>
   <a class="btn btn-link btn-sm ms-auto" href="<?= h($master ? $app->url('list', array_merge(['t' => $t->name], $master['qs'])) : $app->url('list', ['t' => $t->name])) ?>"><i class="bi bi-arrow-left"></i> <?= h(t('btn.back')) ?></a>
 </div>
+<?php if ($grid): $placed = []; $byName = []; foreach ($fields as $f) $byName[$f['name']] = $f; ?>
+<div class="mc-grid mc-formgrid mb-3">
+<?php foreach ($grid as $it): $cs = \MiB\Layout::cellStyle($it); ?>
+  <?php if (($it['type'] ?? '') === 'field'): $f = isset($it['field'], $byName[$it['field']]) ? $byName[$it['field']] : null; if (!$f) continue; $placed[$f['name']] = 1; ?>
+  <div class="mc-cell" data-block="<?= h(isset($it['id']) ? $it['id'] : '') ?>" style="<?= h($cs) ?>"><div class="text-secondary small"><?= h($t->fieldLabel($f)) ?></div><div class="mc-view-value"><?= \MiB\Format::html($t, $f, $row, 'view') ?></div></div>
+  <?php else: ?><div class="mc-cell" data-block="<?= h(isset($it['id']) ? $it['id'] : '') ?>" style="<?= h($cs) ?>"><?= \MiB\Layout::gridBlock($t, $it, 'view') ?></div><?php endif ?>
+<?php endforeach ?>
+</div>
+<?php $rest = array_filter($fields, function ($f) use ($placed) { return !isset($placed[$f['name']]); });
+if ($rest): ?><div class="card mb-3"><div class="card-body mc-scroll-x"><dl class="row mb-0 mc-view"><?php foreach ($rest as $f): ?>
+  <dt class="col-sm-4 col-lg-3 text-secondary fw-normal"><?= h($t->fieldLabel($f)) ?></dt><dd class="col-sm-8 col-lg-9"><?= \MiB\Format::html($t, $f, $row, 'view') ?></dd><?php endforeach ?></dl></div></div><?php endif ?>
+<?php endif ?>
 <?php foreach ($sections as $s): ?>
 <div class="card mb-3">
   <?php if ($s['title'] !== ''): ?><div class="card-header fw-semibold"><?= h($s['title']) ?></div><?php endif ?>

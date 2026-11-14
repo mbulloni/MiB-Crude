@@ -352,3 +352,6 @@ Per l'utente finale:
   - utenti (con sblocco, azzeramento della verifica in due passaggi, telefono);
   - **Accedi come**: l'icona con gli occhiali usa l'app con i permessi di quell'utente; *Torna a…* nell'intestazione riporta all'amministratore; inizio e fine finiscono nel registro;
   - gruppi e permessi (se dinamici), registro attività, notifiche, attività pianificate, utenti e permessi Windows (accesso NTLM).
+
+## Design delle pagine di una tabella
+Tabella › Designer pagine: una scheda per ogni pagina attiva. Modifica, Nuovo e Visualizza si disegnano con lo stesso editor a griglia delle pagine del progetto (trascina e ridimensiona i blocchi; blocchi Campo, Testo, Immagine, Codice, Pagina web, Pulsante, Snippet PHP). **Copia su altre pagine** applica il design alle pagine che scegli (tutte o alcune, anche di altre tabelle). Le altre pagine (Lista, Ricerca, Esporta, Importa, Stampa) scelgono i campi.

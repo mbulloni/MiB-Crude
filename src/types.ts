@@ -26,7 +26,7 @@ export interface Table {
   name: string; connection: string; source: { type: 'table' | 'sql' | 'rest' | 'proc'; table?: string; sql?: string; procedure?: string; params?: ProcParam[]; write?: Partial<Record<'insert' | 'update' | 'delete', { procedure?: string; params?: { name: string; from?: string; value?: string }[] }>>; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
-  layout?: Record<string, { sections: { title: L; fields: string[]; style?: 'card' | 'tab'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;
+  layout?: Record<string, { grid?: DashItem[]; sections?: { title: L; fields: string[]; style?: 'card' | 'tab' | 'step'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;
   buttons?: { id: string; label: L; icon?: string; pages: string[]; row?: boolean }[];
 }
 export interface MenuItem { type: 'table' | 'group' | 'link' | 'report' | 'chart' | 'dashboard' | 'separator' | 'header'; table?: string; page?: string; ref?: string; url?: string; label?: L; icon?: string; items?: MenuItem[]; newWindow?: boolean }
@@ -45,11 +45,11 @@ export interface Security {
 export interface Report { name: string; title: L; table: string; groups: { field: string; interval?: string; desc?: boolean }[]; aggregates: { field: string; fn: string }[]; columns: string[]; showDetails: boolean; crosstab?: { field: string; interval?: string; desc?: boolean } }
 export interface Chart { name: string; title: L; table: string; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean; modifyJs?: string }
 export interface DashItem {
-  type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field';
+  type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field' | 'snippet';
   id?: string; table?: string; ref?: string; field?: string; fn?: string; width?: number; height?: number; rows?: number; title?: L; html?: L;
   // free layout on the 12-column grid (x, w in columns; y, h in rows of 40px)
   x?: number; y?: number; w?: number; h?: number;
-  card?: boolean; style?: string; code?: string; url?: string; alt?: string; newWindow?: boolean; icon?: string;
+  event?: string; card?: boolean; style?: string; code?: string; url?: string; alt?: string; newWindow?: boolean; icon?: string;
   // "field" block: record by fixed key, URL parameter or first/last
   record?: { mode: 'key' | 'param' | 'first' | 'last'; value?: string };
 }

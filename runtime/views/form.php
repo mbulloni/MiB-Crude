@@ -8,7 +8,8 @@ if (!empty($_GET['popup'])) $qs['popup'] = 1;
 $fields = $t->fields($mode);
 $pageCfg = $t->page($mode);
 $cols = isset($pageCfg['columns']) ? max(1, min(4, (int)$pageCfg['columns'])) : 1;
-$sections = \MiB\Layout::sections($t, $mode, $fields);
+$grid = \MiB\Layout::grid($t, $mode);
+$sections = $grid ? [] : \MiB\Layout::sections($t, $mode, $fields);
 $hasFiles = false;
 foreach ($fields as $f) if (in_array($f['editAs']['type'], ['file', 'image'], true)) $hasFiles = true;
 $cancel = $master ? $app->url('view', ['t' => $master['table']->name, 'k' => $master['keys']]) : $app->url('list', ['t' => $t->name]);
@@ -21,6 +22,28 @@ $cancel = $master ? $app->url('view', ['t' => $master['table']->name, 'k' => $ma
 <?php if ($errors): ?><div class="alert alert-danger"><ul class="mb-0"><?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach ?></ul></div><?php endif ?>
 <form method="post" action="<?= h($app->url($mode, $qs)) ?>"<?= $hasFiles ? ' enctype="multipart/form-data"' : '' ?> class="mc-form" novalidate>
 <?= $app->csrfField() ?>
+<?php if ($grid): $steps = []; $placed = [];
+$fieldCell = function ($f) use ($t, $app, $row, $errors, $mode) {
+    $n = $f['name'];
+    if ($f['editAs']['type'] === 'hidden') return \MiB\Controls::render($t, $f, isset($row[$n]) ? $row[$n] : null, $mode, ['row' => $row]);
+    $hint = isset($f['hint']) ? $app->label($f['hint']) : '';
+    return '<label class="form-label" for="f_' . h(preg_replace('/\W/', '_', $n)) . '">' . h($t->fieldLabel($f)) . (!empty($f['validation']['required']) ? ' <span class="text-danger">*</span>' : '') . '</label>'
+        . \MiB\Controls::render($t, $f, isset($row[$n]) ? $row[$n] : null, $mode, ['row' => $row, 'error' => isset($errors[$n])])
+        . (isset($errors[$n]) ? '<div class="invalid-feedback d-block">' . h($errors[$n]) . '</div>' : '') . ($hint !== '' ? '<div class="form-text">' . h($hint) . '</div>' : '');
+};
+$byName = []; foreach ($fields as $f) $byName[$f['name']] = $f; ?>
+<div class="mc-grid mc-formgrid">
+<?php foreach ($grid as $it): ?>
+  <?php if (($it['type'] ?? '') === 'field'): $f = isset($it['field'], $byName[$it['field']]) ? $byName[$it['field']] : null; if (!$f) continue; $placed[$f['name']] = 1; ?>
+  <div class="mc-cell" data-block="<?= h(isset($it['id']) ? $it['id'] : '') ?>" style="<?= h(\MiB\Layout::cellStyle($it)) ?>"><?= $fieldCell($f) ?></div>
+  <?php else: ?>
+  <div class="mc-cell" data-block="<?= h(isset($it['id']) ? $it['id'] : '') ?>" style="<?= h(\MiB\Layout::cellStyle($it)) ?>"><?= \MiB\Layout::gridBlock($t, $it, $mode) ?></div>
+  <?php endif ?>
+<?php endforeach ?>
+</div>
+<?php $rest = array_filter($fields, function ($f) use ($placed) { return !isset($placed[$f['name']]); });
+if ($rest): ?><div class="row g-3 mt-1"><?php foreach ($rest as $f): ?><div class="<?= $f['editAs']['type'] === 'hidden' ? '' : 'col-md-6' ?>"><?= $fieldCell($f) ?></div><?php endforeach ?></div><?php endif ?>
+<?php else: ?>
 <?php $tabs = array_values(array_filter($sections, function ($s) { return $s['style'] === 'tab'; })); ?>
 <?php // Steps: sections with style "step" are shown one at a time (Back / Next), the save buttons on the last one
 $steps = array_values(array_filter($sections, function ($s) { return $s['style'] === 'step'; }));
@@ -56,6 +79,7 @@ if ($steps): ?><ol class="mc-steps list-unstyled d-flex flex-wrap gap-2 mb-3" da
 <?php if ($tabs): ?></div><?php endif ?>
 <?php if ($steps): ?><div class="d-flex gap-2 mb-2 mc-step-nav"><button type="button" class="btn btn-outline-secondary mc-step-prev"><i class="bi bi-arrow-left"></i> <?= h(t('form.prev')) ?></button>
   <button type="button" class="btn btn-primary mc-step-next"><?= h(t('form.next')) ?> <i class="bi bi-arrow-right"></i></button></div><?php endif ?>
+<?php endif ?>
 <div class="d-flex flex-wrap gap-2 mc-form-buttons<?= $steps ? ' mc-steps-save' : '' ?>">
   <?= \MiB\Buttons::html($t, $mode, false, $keys) ?>
   <?php if ($lockedBy === ''): ?>
