@@ -101,8 +101,8 @@ function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () =>
 export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boolean }) {
   const p = useStore((s) => s.proj)!;
   const enabledPages = PAGES.filter(([k]) => t.pages[k]?.enabled || k === 'edit');
-  const [pageSel, setPage] = useState<Page>('edit');
-  const page: Page = enabledPages.some(([k]) => k === pageSel) ? pageSel : 'edit';
+  const [pageSel, setPage] = useState<Page | ''>('');
+  const page: Page = enabledPages.some(([k]) => k === pageSel) ? (pageSel as Page) : enabledPages[0][0];
   const grid = t.layout?.[page]?.grid;
   const isLayout = ['edit', 'add', 'view'].includes(page);
 
