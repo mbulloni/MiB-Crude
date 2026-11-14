@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { update, useStore } from '../store';
 import { TABLE_EVENTS } from '../events';
 import type { Field, Table } from '../types';
@@ -20,6 +20,8 @@ export default function TableEditor({ name }: { name: string }) {
   const t = p.tables.find((x) => x.name === name);
   const nav = useStore((s) => s.nav);
   const [tab, setTab] = useState<TabKey>(((nav as any).tab as TabKey) || 'fields');
+  // A button elsewhere (e.g. «Apri Campi» in the page designer) asks for another tab of the table already open.
+  useEffect(() => { const nt = (nav as any).tab as TabKey | undefined; if (nt) setTab(nt); }, [nav]);
   const [fieldDlg, setFieldDlg] = useState<string | null>(null);
   const [showData, setShowData] = useState(false);
   const lock = useItemLock(`table:${name}`);
