@@ -6,7 +6,6 @@ import type { DashItem, Dashboard, Table } from '../types';
 import PageBuilder, { normalize } from './PageBuilder';
 import { Btn, Check, Num, Row, Section, Select, lbl } from './ui';
 
-const MAXCOLS = 8;
 type El = { id: string; label: string; icon: string; on: boolean; band: string };
 
 export default function ListDesigner({ t, readOnly, onCopy }: { t: Table; readOnly?: boolean; onCopy: () => void }) {
@@ -112,9 +111,8 @@ export default function ListDesigner({ t, readOnly, onCopy }: { t: Table; readOn
         <div className={`ld-table ${sel === 'table' || colSel ? 'sel' : ''}`} onClick={() => setSel('table')}>
           <div className="ld-cols">
             {cols.length === 0 && <span className="muted">Nessuna colonna: spunta «Lista» nella scheda Campi</span>}
-            {cols.slice(0, MAXCOLS).map((f) => <div key={f.name} className={`ld-colbox ${sel === `col:${f.name}` ? 'sel' : ''}`} title={`${lbl(f.label, f.name)} (${f.name})`} onClick={(ev) => { ev.stopPropagation(); setSel(`col:${f.name}`); }}>
+            {cols.map((f) => <div key={f.name} className={`ld-colbox ${sel === `col:${f.name}` ? 'sel' : ''}`} title={`${lbl(f.label, f.name)} (${f.name})`} onClick={(ev) => { ev.stopPropagation(); setSel(`col:${f.name}`); }}>
               <div className="ld-col">{lbl(f.label, f.name)}</div><div className="ld-cell">{f.name}</div></div>)}
-            {cols.length > MAXCOLS && <div className="ld-colbox more"><div className="ld-col">+{cols.length - MAXCOLS}</div><div className="ld-cell">altre</div></div>}
             {rowActs.length > 0 && <div className="ld-colbox act"><div className="ld-col"><i className="bi bi-three-dots" /></div><div className="ld-cell">azioni</div></div>}
           </div>
         </div>
