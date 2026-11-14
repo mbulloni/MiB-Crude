@@ -112,7 +112,8 @@ events/<tabella>/<Ev>.php  eventi della tabella
 menu.json                  menu
 security.json              accesso, gruppi, permessi, provider
 lang/<codice>.json         traduzioni
-reports/, charts/, dashboards/   un file per elemento
+reports/, charts/, dashboards/   un file per elemento (le pagine libere sono dashboard con "page": true;
+                                 blocchi con id, x, y, w, h; css e js di pagina nello stesso file)
 custom/                    file copiati nell'app (custom.css, logo.png…)
 public/                    file serviti dalla radice dell'app (include dei progetti .phpr)
 .mibcrude-local/           solo sul computer dello sviluppatore: password, chiavi, output, profili di pubblicazione

@@ -13,7 +13,7 @@ import TableEditor from './components/TableEditor';
 import MenuPanel from './components/MenuPanel';
 import SecurityPanel from './components/SecurityPanel';
 import GlobalEvents from './components/GlobalEvents';
-import { ChartsPanel, DashboardsPanel, ReportsPanel } from './components/ReportsPanel';
+import { ChartsPanel, DashboardsPanel, PagesPanel, ReportsPanel } from './components/ReportsPanel';
 import LanguagesPanel from './components/LanguagesPanel';
 import OutputPanel from './components/OutputPanel';
 import TeamPanel, { itemOfNav, useTeamLocks } from './components/TeamPanel';
@@ -51,7 +51,8 @@ function Sidebar() {
       <NavItem nav={{ kind: 'events' }} icon="lightning" label="Eventi globali" />
       <NavItem nav={{ kind: 'reports' }} icon="file-earmark-bar-graph" label="Report" badge={p.reports.length || undefined} />
       <NavItem nav={{ kind: 'charts' }} icon="bar-chart" label="Grafici" badge={p.charts.length || undefined} />
-      <NavItem nav={{ kind: 'dashboards' }} icon="speedometer2" label="Dashboard" badge={p.dashboards.length || undefined} />
+      <NavItem nav={{ kind: 'dashboards' }} icon="speedometer2" label="Dashboard" badge={p.dashboards.filter((x) => !x.page).length || undefined} />
+      <NavItem nav={{ kind: 'pages' }} icon="layout-wtf" label="Pagine" badge={p.dashboards.filter((x) => x.page).length || undefined} />
       <NavItem nav={{ kind: 'lang' }} icon="translate" label="Lingue" />
       <div className="sb-group">Rilascio</div>
       <NavItem nav={{ kind: 'output' }} icon="rocket-takeoff" label="Genera e pubblica" />
@@ -73,6 +74,7 @@ function Main() {
     case 'reports': return <ReportsPanel />;
     case 'charts': return <ChartsPanel />;
     case 'dashboards': return <DashboardsPanel />;
+    case 'pages': return <PagesPanel />;
     case 'lang': return <LanguagesPanel />;
     case 'output': return <OutputPanel />;
     case 'team': return <TeamPanel />;

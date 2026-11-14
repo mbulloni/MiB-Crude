@@ -44,8 +44,16 @@ export interface Security {
 }
 export interface Report { name: string; title: L; table: string; groups: { field: string; interval?: string; desc?: boolean }[]; aggregates: { field: string; fn: string }[]; columns: string[]; showDetails: boolean; crosstab?: { field: string; interval?: string; desc?: boolean } }
 export interface Chart { name: string; title: L; table: string; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean; modifyJs?: string }
-export interface DashItem { type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html'; table?: string; ref?: string; field?: string; fn?: string; width?: number; height?: number; rows?: number; title?: L; html?: L }
-export interface Dashboard { name: string; title: L; items: DashItem[] }
+export interface DashItem {
+  type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field';
+  id?: string; table?: string; ref?: string; field?: string; fn?: string; width?: number; height?: number; rows?: number; title?: L; html?: L;
+  // free layout on the 12-column grid (x, w in columns; y, h in rows of 40px)
+  x?: number; y?: number; w?: number; h?: number;
+  card?: boolean; style?: string; code?: string; url?: string; alt?: string; newWindow?: boolean; icon?: string;
+  // "field" block: record by fixed key, URL parameter or first/last
+  record?: { mode: 'key' | 'param' | 'first' | 'last'; value?: string };
+}
+export interface Dashboard { name: string; title: L; items: DashItem[]; page?: boolean; css?: string; js?: string; hideTitle?: boolean }
 export interface ProjectMeta {
   formatVersion: number; name: string; title: L; languages: string[]; defaultLanguage: string; defaultConnection: string;
   theme: { name: string; primary: string; mode: string; layout: string; density: string; pack?: string; authPack?: string; primaryOverride?: boolean; userChoices?: boolean };
@@ -59,5 +67,5 @@ export interface Secrets { connections?: Record<string, string>; oidc?: Record<s
 export interface TeamState { connected: boolean; user: string; project: string; role: string; locks: Record<string, { user: string; since: number }>; presence: { id: string; user: string; focus: string }[]; conflicts: string[] }
 
 export type Nav =
-  | { kind: 'project' | 'connections' | 'tables' | 'menu' | 'security' | 'events' | 'reports' | 'charts' | 'dashboards' | 'lang' | 'output' | 'team' }
+  | { kind: 'project' | 'connections' | 'tables' | 'menu' | 'security' | 'events' | 'reports' | 'charts' | 'dashboards' | 'pages' | 'lang' | 'output' | 'team' }
   | { kind: 'table'; id: string; tab?: string };

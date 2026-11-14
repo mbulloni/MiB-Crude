@@ -284,8 +284,22 @@ class Reports
     {
         $def = $this->def('dashboards', $name);
         $items = [];
+        $i = 0;
         foreach (isset($def['items']) ? $def['items'] : [] as $it) {
             $type = $it['type'];
+            $it['id'] = !empty($it['id']) ? preg_replace('/[^A-Za-z0-9_-]/', '', (string)$it['id']) : 'b' . (++$i);
+            if ($type === 'field') {
+                if (empty($it['table']) || !$this->app->hasTable($it['table']) || !$this->app->security->can($it['table'], 'S')) continue;
+                $t = $this->app->table($it['table']);
+                $f = $t->field(isset($it['field']) ? $it['field'] : '');
+                if (!$f) continue;
+                $row = $this->fieldRecord($t, isset($it['record']) ? $it['record'] : ['mode' => 'first']);
+                $it['value'] = $row && array_key_exists($f['name'], $row) ? $row[$f['name']] : null;
+                $it['display'] = $row ? Format::plain($t, $f, $it['value'], $row) : '';
+                $it['caption'] = $t->fieldLabel($f);
+                $items[] = $it;
+                continue;
+            }
             if ($type === 'count' || $type === 'kpi') {
                 $t = $this->app->table($it['table']);
                 if (!$this->app->security->can($t->name, 'S')) continue;
@@ -310,6 +324,20 @@ class Reports
             $items[] = $it;
         }
         $this->app->title = $this->app->label($def['title'], $name);
-        $this->app->render('dashboard', ['def' => $def, 'items' => $items]);
+        $this->app->render('dashboard', ['def' => $def, 'items' => $items, 'name' => $name]);
+    }
+
+    /** Record shown by a "field" block: fixed key, URL parameter, first or last. */
+    private function fieldRecord(Table $t, array $rec)
+    {
+        $mode = isset($rec['mode']) ? $rec['mode'] : 'first';
+        $keys = $t->def['keys'];
+        if ($mode === 'key' || $mode === 'param') {
+            $v = $mode === 'key' ? (isset($rec['value']) ? (string)$rec['value'] : '') : (isset($_GET[isset($rec['value']) ? $rec['value'] : 'id']) ? (string)$_GET[isset($rec['value']) ? $rec['value'] : 'id'] : '');
+            if ($v === '' || count($keys) !== 1) return null;
+            return $t->fetchOne([$keys[0] => $v]);
+        }
+        $rows = $t->fetch([], 1, 0, $keys ? $keys[0] : '', $mode === 'last' ? 'desc' : 'asc');
+        return $rows ? $rows[0] : null;
     }
 }

@@ -72,7 +72,7 @@ export default function MenuPanel() {
             <Btn small icon="link-45deg" onClick={() => add({ type: 'link', label: { it: 'Link' }, url: 'https://' })}>Link</Btn>
             <Btn small icon="file-earmark-bar-graph" disabled={!p.reports.length} onClick={() => add({ type: 'report', ref: p.reports[0]?.name })}>Report</Btn>
             <Btn small icon="bar-chart" disabled={!p.charts.length} onClick={() => add({ type: 'chart', ref: p.charts[0]?.name })}>Grafico</Btn>
-            <Btn small icon="speedometer2" disabled={!p.dashboards.length} onClick={() => add({ type: 'dashboard', ref: p.dashboards[0]?.name })}>Dashboard</Btn>
+            <Btn small icon="speedometer2" disabled={!p.dashboards.length} onClick={() => add({ type: 'dashboard', ref: p.dashboards[0]?.name })}>Dashboard/Pagina</Btn>
             <Btn small icon="type" onClick={() => add({ type: 'header', label: { it: 'Sezione' } })}>Intestazione</Btn>
             <Btn small icon="dash" onClick={() => add({ type: 'separator' })}>Separatore</Btn>
           </div>

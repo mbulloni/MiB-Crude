@@ -110,3 +110,15 @@ td.mc-saved { background: color-mix(in srgb, var(--bs-success) 18%, transparent)
 .mc-steps .mc-step-dot .badge { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
 .mc-steps .mc-step-dot.active { border-color: var(--bs-primary); color: var(--bs-body-color); font-weight: 600; }
 .mc-steps .mc-step-dot.active .badge, .mc-steps .mc-step-dot.done .badge { background: var(--bs-primary); color: #fff; }
+
+/* dashboards and pages with free layout: 12 columns, rows of 40px */
+.mc-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 40px; gap: 12px; }
+.mc-cell { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.mc-cell > .card, .mc-cell > .mc-code, .mc-cell > iframe, .mc-cell > a { flex: 1 1 auto; min-height: 0; }
+.mc-cell > .card > .card-body { min-height: 0; }
+.mc-cell > .card .mc-chart-box { height: 100% !important; }
+.mc-cell > .card > .mc-embed { flex: 1 1 auto; height: auto !important; }
+.mc-cell > .card:has(.mc-chart-box) > .card-body { flex: 1 1 auto; }
+.mc-cell .mc-img { width: 100%; height: 100%; object-fit: contain; }
+.mc-cell > .mc-code { overflow: auto; }
+@media (max-width: 767px) { .mc-grid { grid-auto-rows: auto; } .mc-cell { grid-column: 1 / -1 !important; grid-row: auto !important; min-height: 120px; } .mc-cell:has(.mc-chart-box) { min-height: 280px; } }

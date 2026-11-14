@@ -26,7 +26,7 @@ Documentazione completa:
 - **Lista**: ricerca rapida e avanzata, pannello filtri, **ricerche salvate**, ordinamento, totali, colonne visibili, **modifica e aggiunta in linea**, **modifica selezionati**, viste **calendario, kanban, galleria, mappa** (con **geocodifica** degli indirizzi)
 - **Nuovo / modifica / visualizza**: designer delle pagine a sezioni (riquadri, schede o **passi** con Avanti/Indietro), blocchi HTML e PHP, finestre popup, copia, blocco del record durante la modifica
 - **Esportazione** CSV, XLSX, JSON e **PDF** in quasi tutte le lingue (anche cinese, giapponese, arabo, ebraico, tailandese) con le immagini dei campi; **stampa**; **importazione** CSV/XLSX
-- **Report** con raggruppamenti e totali, report **a campi incrociati (crosstab)**; **grafici** Apache ECharts con clic che apre la lista filtrata; **dashboard**; **Report & Chart Builder** per gli utenti
+- **Report** con raggruppamenti e totali, report **a campi incrociati (crosstab)**; **grafici** Apache ECharts con clic che apre la lista filtrata; **dashboard e pagine libere** (griglia drag & drop con indicatori, campi, grafici, tabelle, report, testi, immagini, pulsanti, codice HTML/JS e CSS/JavaScript di pagina); **Report & Chart Builder** per gli utenti
 - **API REST** per tabella con chiave API e descrizione **OpenAPI**
 
 ### Utenti e sicurezza

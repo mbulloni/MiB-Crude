@@ -244,7 +244,12 @@ Eventi dell'applicazione: avvio, prima e dopo il login, login fallito, registraz
 
 **Grafici** (Apache ECharts): colonne, barre, linee, aree, dispersione, torta, ciambella, rosa, imbuto, treemap, gauge, radar; serie multiple, impilamento, ordinamento per valore. Un clic su barra, punto o fetta apre la lista filtrata su quel valore o periodo. Le personalizzazioni AnyChart dei progetti .phpr (`JS_ModifyChart`) vengono tradotte su ECharts.
 
-**Dashboard**: conteggi, indicatori (somma/media di un campo), grafici, report, liste e blocchi HTML in una griglia.
+**Dashboard e Pagine** (voci *Dashboard* e *Pagine* nella barra a sinistra): stesso editor a blocchi su una griglia libera di 12 colonne (righe da 40 px). Le *Pagine* non sono legate a una tabella; entrambe hanno voce di menu e permesso «Elenco» come le dashboard.
+- **Layout**: trascina un blocco per spostarlo, il quadratino in basso a destra per ridimensionarlo; i blocchi non si sovrappongono (gli altri scendono). Duplica ed elimina dall'intestazione del blocco; posizione e misure anche numeriche nel pannello a destra. Le dashboard create prima si convertono alla griglia alla prima apertura; su schermi stretti i blocchi vanno a tutta larghezza.
+- **Blocchi**: *Indicatore* (conteggio, somma, media, minimo, massimo), *Campo*, *Grafico*, *Tabella* (lista di una tabella), *Report*, *Testo* (HTML filtrato, con o senza scheda), *Codice*, *Immagine* (URL o file di `public/`), *Pagina web* (iframe), *Pulsante* (link, anche in nuova scheda; gli indirizzi `javascript:` sono bloccati).
+- **Campo**: tabella + campo + record (primo, ultimo, chiave fissa, o parametro URL: `index.php?p=dashboard&d=pagina&id=7`); mostra etichetta e valore formattato come nella tabella. Solo lettura, tabelle con chiave singola.
+- **Codice**: HTML, `<style>` e `<script>` scritti nella pagina così come sono, senza filtri (lo modifica chi ha accesso al progetto).
+- **Stile (CSS) e JavaScript** di pagina, nelle schede dell'editor. I blocchi hanno `data-block="id"`. Il JavaScript gira a pagina caricata e dispone di `mcPage`: `mcPage.items[id].value` (indicatori e campi), `mcPage.el(id)`, `mcPage.chart(id)` (Promise dell'istanza ECharts, i grafici si caricano in modo asincrono), `mcPage.ready(fn)`.
 
 **Report & Chart Builder** web (opzione del progetto): gli utenti dell'app creano report e grafici propri, rispettando i loro permessi, e li possono condividere.
 

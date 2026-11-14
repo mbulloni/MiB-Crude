@@ -26,7 +26,7 @@ export default function SecurityPanel() {
   const userTable = p.tables.find((t) => t.name === sec.users.table);
   const ufields: [string, string][] = [['', '—'], ...(userTable?.fields || []).map((f) => [f.name, f.name] as [string, string])];
   const objects = [...p.tables.map((t) => [t.name, lbl(t.caption, t.name)]), ...p.reports.map((r) => [`report:${r.name}`, `Report: ${lbl(r.title, r.name)}`]),
-    ...p.charts.map((r) => [`chart:${r.name}`, `Grafico: ${lbl(r.title, r.name)}`]), ...p.dashboards.map((r) => [`dashboard:${r.name}`, `Dashboard: ${lbl(r.title, r.name)}`])];
+    ...p.charts.map((r) => [`chart:${r.name}`, `Grafico: ${lbl(r.title, r.name)}`]), ...p.dashboards.map((r) => [`dashboard:${r.name}`, `${r.page ? 'Pagina' : 'Dashboard'}: ${lbl(r.title, r.name)}`])];
   const groups = [...sec.groups, ...(sec.guestAccess ? [{ id: '<guest>', label: { it: 'Ospiti (non autenticati)' } }] : [])];
 
   return (

@@ -48,7 +48,7 @@ export function searchProject(p: Project, query: string, max = 300): Hit[] {
   walk(p.menu.items as Parameters<typeof walk>[0]);
   for (const r of p.reports) text('Report', r.name, `${r.name} ${flat((r as { title?: L }).title)}`, { kind: 'reports' });
   for (const c of p.charts) text('Grafici', c.name, `${c.name} ${flat((c as { title?: L }).title)}`, { kind: 'charts' });
-  for (const d of p.dashboards) text('Dashboard', d.name, `${d.name} ${flat((d as { title?: L }).title)}`, { kind: 'dashboards' });
+  for (const d of p.dashboards) text(d.page ? 'Pagina' : 'Dashboard', d.name, `${d.name} ${flat((d as { title?: L }).title)}`, { kind: d.page ? 'pages' : 'dashboards' });
   for (const [lang, dict] of Object.entries(p.lang || {})) for (const [k, v] of Object.entries(dict)) text(`Lingue (${lang})`, k, `${k} = ${v}`, { kind: 'lang' });
   const st = p.project.settings as { regions?: Record<string, { code?: string; file?: string }>; tasks?: { name: string; title?: string; cron: string }[]; mailTemplates?: Record<string, { subject?: L; body?: L }> };
   for (const [name, r] of Object.entries(st.regions || {})) { code('Intestazione, piè di pagina e menu', name, r.code, { kind: 'project' }); text('Intestazione, piè di pagina e menu', name, r.file, { kind: 'project' }); }

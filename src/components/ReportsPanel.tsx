@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { toast, update, useStore } from '../store';
 import type { Chart, Dashboard, DashItem, Report } from '../types';
 import CodeEditor from './CodeEditor';
+import PageBuilder from './PageBuilder';
 import { Btn, Check, Empty, Hero, I, LangText, Num, Row, Section, Select, ask, lbl, slug } from './ui';
 
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
@@ -13,16 +14,16 @@ function useFieldsOf(table: string) {
   return (t?.fields || []).map((f) => [f.name, lbl(f.label, f.name)] as [string, string]);
 }
 
-function ListShell<T extends { name: string; title: any }>({ kind, title, items, make, editor }: { kind: 'reports' | 'charts' | 'dashboards'; title: string; items: T[]; make: (name: string) => T; editor: (it: T, set: (fn: (x: T) => void) => void) => React.ReactNode }) {
+function ListShell<T extends { name: string; title: any }>({ kind, title, items, make, editor, all }: { kind: 'reports' | 'charts' | 'dashboards'; title: string; items: T[]; all?: T[]; make: (name: string) => T; editor: (it: T, set: (fn: (x: T) => void) => void) => React.ReactNode }) {
   const [cur, setCur] = useState(items[0]?.name || '');
   const it = items.find((x) => x.name === cur);
   const set = (fn: (x: T) => void) => update((d) => { const x = (d[kind] as unknown as T[]).find((y) => y.name === cur); if (x) fn(x); });
   const add = async () => {
     let n = items.length + 1;
-    while (items.some((x) => x.name === `${kind.slice(0, -1)}${n}`)) n++;
-    const name = slug((await ask(`Nuov${kind === 'reports' ? 'o report' : kind === 'charts' ? 'o grafico' : 'a dashboard'}: nome (identificativo)`, `${kind.slice(0, -1)}${n}`)) || '');
+    while ((all || items).some((x) => x.name === `${kind.slice(0, -1)}${n}`)) n++;
+    const name = slug((await ask(`Nuov${kind === 'reports' ? 'o report' : kind === 'charts' ? 'o grafico' : title === 'Pagine' ? 'a pagina' : 'a dashboard'}: nome (identificativo)`, `${kind.slice(0, -1)}${n}`)) || '');
     if (!name) return;
-    if (items.some((x) => x.name === name)) { toast(`Esiste già un elemento «${name}»`, 'err'); return; }
+    if ((all || items).some((x) => x.name === name)) { toast(`Esiste già un elemento «${name}»`, 'err'); return; }
     update((d) => { (d[kind] as unknown as T[]).push(make(name)); });
     setCur(name);
   };
@@ -120,42 +121,13 @@ function ChartEditor({ c, set }: { c: Chart; set: (fn: (x: Chart) => void) => vo
   </>;
 }
 
-export function DashboardsPanel() {
+export function DashboardsPanel({ pages }: { pages?: boolean } = {}) {
   const p = useStore((s) => s.proj)!;
-  return <ListShell kind="dashboards" title="Dashboard" items={p.dashboards}
-    make={(name) => ({ name, title: { it: name }, items: [] } as Dashboard)}
-    editor={(d, set) => <DashEditor d={d} set={set} />} />;
+  return <ListShell kind="dashboards" title={pages ? 'Pagine' : 'Dashboard'} items={p.dashboards.filter((d) => !!d.page === !!pages)} all={p.dashboards}
+    make={(name) => ({ name, title: { it: name }, items: [], ...(pages ? { page: true } : {}) } as Dashboard)}
+    editor={(d, set) => <PageBuilder d={d} set={set} />} />;
 }
 
-function DashEditor({ d, set }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void }) {
-  const p = useStore((s) => s.proj)!;
-  const add = (it: DashItem) => set((x) => { x.items.push(it); });
-  return <>
-    <div className="inline wrap">
-      <Btn small icon="123" onClick={() => add({ type: 'count', table: p.tables[0]?.name, width: 3 })}>Indicatore</Btn>
-      <Btn small icon="bar-chart" disabled={!p.charts.length} onClick={() => add({ type: 'chart', ref: p.charts[0]?.name, width: 6 })}>Grafico</Btn>
-      <Btn small icon="file-earmark-bar-graph" disabled={!p.reports.length} onClick={() => add({ type: 'report', ref: p.reports[0]?.name, width: 12 })}>Report</Btn>
-      <Btn small icon="table" onClick={() => add({ type: 'list', table: p.tables[0]?.name, width: 6, rows: 10 })}>Lista</Btn>
-      <Btn small icon="code" onClick={() => add({ type: 'html', html: { it: '<p>Testo</p>' }, width: 12 })}>Testo/HTML</Btn>
-    </div>
-    <div className="dash-board">
-      {d.items.map((it, i) => <div className="dash-item" key={i} style={{ gridColumn: `span ${it.width || 6}` }}>
-        <div className="inline"><b>{{ count: 'Indicatore', kpi: 'Indicatore', chart: 'Grafico', report: 'Report', list: 'Lista', html: 'Testo' }[it.type]}</b><span className="grow" />
-          <Btn small kind="ghost" icon="arrow-left" onClick={() => set((x) => { if (i > 0) [x.items[i - 1], x.items[i]] = [x.items[i], x.items[i - 1]]; })} />
-          <Btn small kind="ghost" icon="arrow-right" onClick={() => set((x) => { if (i < x.items.length - 1) [x.items[i + 1], x.items[i]] = [x.items[i], x.items[i + 1]]; })} />
-          <Btn small kind="ghost" icon="x-lg" onClick={() => set((x) => { x.items.splice(i, 1); })} /></div>
-        {(it.type === 'count' || it.type === 'kpi' || it.type === 'list') && <Row label="Tabella"><Select value={it.table} options={p.tables.map((t) => [t.name, lbl(t.caption, t.name)] as [string, string])} onChange={(v) => set((x) => { x.items[i].table = v; })} /></Row>}
-        {it.type === 'count' && <Row label="Valore"><span className="inline"><Select value={it.fn || 'count'} options={FNS} onChange={(v) => set((x) => { x.items[i].fn = v; })} />
-          {it.fn && it.fn !== 'count' && <Select value={it.field} options={(p.tables.find((t) => t.name === it.table)?.fields || []).map((f) => [f.name, f.name] as [string, string])} onChange={(v) => set((x) => { x.items[i].field = v; })} />}</span></Row>}
-        {it.type === 'chart' && <Row label="Grafico"><Select value={it.ref} options={p.charts.map((c) => [c.name, lbl(c.title, c.name)] as [string, string])} onChange={(v) => set((x) => { x.items[i].ref = v; })} /></Row>}
-        {it.type === 'report' && <Row label="Report"><Select value={it.ref} options={p.reports.map((c) => [c.name, lbl(c.title, c.name)] as [string, string])} onChange={(v) => set((x) => { x.items[i].ref = v; })} /></Row>}
-        {it.type === 'list' && <Row label="Righe"><Num value={it.rows} onChange={(v) => set((x) => { x.items[i].rows = v || 10; })} /></Row>}
-        {it.type === 'html' && <Row label="HTML"><LangText multiline value={it.html} onChange={(v) => set((x) => { x.items[i].html = v; })} /></Row>}
-        <Row label="Titolo"><LangText value={it.title} onChange={(v) => set((x) => { x.items[i].title = v; })} /></Row>
-        <Row label="Larghezza"><Select value={String(it.width || 6)} options={[['3', '1/4'], ['4', '1/3'], ['6', '1/2'], ['8', '2/3'], ['12', 'Intera']]} onChange={(v) => set((x) => { x.items[i].width = Number(v); })} /></Row>
-      </div>)}
-    </div>
-  </>;
-}
+export function PagesPanel() { return <DashboardsPanel pages />; }
 
 export default ReportsPanel;

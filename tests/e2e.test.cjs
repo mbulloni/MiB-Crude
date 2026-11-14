@@ -122,6 +122,13 @@ test.before(async () => {
   proj.reports.push({ name: 'cross', title: { it: 'Incrociato' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }, { field: 'id', fn: 'count' }], columns: [], showDetails: false, crosstab: { field: 'order_date', interval: 'year' } });
   proj.charts.push({ name: 'bystatus', title: { it: 'Per stato' }, table: 'orders', type: 'bar', labelField: 'status', series: [{ field: 'total', fn: 'sum' }] });
   proj.charts.push({ name: 'bymonth', title: { it: 'Per mese' }, table: 'orders', type: 'line', labelField: 'order_date', labelInterval: 'month', series: [{ field: 'total', fn: 'sum' }] });
+  proj.dashboards.push({ name: 'libera', page: true, title: { it: 'Libera' }, css: '.x{color:red}', js: 'window.__ok = 1;', items: [
+    { id: 'a', type: 'code', x: 1, y: 1, w: 6, h: 4, code: '<b id="raw">crudo</b><script>window.__raw=1</script>' },
+    { id: 'f', type: 'field', x: 7, y: 1, w: 3, h: 3, table: 'orders', field: 'total', record: { mode: 'last' } },
+    { id: 'k', type: 'count', x: 10, y: 1, w: 3, h: 3, table: 'orders' },
+    { id: 'b', type: 'button', x: 1, y: 5, w: 3, h: 2, url: 'javascript:alert(1)', title: { it: 'Vai' } },
+    { id: 'i', type: 'image', x: 4, y: 5, w: 3, h: 4, url: 'img/a.png' },
+  ] });
   proj.dashboards.push({ name: 'main', title: { it: 'Cruscotto' }, items: [{ type: 'count', table: 'orders', width: 4 }, { type: 'chart', ref: 'bystatus', width: 8 }, { type: 'report', ref: 'sales', width: 12 }] });
   P.saveProject(proj);
   const reloaded = P.loadProject(dir);
@@ -246,6 +253,14 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.strictEqual(chart.labels.length, 3);
   r = await c.req('?p=dashboard&d=main');
   assert.strictEqual(r.status, 200);
+  r = await c.req('?p=dashboard&d=libera');
+  assert.strictEqual(r.status, 200, r.text.slice(0, 300));
+  assert.match(r.text, /class="mc-grid"/);
+  assert.match(r.text, /<b id="raw">crudo<\/b><script>window.__raw=1<\/script>/);
+  assert.match(r.text, /data-block="f"[\s\S]*mc-field-value/);
+  assert.match(r.text, /window\.__ok = 1;/);
+  assert.match(r.text, /mcPage\.ready/);
+  assert.doesNotMatch(r.text, /href="javascript:/);
 
   // Web report builder: a user-built report and chart.
   r = await c.req('?p=builder&id=new&kind=report&t=orders');
