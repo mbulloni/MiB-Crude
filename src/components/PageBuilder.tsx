@@ -177,7 +177,7 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
         <Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} />
         {((ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
           <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || ((t === 'toolbar' || t === 'datalist') && d.items.some((q) => q.type === t)) || (t === 'field' && !!ctx && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
-        {ctx && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
+        {ctx && ctx.page !== 'list' && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>
       <p className="help">Trascina un blocco per spostarlo, il quadratino in basso a destra per ridimensionarlo. I blocchi non si sovrappongono: gli altri scendono.</p>
       {!d.items.length && <p className="help"><I n="lightbulb" /> Pagina vuota: aggiungi un blocco con i pulsanti qui sopra, oppure apri la <b>Guida</b>.</p>}
@@ -203,6 +203,9 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
               {it.fn && it.fn !== 'count' && <Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} />}</span></Row>}
             {it.type === 'field' && ctx && <Row label="Campo" hint="Campo editabile (Modifica/Nuovo) o in sola lettura (Visualizza) di questa tabella.">
               <Select value={it.field} options={ctx.table.fields.filter((f) => f.name === it.field || (f.show[ctx.page] && !d.items.some((q) => q.type === 'field' && q.field === f.name))).map((f) => [f.name, lbl(f.label, f.name)] as [string, string])} onChange={(v) => edit((q) => { q.field = v; })} /></Row>}
+            {it.type === 'datalist' && ctx && <Row label="Colonne" hint="Le colonne sono i campi con «Lista» spuntato nella scheda Campi (ordine incluso).">
+              <span className="inline"><b>{ctx.table.fields.filter((f) => f.show.list).length}</b> su {ctx.table.fields.length}
+                <Btn small icon="list-columns" onClick={() => useStore.getState().set({ nav: { kind: 'table', id: ctx.table.name, tab: 'fields' } })}>Apri Campi</Btn></span></Row>}
             {it.type === 'snippet' && <Row label="Evento" hint="Il codice PHP del blocco è nella scheda Eventi."><span className="inline"><b>{it.event}</b><Btn small onClick={ctx!.onSnippet}>Apri</Btn></span></Row>}
             {it.type === 'field' && !ctx && <>
               <Row label="Campo"><Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} /></Row>
