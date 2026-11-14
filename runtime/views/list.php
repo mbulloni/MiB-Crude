@@ -43,6 +43,7 @@ if ($lgrid): $hasBody = false; ?>
 <?php foreach ($lgrid as $it): $ty = isset($it['type']) ? $it['type'] : ''; ?>
   <div class="mc-cell" data-block="<?= h(isset($it['id']) ? $it['id'] : '') ?>" style="<?= h(\MiB\Layout::cellStyle($it)) ?>">
   <?php if ($ty === 'toolbar'): include __DIR__ . '/partials/list_head.php';
+  elseif ($ty === 'field'): echo \MiB\Layout::listFilter($t, $it);
   elseif ($ty === 'datalist'): $hasBody = true; include __DIR__ . '/partials/list_body.php';
   else: echo \MiB\Layout::gridBlock($t, $it, 'list'); endif ?>
   </div>

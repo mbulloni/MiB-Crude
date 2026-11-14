@@ -98,7 +98,7 @@ test.before(async () => {
   // categories list page: free grid around the standard list (toolbar + text block + record list)
   proj.tables.find((t) => t.name === 'categories').layout = { list: { grid: [
     { id: 'b1', type: 'html', x: 1, y: 1, w: 12, h: 1, card: false, html: { it: '<p class="mc-test-listtop">Sopra la lista</p>' } },
-    { id: 'b2', type: 'toolbar', x: 1, y: 2, w: 12, h: 2 }, { id: 'b3', type: 'datalist', x: 1, y: 4, w: 12, h: 10 },
+    { id: 'b2', type: 'toolbar', x: 1, y: 2, w: 8, h: 2 }, { id: 'b4', type: 'field', field: 'name', x: 9, y: 2, w: 4, h: 2 }, { id: 'b3', type: 'datalist', x: 1, y: 4, w: 12, h: 10 },
   ] } };
   // product add page in two steps
   proj.tables.find((t) => t.name === 'products').layout = { add: { sections: [{ title: { it: 'Prodotto' }, style: 'step', fields: ['name'] }, { title: { it: 'Prezzo' }, style: 'step', fields: ['price'] }] } };
@@ -269,6 +269,11 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.match(r.text, /mc-test-listtop/);
   assert.ok(r.text.indexOf('mc-test-listtop') < r.text.indexOf('id="mcGrid"'), 'block above the list');
   assert.match(r.text, /id="mcGrid"/);
+  assert.match(r.text, /mc-fieldfilter/);
+  assert.match(r.text, /name="s\[name\]\[v\]"/);
+  r = await c.req('?p=list&t=categories&s[name][op]=contains&s[name][v]=zzz');
+  assert.match(r.text, /mc-fieldfilter/);
+  assert.match(r.text, /value="zzz"/);
 
   // Dependent lookup.
   r = await c.req('?p=lookup&t=customers&f=city_id&parent=2');

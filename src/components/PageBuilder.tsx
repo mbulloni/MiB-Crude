@@ -96,6 +96,8 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
   const tables = p.tables.map((t) => [t.name, lbl(t.caption, t.name)] as [string, string]);
   const fieldsOf = (t?: string) => (p.tables.find((x) => x.name === t)?.fields || []).map((f) => [f.name, lbl(f.label, f.name)] as [string, string]);
 
+  // A filter block on the list works only on fields marked for search.
+  const ensureSearch = (name: string) => update((d) => { const f = d.tables.find((y) => y.name === ctx!.table.name)?.fields.find((y) => y.name === name); if (f && !f.show.search) f.show = { ...f.show, search: true }; });
   const add = (type: Type) => set((x) => {
     const k = KINDS[type];
     const ids = new Set(x.items.map((i) => i.id));
@@ -104,9 +106,11 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
     if (type === 'count') it.table = p.tables[0]?.name;
     if (type === 'list') { it.table = p.tables[0]?.name; it.rows = 10; }
     if (type === 'field' && ctx) {
-      const free = ctx.table.fields.find((f) => f.show[ctx.page] && !x.items.some((q) => q.type === 'field' && q.field === f.name));
+      const used = (f: { name: string }) => x.items.some((q) => q.type === 'field' && q.field === f.name);
+      const free = ctx.page === 'list' ? ctx.table.fields.find((f) => !used(f)) : ctx.table.fields.find((f) => f.show[ctx.page] && !used(f));
       if (!free) return;
-      it.field = free.name; it.w = 6; it.h = FIELD_H(free);
+      it.field = free.name; it.w = ctx.page === 'list' ? 4 : 6; it.h = ctx.page === 'list' ? 2 : FIELD_H(free);
+      if (ctx.page === 'list') setTimeout(() => ensureSearch(free.name), 0);
     } else if (type === 'field') { it.table = p.tables[0]?.name; it.field = p.tables[0]?.fields[0]?.name; it.record = { mode: 'first' }; }
     if (type === 'chart') it.ref = p.charts[0]?.name;
     if (type === 'report') it.ref = p.reports[0]?.name;
@@ -175,8 +179,8 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
       <div className="inline wrap" style={{ margin: '8px 0' }}>
         <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
         <Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} />
-        {((ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
-          <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || ((t === 'toolbar' || t === 'datalist') && d.items.some((q) => q.type === t)) || (t === 'field' && !!ctx && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
+        {((ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'field', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
+          <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || ((t === 'toolbar' || t === 'datalist') && d.items.some((q) => q.type === t)) || (t === 'field' && !!ctx && ctx.page !== 'list' && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
         {ctx && ctx.page !== 'list' && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>
       <p className="help">Trascina un blocco per spostarlo, il quadratino in basso a destra per ridimensionarlo. I blocchi non si sovrappongono: gli altri scendono.</p>
@@ -197,12 +201,13 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
           })}
         </div>
         {it && <div className="pb-insp">
-          <Section title={`${(KINDS[it.type] || KINDS.html).label} · ${it.id}`} help={HINTS[it.type]}>
+          <Section title={`${(KINDS[it.type] || KINDS.html).label} · ${it.id}`} help={ctx?.page === 'list' && it.type === 'field' ? 'Filtro su un campo della tabella: scrivi o scegli un valore e la lista si filtra. Mettilo dove vuoi (sopra la tabella, accanto ai pulsanti).' : HINTS[it.type]}>
             {(['count', 'kpi', 'list'].includes(it.type) || (it.type === 'field' && !ctx)) && <Row label="Tabella"><Select value={it.table} options={tables} onChange={(v) => edit((q) => { q.table = v; if (q.type === 'field') q.field = fieldsOf(v)[0]?.[0]; })} /></Row>}
             {(it.type === 'count' || it.type === 'kpi') && <Row label="Valore"><span className="inline"><Select value={it.fn || 'count'} options={FNS} onChange={(v) => edit((q) => { q.fn = v; })} />
               {it.fn && it.fn !== 'count' && <Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} />}</span></Row>}
             {it.type === 'field' && ctx && <Row label="Campo" hint="Campo editabile (Modifica/Nuovo) o in sola lettura (Visualizza) di questa tabella.">
-              <Select value={it.field} options={ctx.table.fields.filter((f) => f.name === it.field || (f.show[ctx.page] && !d.items.some((q) => q.type === 'field' && q.field === f.name))).map((f) => [f.name, lbl(f.label, f.name)] as [string, string])} onChange={(v) => edit((q) => { q.field = v; })} /></Row>}
+              <Select value={it.field} options={ctx.table.fields.filter((f) => f.name === it.field || ((ctx.page === 'list' || f.show[ctx.page]) && !d.items.some((q) => q.type === 'field' && q.field === f.name))).map((f) => [f.name, lbl(f.label, f.name)] as [string, string])} onChange={(v) => { edit((q) => { q.field = v; }); if (ctx.page === 'list') ensureSearch(v); }} /></Row>}
+            {it.type === 'field' && ctx?.page === 'list' && <Row label="Confronto" hint="Come il valore scelto filtra la lista. Vuoto: automatico (testo «contiene», numeri e menu «uguale», date «tra»)."><Select value={(it as any).op || ''} options={[['', 'Automatico'], ['contains', 'Contiene'], ['equals', 'Uguale'], ['notequals', 'Diverso'], ['starts', 'Inizia con'], ['more', 'Maggiore'], ['less', 'Minore'], ['between', 'Tra']]} onChange={(v) => edit((q) => { (q as any).op = v; })} /></Row>}
             {it.type === 'datalist' && ctx && <Row label="Colonne" hint="Le colonne sono i campi con «Lista» spuntato nella scheda Campi (ordine incluso).">
               <span className="inline"><b>{ctx.table.fields.filter((f) => f.show.list).length}</b> su {ctx.table.fields.length}
                 <Btn small icon="list-columns" onClick={() => useStore.getState().set({ nav: { kind: 'table', id: ctx.table.name, tab: 'fields' } })}>Apri Campi</Btn></span></Row>}

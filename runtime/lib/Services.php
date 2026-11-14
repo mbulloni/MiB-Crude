@@ -282,6 +282,40 @@ class Layout
             . ';grid-row:' . max(1, (int)(isset($it['y']) ? $it['y'] : 1)) . ' / span ' . max(1, (int)(isset($it['h']) ? $it['h'] : 2));
     }
 
+    /** "Field" block of the list page grid: a filter on one field, placed where the designer wants (advanced search syntax s[field]). */
+    public static function listFilter(Table $t, array $it)
+    {
+        $f = $t->field(isset($it['field']) ? $it['field'] : '');
+        if (!$f || empty($f['show']['search'])) return '';
+        $n = $f['name'];
+        $c = isset($_GET['s'][$n]) && is_array($_GET['s'][$n]) ? $_GET['s'][$n] : [];
+        $isLookup = (bool)$t->lookupDef($f);
+        $def = $isLookup || in_array($f['type'], ['int', 'decimal', 'bool'], true) ? 'equals' : (in_array($f['type'], ['date', 'datetime'], true) ? 'between' : 'contains');
+        $op = !empty($it['op']) && in_array($it['op'], ['contains', 'equals', 'notequals', 'starts', 'more', 'less', 'between'], true) ? $it['op'] : $def;
+        $hidden = '';
+        $walk = function ($a, $pre) use (&$walk, &$hidden, $n) {
+            foreach ($a as $k => $v) {
+                $key = $pre === '' ? (string)$k : $pre . '[' . $k . ']';
+                if ($key === 's[' . $n . ']' || $key === 'page') continue;
+                if (is_array($v)) $walk($v, $key); else $hidden .= '<input type="hidden" name="' . h($key) . '" value="' . h($v) . '">';
+            }
+        };
+        $walk($_GET, '');
+        $g = $_GET;
+        unset($g['s'][$n]);
+        if (empty($g['s'])) unset($g['s']);
+        $label = $t->app->label(isset($it['title']) ? $it['title'] : '', '') ?: $t->fieldLabel($f);
+        $html = '<form method="get" action="index.php" class="mc-fieldfilter h-100 d-flex flex-column justify-content-center">' . $hidden
+            . '<label class="form-label small mb-1">' . h($label) . '</label><div class="input-group input-group-sm flex-nowrap">'
+            . '<input type="hidden" name="s[' . h($n) . '][op]" value="' . h($op) . '">'
+            . Controls::render($t, $f, isset($c['v']) ? $c['v'] : '', 'search', ['name' => 's[' . $n . '][v]'])
+            . ($op === 'between' ? Controls::render($t, $f, isset($c['v2']) ? $c['v2'] : '', 'search', ['name' => 's[' . $n . '][v2]']) : '')
+            . '<button class="btn btn-outline-primary" title="' . h(t('btn.search')) . '"><i class="bi bi-funnel"></i></button>'
+            . ($c ? '<a class="btn btn-outline-secondary" title="' . h(t('list.clear')) . '" href="index.php?' . h(http_build_query($g)) . '"><i class="bi bi-x-lg"></i></a>' : '')
+            . '</div></form>';
+        return $html;
+    }
+
     /** Non-field blocks of a table page grid: the same blocks (and markup) as the project pages. */
     public static function gridBlock(Table $t, array $it, $page)
     {
