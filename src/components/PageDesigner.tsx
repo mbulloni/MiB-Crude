@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { toast, update, useStore } from '../store';
 import type { DashItem, Dashboard, Field, Table } from '../types';
+import ListDesigner from './ListDesigner';
 import PageBuilder, { FIELD_H, normalize } from './PageBuilder';
 import { Btn, Check, Modal, Row, Tabs, lbl } from './ui';
 
@@ -103,7 +104,7 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
   const [pageSel, setPage] = useState<Page>('edit');
   const page: Page = enabledPages.some(([k]) => k === pageSel) ? pageSel : 'edit';
   const grid = t.layout?.[page]?.grid;
-  const isLayout = ['edit', 'add', 'view', 'list'].includes(page);
+  const isLayout = ['edit', 'add', 'view'].includes(page);
 
   // First time on a page: the old section layout (or the automatic one) becomes grid blocks.
   useEffect(() => {
@@ -118,27 +119,23 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
 
   const [copy, setCopy] = useState(false);
   const tabs = <Tabs value={page} onChange={setPage} tabs={enabledPages} />;
-  if (!isLayout) {
-    const pickable = page !== 'delete';
-    return (
-      <div className="pd">
-        <div className="inline wrap">{tabs}</div>
-        <div className="pd-canvas" style={{ padding: 16 }}>
-          {pickable ? <>
-            <p className="help">{PICK_HELP[page]} Qui non ci sono sezioni da disegnare: scegli i campi.</p>
-            <div className="chips">
-              {t.fields.map((f) => <label key={f.name} className="check"><input type="checkbox" disabled={readOnly} checked={!!f.show[page]} onChange={(e) => update((d) => { const x = d.tables.find((y) => y.name === t.name)!.fields.find((y) => y.name === f.name)!; x.show = { ...x.show, [page]: e.target.checked }; })} /> {lbl(f.label, f.name)}</label>)}
-            </div>
-            <div className="inline" style={{ marginTop: 12 }}>
-              <Btn small disabled={readOnly} onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: true }; })}>Tutti</Btn>
-              <Btn small kind="ghost" icon="arrow-counterclockwise" disabled={readOnly} title="Tutti i campi, come all'importazione della tabella" onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: page === 'import' ? !x.pk : true }; })}>Ripristina standard</Btn>
-              <Btn small kind="ghost" disabled={readOnly} onClick={() => update((d) => { for (const x of d.tables.find((y) => y.name === t.name)!.fields) x.show = { ...x.show, [page]: false }; })}>Nessuno</Btn>
-            </div>
-          </> : <p className="help">La pagina Elimina chiede conferma e rimuove il record: non ha campi né layout da configurare. I permessi stanno in Sicurezza.</p>}
-        </div>
+  if (page === 'list') return (
+    <div className="pd">
+      <div className="inline wrap">{tabs}</div>
+      {copy && <CopyDesign t={t} page={page} onClose={() => setCopy(false)} />}
+      <ListDesigner t={t} readOnly={readOnly} onCopy={() => setCopy(true)} />
+    </div>
+  );
+  if (!isLayout) return (
+    <div className="pd">
+      <div className="inline wrap">{tabs}</div>
+      <div className="pd-canvas" style={{ padding: 16 }}>
+        <p className="help">{page === 'delete' ? 'La pagina Elimina chiede conferma e rimuove il record: non ha layout da configurare. I permessi stanno in Sicurezza.'
+          : `${PICK_HELP[page]} I campi di questa pagina si scelgono nella scheda Campi (colonna «${PAGES.find(([k]) => k === page)![1]}»); qui non c'è altro da disegnare.`}</p>
+        <Btn small icon="list-columns" onClick={() => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'fields' } })}>Apri Campi</Btn>
       </div>
-    );
-  }
+    </div>
+  );
   const dash: Dashboard = { name: `${t.name}:${page}`, title: {}, items: grid || [], css: t.layout?.[page]?.css, js: t.layout?.[page]?.js };
   const set = (fn: (x: Dashboard) => void) => {
     if (readOnly) return;
@@ -157,12 +154,6 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
         {!readOnly && <Btn small kind="ghost" icon="arrow-counterclockwise" title="Scarta il design di questa pagina e torna al layout standard" onClick={() => { if (confirm('Ripristinare il design standard di questa pagina? Il design personalizzato (blocchi, CSS, JavaScript) va perso.')) update((d) => { const x = d.tables.find((y) => y.name === t.name)!; if (x.layout) delete x.layout[page]; }); }}>Ripristina standard</Btn>}</div>
       {copy && <CopyDesign t={t} page={page} onClose={() => setCopy(false)} />}
       <PageBuilder d={dash} set={set} ctx={{ table: t, page, readOnly, onCopy: () => setCopy(true), onSnippet: () => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'events' } }) }} />
-      {page === 'list' && <div className="pd-canvas" style={{ padding: 16 }}>
-        <p className="help"><b>Colonne della lista</b>: {PICK_HELP.list}</p>
-        <div className="chips">
-          {t.fields.map((f) => <label key={f.name} className="check"><input type="checkbox" disabled={readOnly} checked={!!f.show.list} onChange={(e) => update((d) => { const x = d.tables.find((y) => y.name === t.name)!.fields.find((y) => y.name === f.name)!; x.show = { ...x.show, list: e.target.checked }; })} /> {lbl(f.label, f.name)}</label>)}
-        </div>
-      </div>}
     </div>
   );
 }
