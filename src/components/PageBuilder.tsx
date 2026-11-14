@@ -71,7 +71,7 @@ export function normalize(d: Dashboard): boolean {
 type Drag = { i: number; mode: 'move' | 'resize'; x0: number; y0: number; orig: Box };
 
 /** Table page mode: same editor, blocks plus the editable fields of the table (no CSS/JS tabs, no other-page propagation). */
-export interface TableCtx { table: Table; page: string; readOnly?: boolean; onSnippet: () => void }
+export interface TableCtx { table: Table; page: string; readOnly?: boolean; onSnippet: () => void; onCopy: () => void }
 
 export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void; ctx?: TableCtx }) {
   const p = useStore((s) => s.proj)!;
@@ -164,12 +164,12 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
   const it = d.items[cur];
 
   return <>
-    {!ctx && <Tabs tabs={[['layout', 'Layout', 'layout-wtf'], ['css', 'Stile (CSS)', 'palette'], ['js', 'JavaScript', 'braces']]} value={tab} onChange={setTab} />}
+    {<Tabs tabs={[['layout', 'Layout', 'layout-wtf'], ['css', 'Stile (CSS)', 'palette'], ['js', 'JavaScript', 'braces']]} value={tab} onChange={setTab} />}
     {tab === 'layout' && <>
       <div className="inline wrap" style={{ margin: '8px 0' }}>
-        {!ctx && <><Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
-        <Btn small icon="files" onClick={() => setDlg('propagate')}>Applica ad altre pagine</Btn><span style={{ width: 12 }} /></>}
-        {((ctx ? ['field', 'html', 'image', 'code', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
+        <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
+        <Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} />
+        {((ctx ? ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
           <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || (t === 'field' && !!ctx && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
         {ctx && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>
@@ -192,7 +192,7 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
         </div>
         {it && <div className="pb-insp">
           <Section title={`${(KINDS[it.type] || KINDS.html).label} · ${it.id}`} help={HINTS[it.type]}>
-            {['count', 'kpi', 'list', 'field'].includes(it.type) && !ctx && <Row label="Tabella"><Select value={it.table} options={tables} onChange={(v) => edit((q) => { q.table = v; if (q.type === 'field') q.field = fieldsOf(v)[0]?.[0]; })} /></Row>}
+            {(['count', 'kpi', 'list'].includes(it.type) || (it.type === 'field' && !ctx)) && <Row label="Tabella"><Select value={it.table} options={tables} onChange={(v) => edit((q) => { q.table = v; if (q.type === 'field') q.field = fieldsOf(v)[0]?.[0]; })} /></Row>}
             {(it.type === 'count' || it.type === 'kpi') && <Row label="Valore"><span className="inline"><Select value={it.fn || 'count'} options={FNS} onChange={(v) => edit((q) => { q.fn = v; })} />
               {it.fn && it.fn !== 'count' && <Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} />}</span></Row>}
             {it.type === 'field' && ctx && <Row label="Campo" hint="Campo editabile (Modifica/Nuovo) o in sola lettura (Visualizza) di questa tabella.">
@@ -226,7 +226,7 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
     {tab === 'js' && <Section title="JavaScript della pagina" help="Eseguito a pagina caricata. Disponibile mcPage: mcPage.items[id].value (indicatori e campi), mcPage.el(id) (elemento del blocco), mcPage.chart(id) (Promise dell'istanza ECharts), mcPage.ready(fn).">
       <CodeEditor language="javascript" value={d.js || ''} onChange={(v) => set((x) => { x.js = v; })} height={360} /></Section>}
     {!ctx && <Row label="Titolo"><Check value={!d.hideTitle} onChange={(v) => set((x) => { x.hideTitle = !v; })} label="Mostra il titolo in cima alla pagina" /></Row>}
-    {!ctx && dlg === 'guide' && <PageGuide onClose={closeGuide} onInsertJs={(code) => set((x) => { x.js = (x.js ? x.js + '\n\n' : '') + code; })} />}
-    {dlg === 'propagate' && <PropagateDialog d={d} selected={sel} onClose={() => setDlg('')} />}
+    {dlg === 'guide' && <PageGuide onClose={closeGuide} onInsertJs={(code) => set((x) => { x.js = (x.js ? x.js + '\n\n' : '') + code; })} />}
+    {!ctx && dlg === 'propagate' && <PropagateDialog d={d} selected={sel} onClose={() => setDlg('')} />}
   </>;
 }

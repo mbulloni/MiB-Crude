@@ -26,7 +26,7 @@ export interface Table {
   name: string; connection: string; source: { type: 'table' | 'sql' | 'rest' | 'proc'; table?: string; sql?: string; procedure?: string; params?: ProcParam[]; write?: Partial<Record<'insert' | 'update' | 'delete', { procedure?: string; params?: { name: string; from?: string; value?: string }[] }>>; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
-  layout?: Record<string, { grid?: DashItem[]; sections?: { title: L; fields: string[]; style?: 'card' | 'tab' | 'step'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;
+  layout?: Record<string, { grid?: DashItem[]; css?: string; js?: string; sections?: { title: L; fields: string[]; style?: 'card' | 'tab' | 'step'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;
   buttons?: { id: string; label: L; icon?: string; pages: string[]; row?: boolean }[];
 }
 export interface MenuItem { type: 'table' | 'group' | 'link' | 'report' | 'chart' | 'dashboard' | 'separator' | 'header'; table?: string; page?: string; ref?: string; url?: string; label?: L; icon?: string; items?: MenuItem[]; newWindow?: boolean }

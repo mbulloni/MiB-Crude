@@ -9,6 +9,7 @@ $fields = $t->fields($mode);
 $pageCfg = $t->page($mode);
 $cols = isset($pageCfg['columns']) ? max(1, min(4, (int)$pageCfg['columns'])) : 1;
 $grid = \MiB\Layout::grid($t, $mode);
+$needCharts = $grid && \MiB\Layout::needsCharts($grid);
 $sections = $grid ? [] : \MiB\Layout::sections($t, $mode, $fields);
 $hasFiles = false;
 foreach ($fields as $f) if (in_array($f['editAs']['type'], ['file', 'image'], true)) $hasFiles = true;
@@ -41,6 +42,7 @@ $byName = []; foreach ($fields as $f) $byName[$f['name']] = $f; ?>
   <?php endif ?>
 <?php endforeach ?>
 </div>
+<?= \MiB\Layout::gridAssets($t, $mode, $grid) ?>
 <?php $rest = array_filter($fields, function ($f) use ($placed) { return !isset($placed[$f['name']]); });
 if ($rest): ?><div class="row g-3 mt-1"><?php foreach ($rest as $f): ?><div class="<?= $f['editAs']['type'] === 'hidden' ? '' : 'col-md-6' ?>"><?= $fieldCell($f) ?></div><?php endforeach ?></div><?php endif ?>
 <?php else: ?>

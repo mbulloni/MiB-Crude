@@ -55,7 +55,8 @@ function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () =>
   const [mode, setMode] = useState<'replace' | 'append'>('replace');
   const targets = p.tables.flatMap((x) => LAYOUT_PAGES.filter(([k]) => (x.name !== t.name || k !== page) && (x.pages[k]?.enabled || k === 'edit')).map(([k, l]) => ({ key: `${x.name}:${k}`, table: x, page: k, label: l })));
   const chosen = targets.filter((x) => to[x.key]);
-  const src = (t.layout?.[page]?.grid || []) as DashItem[];
+  const srcDef = t.layout?.[page];
+  const src = (srcDef?.grid || []) as DashItem[];
   const apply = () => {
     update((d) => {
       for (const tg of chosen) {
@@ -64,7 +65,7 @@ function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () =>
         let items = structuredClone(src).filter((i) => i.type !== 'field' || mine || x.fields.some((f) => f.name === i.field && f.show[tg.page]));
         if (!mine) items = items.filter((i) => i.type !== 'snippet');
         x.layout = x.layout || {};
-        if (mode === 'replace') { x.layout[tg.page] = { grid: items }; continue; }
+        if (mode === 'replace') { x.layout[tg.page] = { grid: items, ...(srcDef?.css ? { css: srcDef.css } : {}), ...(srcDef?.js ? { js: srcDef.js } : {}) }; continue; }
         const cur = structuredClone(x.layout[tg.page]?.grid || []);
         const have = new Set(cur.map((i) => i.id)), taken = new Set(cur.filter((i) => i.type === 'field').map((i) => i.field));
         const base = Math.max(0, ...cur.map((i) => (i.y || 1) + (i.h || 6) - 1)), top = Math.min(1e9, ...items.map((i) => i.y || 1));
@@ -75,7 +76,7 @@ function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () =>
           it.id = `b${n}`; have.add(it.id); it.y = base + 1 + ((it.y || 1) - top);
           cur.push(it);
         }
-        x.layout[tg.page] = { grid: cur };
+        x.layout[tg.page] = { ...x.layout[tg.page], grid: cur };
       }
     });
     toast(`Design copiato su ${chosen.length} ${chosen.length === 1 ? 'pagina' : 'pagine'}`, 'ok');
@@ -136,25 +137,24 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
       </div>
     );
   }
-  const dash: Dashboard = { name: `${t.name}:${page}`, title: {}, items: grid || [] };
+  const dash: Dashboard = { name: `${t.name}:${page}`, title: {}, items: grid || [], css: t.layout?.[page]?.css, js: t.layout?.[page]?.js };
   const set = (fn: (x: Dashboard) => void) => {
     if (readOnly) return;
     update((d) => {
       const x = d.tables.find((y) => y.name === t.name)!;
-      const tmp: Dashboard = { name: dash.name, title: {}, items: structuredClone(x.layout?.[page]?.grid || []) };
+      const tmp: Dashboard = { name: dash.name, title: {}, items: structuredClone(x.layout?.[page]?.grid || []), css: x.layout?.[page]?.css, js: x.layout?.[page]?.js };
       fn(tmp);
       normalize(tmp);
       x.layout = x.layout || {};
-      x.layout[page] = { grid: tmp.items };
+      x.layout[page] = { grid: tmp.items, ...(tmp.css ? { css: tmp.css } : {}), ...(tmp.js ? { js: tmp.js } : {}) };
     });
   };
   return (
     <div className="pd">
       <div className="inline wrap">{tabs}<span className="grow" />
-        {!readOnly && <Btn small icon="files" onClick={() => setCopy(true)}>Copia su altre pagine</Btn>}
         {!readOnly && <Btn small kind="ghost" icon="arrow-counterclockwise" onClick={() => { if (confirm('Rimettere tutti i campi nella disposizione automatica?')) update((d) => { const x = d.tables.find((y) => y.name === t.name)!; if (x.layout) delete x.layout[page]; }); }}>Disposizione automatica</Btn>}</div>
       {copy && <CopyDesign t={t} page={page} onClose={() => setCopy(false)} />}
-      <PageBuilder d={dash} set={set} ctx={{ table: t, page, readOnly, onSnippet: () => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'events' } }) }} />
+      <PageBuilder d={dash} set={set} ctx={{ table: t, page, readOnly, onCopy: () => setCopy(true), onSnippet: () => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'events' } }) }} />
     </div>
   );
 }

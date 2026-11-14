@@ -280,29 +280,25 @@ class Reports
         $this->app->json($out);
     }
 
-    public function dashboard($name)
+    /** Resolve one grid block (value, link, source URL); null when the user may not see it. */
+    public function resolveItem(array $it, &$i)
     {
-        $def = $this->def('dashboards', $name);
-        $items = [];
-        $i = 0;
-        foreach (isset($def['items']) ? $def['items'] : [] as $it) {
             $type = $it['type'];
             $it['id'] = !empty($it['id']) ? preg_replace('/[^A-Za-z0-9_-]/', '', (string)$it['id']) : 'b' . (++$i);
             if ($type === 'field') {
-                if (empty($it['table']) || !$this->app->hasTable($it['table']) || !$this->app->security->can($it['table'], 'S')) continue;
+                if (empty($it['table']) || !$this->app->hasTable($it['table']) || !$this->app->security->can($it['table'], 'S')) return null;
                 $t = $this->app->table($it['table']);
                 $f = $t->field(isset($it['field']) ? $it['field'] : '');
-                if (!$f) continue;
+                if (!$f) return null;
                 $row = $this->fieldRecord($t, isset($it['record']) ? $it['record'] : ['mode' => 'first']);
                 $it['value'] = $row && array_key_exists($f['name'], $row) ? $row[$f['name']] : null;
                 $it['display'] = $row ? Format::plain($t, $f, $it['value'], $row) : '';
                 $it['caption'] = $t->fieldLabel($f);
-                $items[] = $it;
-                continue;
+                return $it;
             }
             if ($type === 'count' || $type === 'kpi') {
                 $t = $this->app->table($it['table']);
-                if (!$this->app->security->can($t->name, 'S')) continue;
+                if (!$this->app->security->can($t->name, 'S')) return null;
                 $fn = isset($it['fn']) ? $it['fn'] : 'count';
                 if ($fn === 'count') $it['value'] = $t->count([]);
                 else {
@@ -313,15 +309,25 @@ class Reports
                 $it['display'] = $f && $fn !== 'count' ? Format::plain($t, $f, $it['value']) : Format::number($it['value'], 0);
                 $it['link'] = $t->enabled('list') ? $this->app->url('list', ['t' => $t->name]) : '';
             } elseif ($type === 'list') {
-                if (!$this->app->security->can($it['table'], 'S')) continue;
+                if (!$this->app->security->can($it['table'], 'S')) return null;
                 $it['src'] = $this->app->url('list', ['t' => $it['table'], 'embed' => 1, 'ps' => isset($it['rows']) ? (int)$it['rows'] : 10]);
             } elseif ($type === 'report') {
-                if (!$this->app->security->can('report:' . $it['ref'], 'S')) continue;
+                if (!$this->app->security->can('report:' . $it['ref'], 'S')) return null;
                 $it['src'] = $this->app->url('report', ['r' => $it['ref'], 'embed' => 1]);
             } elseif ($type === 'chart') {
-                if (!$this->app->security->can('chart:' . $it['ref'], 'S')) continue;
+                if (!$this->app->security->can('chart:' . $it['ref'], 'S')) return null;
             }
-            $items[] = $it;
+            return $it;
+    }
+
+    public function dashboard($name)
+    {
+        $def = $this->def('dashboards', $name);
+        $items = [];
+        $i = 0;
+        foreach (isset($def['items']) ? $def['items'] : [] as $it) {
+            $r = $this->resolveItem($it, $i);
+            if ($r) $items[] = $r;
         }
         $this->app->title = $this->app->label($def['title'], $name);
         $this->app->render('dashboard', ['def' => $def, 'items' => $items, 'name' => $name]);

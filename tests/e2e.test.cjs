@@ -92,7 +92,9 @@ test.before(async () => {
     { id: 'b1', type: 'html', x: 1, y: 1, w: 12, h: 1, card: false, html: { it: '<h5 class="mc-test-grid">Ordine</h5>' } },
     { id: 'b2', type: 'field', field: 'status', x: 7, y: 2, w: 6, h: 2 },
     { id: 'b3', type: 'image', x: 1, y: 2, w: 6, h: 2, url: 'img/o.png', alt: 'logo' },
-  ] }, view: { grid: [{ id: 'b1', type: 'field', field: 'total', x: 1, y: 1, w: 4, h: 2 }] } };
+    { id: 'b4', type: 'count', x: 1, y: 4, w: 4, h: 3, table: 'orders' },
+    { id: 'b5', type: 'chart', x: 5, y: 4, w: 8, h: 6, ref: 'bystatus' },
+  ], css: '.mc-test-css{color:red}', js: 'window.__tp = 1;' }, view: { grid: [{ id: 'b1', type: 'field', field: 'total', x: 1, y: 1, w: 4, h: 2 }] } };
   // product add page in two steps
   proj.tables.find((t) => t.name === 'products').layout = { add: { sections: [{ title: { it: 'Prodotto' }, style: 'step', fields: ['name'] }, { title: { it: 'Prezzo' }, style: 'step', fields: ['price'] }] } };
   const cats = proj.tables.find((t) => t.name === 'categories');
@@ -247,6 +249,11 @@ test('setup, login, CRUD, events, export, report, api', async () => {
   assert.match(r.text, /mc-test-grid/);
   assert.match(r.text, /grid-column:7 \/ span 6;grid-row:2 \/ span 2/);
   assert.match(r.text, /src="img\/o\.png"/);
+  assert.match(r.text, /mc-kpi/);
+  assert.match(r.text, /class="mc-chart"/);
+  assert.match(r.text, /mc-test-css/);
+  assert.match(r.text, /window\.__tp = 1;/);
+  assert.match(r.text, /window\.mcPage/);
   assert.ok(r.text.indexOf('name="status"') > 0 && r.text.includes('name="total"'), 'unplaced fields still in the form');
   r = await c.req('?p=view&t=orders&k[id]=1');
   assert.match(r.text, /mc-formgrid/);

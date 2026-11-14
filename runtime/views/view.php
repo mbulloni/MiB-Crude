@@ -5,6 +5,7 @@ $qs = ['t' => $t->name, 'k' => $keys];
 if ($master) $qs = array_merge($qs, $master['qs']);
 $fields = $t->fields('view');
 $grid = \MiB\Layout::grid($t, 'view');
+$needCharts = $grid && \MiB\Layout::needsCharts($grid);
 $sections = $grid ? [] : \MiB\Layout::sections($t, 'view', $fields);
 ?>
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3 mc-pagehead">
@@ -29,6 +30,7 @@ $sections = $grid ? [] : \MiB\Layout::sections($t, 'view', $fields);
   <?php else: ?><div class="mc-cell" data-block="<?= h(isset($it['id']) ? $it['id'] : '') ?>" style="<?= h($cs) ?>"><?= \MiB\Layout::gridBlock($t, $it, 'view') ?></div><?php endif ?>
 <?php endforeach ?>
 </div>
+<?= \MiB\Layout::gridAssets($t, 'view', $grid) ?>
 <?php $rest = array_filter($fields, function ($f) use ($placed) { return !isset($placed[$f['name']]); });
 if ($rest): ?><div class="card mb-3"><div class="card-body mc-scroll-x"><dl class="row mb-0 mc-view"><?php foreach ($rest as $f): ?>
   <dt class="col-sm-4 col-lg-3 text-secondary fw-normal"><?= h($t->fieldLabel($f)) ?></dt><dd class="col-sm-8 col-lg-9"><?= \MiB\Format::html($t, $f, $row, 'view') ?></dd><?php endforeach ?></dl></div></div><?php endif ?>
