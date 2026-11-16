@@ -152,10 +152,14 @@ test('designed table pages: blocks rearranged or left out, free blocks, PHP snip
         { id: 'b1', type: 'html', x: 1, y: 1, w: 12, h: 3, card: false, html: { it: '<p class="zz-search">Cerca con calma</p>' } },
         { id: 'b2', type: 'sys', block: 'form', x: 1, y: 4, w: 12, h: 10 }, // the title block is left out
         { id: 'b3', type: 'snippet', event: 'Snippet_blocco1', x: 1, y: 14, w: 12, h: 2 },
+        { id: 'b4', type: 'count', table: 't_items', fn: 'count', title: { it: 'Totale articoli' }, x: 1, y: 16, w: 4, h: 3 }, // indicator and chart: same blocks as the list's free layout
+        { id: 'b5', type: 'chart', ref: 'c1', x: 5, y: 16, w: 8, h: 6 },
       ] },
       print: { grid: [{ id: 'b1', type: 'sys', block: 'count', x: 1, y: 1, w: 12, h: 1 }] }, // only the number of records
       import: { grid: [{ id: 'b1', type: 'sys', block: 'form', x: 1, y: 1, w: 12, h: 9 }, { id: 'b2', type: 'sys', block: 'title', x: 1, y: 10, w: 12, h: 2 }] },
     };
+    proj.charts = [{ name: 'c1', title: { it: 'Grafico prova' }, table: t.name, type: 'bar', labelField: 'name', series: [] }];
+    t.layout.search.grid.find((g) => g.id === 'b4').table = t.name;
     proj.events[t.name] = { Snippet_blocco1: "<?php\necho '<b>SNIPPET-OK</b>';\nreturn true;\n" };
   }));
   try {
@@ -166,6 +170,10 @@ test('designed table pages: blocks rearranged or left out, free blocks, PHP snip
     assert.match(search, /\.zz-search\{color:blue\}/);
     assert.match(search, /window\.zzSearch = 1;/);
     assert.match(search, /SNIPPET-OK/);
+    assert.match(search, /data-block="b4" data-type="count"/);
+    assert.match(search, /Totale articoli/);
+    assert.match(search, /data-block="b5" data-type="chart"/);
+    assert.match(search, /echarts/i); // the layout loads the chart library for a chart block
     const print = await s.call('p=print&t=items');
     assert.match(print, /5 record/);
     assert.doesNotMatch(print, /table table-sm table-bordered/); // the table block was not placed

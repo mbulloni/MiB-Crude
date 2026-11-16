@@ -80,7 +80,7 @@ export interface TableCtx { table: Table; page: string; readOnly?: boolean; onSn
 
 /** System page mode (login, profile, home…): the blocks of the page itself plus the free blocks, no tables or fields. */
 /** `blocks` = the system blocks of the page; with a `table` (search, print, import pages) snippet blocks are possible too. */
-export interface SysCtx { page: string; blocks: SysBlock[]; table?: Table; onSnippet?: () => void }
+export interface SysCtx { page: string; blocks: SysBlock[]; table?: Table; onSnippet?: () => void; onCopy?: () => void }
 
 export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void; ctx?: TableCtx; sys?: SysCtx }) {
   /** Label, icon and help of a block (system blocks come from the page definition). */
@@ -195,9 +195,9 @@ export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (
     {tab === 'layout' && <>
       <div className="inline wrap" style={{ margin: '8px 0' }}>
         <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
-        {!sys && <><Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} /></>}
+        {(!sys || sys.onCopy) && <><Btn small icon="files" onClick={() => (sys?.onCopy ? sys.onCopy() : ctx ? ctx.onCopy() : setDlg('propagate'))} disabled={ctx?.readOnly}>Applica ad altre pagine</Btn><span style={{ width: 12 }} /></>}
         {sys && <>{sys.blocks.map((b) => <Btn key={b.id} small kind="primary" icon={b.icon} title={b.hint} disabled={d.items.some((q) => q.type === 'sys' && q.block === b.id)} onClick={() => addSys(b.id)}>{b.label}</Btn>)}<span style={{ width: 12 }} /></>}
-        {((sys ? (sys.table ? ['html', 'code', 'image', 'frame', 'button', 'snippet'] : ['html', 'code', 'image', 'frame', 'button']) : ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'field', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
+        {((sys ? (sys.table ? ['count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) : ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'field', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
           <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || ((t === 'toolbar' || t === 'datalist') && d.items.some((q) => q.type === t)) || (t === 'field' && !!ctx && ctx.page !== 'list' && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
         {ctx && ctx.page !== 'list' && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>

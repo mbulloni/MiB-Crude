@@ -49,14 +49,16 @@ function toGrid(t: Table, page: string, lang: string): DashItem[] {
   return items;
 }
 
-const LAYOUT_PAGES: [Page, string][] = [['list', 'Lista'], ['edit', 'Modifica'], ['add', 'Nuovo'], ['view', 'Visualizza']];
+const LAYOUT_PAGES: [Page, string][] = [['list', 'Lista'], ['edit', 'Modifica'], ['add', 'Nuovo'], ['view', 'Visualizza'], ['search', 'Ricerca avanzata'], ['print', 'Stampa'], ['import', 'Importa']];
+/** Search, print and import have blocks of their own: their design can only go to the same page of other tables. */
+const SYS_TABLE_PAGES = ['search', 'print', 'import'];
 
 /** Copy the design of the current page to other pages: the table's own pages, or pages of other tables (only the fields they have). */
 function CopyDesign({ t, page, onClose }: { t: Table; page: Page; onClose: () => void }) {
   const p = useStore((s) => s.proj)!;
   const [to, setTo] = useState<Record<string, boolean>>({});
   const [mode, setMode] = useState<'replace' | 'append'>('replace');
-  const targets = p.tables.flatMap((x) => LAYOUT_PAGES.filter(([k]) => (x.name !== t.name || k !== page) && (x.pages[k]?.enabled || k === 'edit')).map(([k, l]) => ({ key: `${x.name}:${k}`, table: x, page: k, label: l })));
+  const targets = p.tables.flatMap((x) => LAYOUT_PAGES.filter(([k]) => (x.name !== t.name || k !== page) && (x.pages[k]?.enabled || k === 'edit') && (SYS_TABLE_PAGES.includes(page) ? k === page : !SYS_TABLE_PAGES.includes(k))).map(([k, l]) => ({ key: `${x.name}:${k}`, table: x, page: k, label: l })));
   const chosen = targets.filter((x) => to[x.key]);
   const srcDef = t.layout?.[page];
   const src = (srcDef?.grid || []) as DashItem[];
@@ -127,7 +129,10 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
       <ListDesigner t={t} readOnly={readOnly} onCopy={() => setCopy(true)} />
     </div>
   );
-  if (!isLayout) return <TablePageSys t={t} page={page} tabs={tabs} readOnly={readOnly} />; // search, print, import, export, delete
+  if (!isLayout) return <>
+    <TablePageSys t={t} page={page} tabs={tabs} readOnly={readOnly} onCopy={() => setCopy(true)} />{/* search, print, import, export, delete */}
+    {copy && <CopyDesign t={t} page={page} onClose={() => setCopy(false)} />}
+  </>;
   const dash: Dashboard = { name: `${t.name}:${page}`, title: {}, items: grid || [], css: t.layout?.[page]?.css, js: t.layout?.[page]?.js };
   const set = (fn: (x: Dashboard) => void) => {
     if (readOnly) return;

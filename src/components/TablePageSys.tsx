@@ -7,7 +7,7 @@ import { Btn, I, Section } from './ui';
 import PageBuilder, { normalize } from './PageBuilder';
 import TextsSection from './TextsSection';
 
-export default function TablePageSys({ t, page, tabs, readOnly }: { t: Table; page: string; tabs: ReactNode; readOnly?: boolean }) {
+export default function TablePageSys({ t, page, tabs, readOnly, onCopy }: { t: Table; page: string; tabs: ReactNode; readOnly?: boolean; onCopy: () => void }) {
   const def = TABLE_PAGES[page];
   const layout = t.layout?.[page];
   const designed = !!layout?.grid?.length;
@@ -33,7 +33,7 @@ export default function TablePageSys({ t, page, tabs, readOnly }: { t: Table; pa
         {!readOnly && <Btn small kind="ghost" icon="arrow-counterclockwise" onClick={restore} title="Scarta il design e torna all'aspetto standard">Ripristina l'aspetto standard</Btn>}</>}</div>
       <p className="help" style={{ margin: '8px 0' }}>{def.help} {page !== 'export' && page !== 'delete' && <Btn small icon="list-columns" onClick={() => open('fields')}>Apri Campi</Btn>}</p>
       {def.blocks.length > 0 && (designed
-        ? <PageBuilder d={dash} set={set} sys={{ page, blocks: def.blocks, table: t, onSnippet: () => open('events') }} />
+        ? <PageBuilder d={dash} set={set} sys={{ page, blocks: def.blocks, table: t, onSnippet: () => open('events'), onCopy }} />
         : <Section title="Aspetto" help="Senza un design la pagina esce come standard.">
           <p><I n="check-circle" /> Questa pagina usa l'aspetto standard. Personalizzandola ottieni una griglia libera con i blocchi della pagina ({def.blocks.map((b) => b.label).join(', ')}) più testi, immagini, codice, pulsanti e snippet PHP, CSS e JavaScript.</p>
           <Btn kind="primary" icon="layout-wtf" disabled={readOnly} onClick={personalize}>Personalizza questa pagina</Btn>

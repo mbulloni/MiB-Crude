@@ -374,6 +374,9 @@ class Layout
  */
 class SysPage
 {
+    /** A chart block was drawn: the layout loads the chart library (Theme::js). */
+    public static $needsCharts = false;
+
     /** Design of a page ({items, css, js}) or null when the page keeps its standard look. */
     public static function def($page)
     {
@@ -434,7 +437,7 @@ class SysPage
             $type = isset($it['type']) ? $it['type'] : '';
             echo '<div class="mc-cell" data-block="' . h(isset($it['id']) ? $it['id'] : '') . '" data-type="' . h($type) . '" style="' . h(Layout::cellStyle($it)) . '">';
             if ($type === 'sys') echo isset($it['block']) && in_array($it['block'], $order, true) ? $p($it['block']) : '';
-            elseif (in_array($type, ['html', 'code', 'image', 'frame', 'button', 'snippet'], true)) echo $free($it);
+            elseif (in_array($type, ['html', 'code', 'image', 'frame', 'button', 'snippet', 'count', 'kpi', 'chart', 'report', 'list'], true)) { if ($type === 'chart') self::$needsCharts = true; echo $free($it); }
             echo '</div>';
         }
         echo '</div>';
@@ -603,6 +606,7 @@ class Theme
     /** <script> tags before </body>. */
     public static function js(App $app, $t = null, $charts = false, array $libs = [])
     {
+        $charts = $charts || SysPage::$needsCharts; // chart blocks of a system page
         $pack = self::pack($app);
         $s = '';
         if (in_array('map', $libs, true)) $s .= '<link rel="stylesheet" href="' . h($app->asset('vendor/leaflet.css')) . '">' . "\n";
