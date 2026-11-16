@@ -84,7 +84,7 @@ Accesso Windows (R-LAB): permessi per pagina nella forma posizionale `R:W:L` (le
 
 ## Tabelle di sistema
 
-Create dall'app al primo avvio nel database della connessione principale (prefisso predefinito `mc_`), su MariaDB/MySQL, PostgreSQL, SQL Server, Oracle e SQLite. Una versione nuova dell'app crea solo le tabelle mancanti. Su Microsoft Fabric Warehouse usano `BIGINT IDENTITY`, `VARCHAR` e chiavi `NOT ENFORCED`; l'unicità del nome utente è garantita dall'app (`Schema::insertUser`), perché Fabric non applica i vincoli `UNIQUE`.
+Create dall'app al primo avvio nel database della connessione principale (prefisso predefinito `mc_`), su MariaDB/MySQL, PostgreSQL, SQL Server, Oracle e SQLite (non su Microsoft Fabric Warehouse: la connessione principale non può essere Fabric). Una versione nuova dell'app crea solo le tabelle mancanti.
 
 | Tabella | Contenuto |
 |---|---|

@@ -335,8 +335,8 @@ class Security
             $db->update($t, ['email' => $info['email'] ?? $row['email'], 'fullname' => $info['fullname'] ?? $row['fullname']], ['id' => $row['id']]);
             $id = $row['id'];
         } else {
-            $id = Schema::insertUser($db, ['username' => $username, 'password' => '', 'email' => $info['email'] ?? '', 'fullname' => $info['fullname'] ?? $username,
-                'active' => 1, 'verified' => 1, 'provider' => $provider, 'created_at' => $db->now()]);
+            $id = $db->insert($t, ['username' => $username, 'password' => '', 'email' => $info['email'] ?? '', 'fullname' => $info['fullname'] ?? $username,
+                'active' => 1, 'verified' => 1, 'provider' => $provider, 'created_at' => $db->now()], 'id');
             $def = $this->cfg['registration']['defaultGroup'] ?? '';
             if ($def !== '') $db->insert(Schema::t('members'), ['username' => $username, 'group_id' => $def]);
         }

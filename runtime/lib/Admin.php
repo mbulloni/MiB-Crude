@@ -63,14 +63,13 @@ class Admin
                 try {
                     if ($id) {
                         $old = $this->db->value('SELECT ' . $this->db->q('username') . ' FROM ' . $this->db->table($tu) . ' WHERE ' . $this->db->q('id') . ' = ?', [$id]);
-                        Schema::requireFreeUsername($this->db, $vals['username'], $id); // renaming onto an existing name (Fabric: no UNIQUE)
                         $this->db->update($tu, $vals, ['id' => $id]);
                         $this->db->delete($tm, ['username' => $old]);
                     } else {
                         $vals['created_at'] = $this->db->now();
                         $vals['provider'] = 'local';
                         if (!isset($vals['password'])) $vals['password'] = '';
-                        Schema::insertUser($this->db, $vals);
+                        $this->db->insert($tu, $vals, 'id');
                     }
                     foreach (isset($_POST['groups']) ? (array)$_POST['groups'] : [] as $g) $this->db->insert($tm, ['username' => $vals['username'], 'group_id' => (string)$g]);
                     // phone for the SMS sign-in codes

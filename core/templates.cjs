@@ -145,7 +145,7 @@ async function apply(proj, conn, password, templateId, opts = {}) {
     const existing = new Set((await D.listTables(c, conn)).map((t) => t.name));
     for (const t of tpl.tables) {
       if (existing.has(t.name)) continue;
-      await c.query(DDL.createTable(dialect, t.name, t.cols.map((x) => ({ nullable: false, ...x }))));
+      for (const st of DDL.createStatements(dialect, t.name, t.cols.map((x) => ({ nullable: false, ...x })))) await c.query(st);
       created.push(t.name);
       if (opts.sample !== false) {
         const cols = t.cols.filter((x) => !x.autoInc);

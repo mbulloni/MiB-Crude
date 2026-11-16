@@ -76,6 +76,7 @@ async function connect(conn, password) {
             ? { authentication: { type: 'token-credential', options: { credential: entraCredential(conn) } } }
             : { user: conn.user, password: pw }),
         options: { trustServerCertificate: !entra, encrypt: entra || !!conn.encrypt }, connectionTimeout: personal ? 120000 : entra ? 30000 : 8000, // personal: time to sign in with MFA
+        requestTimeout: 120000, // analytic warehouses (Fabric) answer big scans slowly, the driver's 15 s default cuts them off
       }).connect();
       return {
         driver: 'sqlsrv',

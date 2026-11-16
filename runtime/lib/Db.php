@@ -9,7 +9,7 @@ class Db
     /** @var PDO */
     public $pdo;
     public $driver;
-    /** @var bool Microsoft Fabric Warehouse (SQL Server dialect with its own DDL rules) */
+    /** @var bool Microsoft Fabric Warehouse (SQL Server dialect: no NVARCHAR, no key/default in CREATE TABLE, no generated key read-back) */
     public $fabric = false;
     public $id;
     public $schema;
@@ -179,17 +179,6 @@ class Db
     }
 
     /**
-     * ", PRIMARY KEY (...)" table clause for a CREATE TABLE. Fabric keeps keys as metadata only: NONCLUSTERED ... NOT ENFORCED
-     * (a duplicate is never rejected by the engine).
-     * @param string[] $cols
-     */
-    public function primaryKey(array $cols)
-    {
-        $list = implode(', ', array_map([$this, 'q'], $cols));
-        return $this->fabric ? ", PRIMARY KEY NONCLUSTERED ($list) NOT ENFORCED" : ", PRIMARY KEY ($list)";
-    }
-
-    /**
      * Insert a row and return the generated key of $autoField (or null).
      * @param array $values column => value
      */
@@ -202,6 +191,12 @@ class Db
         if ($this->driver === 'pgsql' && $autoField) {
             $sql .= (count($cols) ? 'VALUES (' . implode(', ', $marks) . ')' : 'DEFAULT VALUES') . ' RETURNING ' . $this->q($autoField);
             return $this->query($sql, array_values($values))->fetchColumn();
+        }
+        if ($this->fabric) {
+            // Fabric Warehouse: no OUTPUT, SCOPE_IDENTITY, @@IDENTITY or DEFAULT VALUES (checked on a real warehouse): the generated key cannot be read back
+            if (!count($cols)) throw new \RuntimeException('Microsoft Fabric does not support INSERT ... DEFAULT VALUES: give at least one value');
+            $this->query($sql . 'VALUES (' . implode(', ', $marks) . ')', array_values($values));
+            return null;
         }
         if ($this->driver === 'sqlsrv' && $autoField) {
             $sql = 'INSERT INTO ' . $this->table($table) . (count($cols) ? ' (' . implode(', ', $cols) . ')' : '')

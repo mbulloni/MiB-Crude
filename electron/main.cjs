@@ -244,7 +244,7 @@ handle('wizard:refresh', async (proj, table) => {
 
 const DDL = require('../core/ddl.cjs');
 handle('ddl:build', (kind, ...args) => {
-  if (kind === 'create') return [DDL.createTable(...args)];
+  if (kind === 'create') return DDL.createStatements(...args);
   if (kind === 'alter') return DDL.alterTable(...args);
   if (kind === 'drop') return [DDL.dropTable(...args)];
   throw new Error(`DDL sconosciuto: ${kind}`);

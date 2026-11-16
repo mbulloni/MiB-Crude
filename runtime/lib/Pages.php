@@ -740,7 +740,7 @@ class Pages
             if ($msg === '' && $p !== (string)$_POST['password2']) $msg = t('pw.mismatch');
             if ($msg === '') {
                 $db = $this->app->db();
-                Schema::insertUser($db, ['username' => $u, 'password' => password_hash($p, PASSWORD_DEFAULT), 'email' => trim((string)$_POST['email']),
+                $db->insert(Schema::t('users'), ['username' => $u, 'password' => password_hash($p, PASSWORD_DEFAULT), 'email' => trim((string)$_POST['email']),
                     'fullname' => $u, 'active' => 1, 'verified' => 1, 'provider' => 'local', 'created_at' => $db->now()], 'id');
                 $admin = 'admin';
                 foreach ($sec->cfg['groups'] as $g) if (!empty($g['admin'])) { $admin = $g['id']; break; }
@@ -775,7 +775,7 @@ class Pages
                 if ($this->app->event('_global', 'BeforeRegister', [&$values, &$msg]) !== false) {
                     $verify = !empty($sec->cfg['registration']['emailVerify']);
                     $token = $verify ? bin2hex(random_bytes(16)) : null;
-                    Schema::insertUser($db, ['username' => $values['username'], 'password' => password_hash($pw, PASSWORD_DEFAULT), 'email' => $values['email'],
+                    $db->insert(Schema::t('users'), ['username' => $values['username'], 'password' => password_hash($pw, PASSWORD_DEFAULT), 'email' => $values['email'],
                         'fullname' => $values['fullname'], 'active' => 1, 'verified' => $verify ? 0 : 1, 'provider' => 'local', 'token' => $token, 'created_at' => $db->now()], 'id');
                     $db->insert(Schema::t('members'), ['username' => $values['username'], 'group_id' => $sec->cfg['registration']['defaultGroup']]);
                     if ($verify) {

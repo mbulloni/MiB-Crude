@@ -116,6 +116,8 @@ function check(proj) {
   if (!proj.connections.length) problems.push({ level: 'error', msg: 'Nessuna connessione al database' });
   if (proj.connections.find((c) => c.id === proj.project.defaultConnection)?.driver === 'rest') problems.push({ level: 'error', msg: 'La connessione principale deve essere un database (utenti, permessi e registro vivono lì), non un servizio REST' });
   for (const c of proj.connections) if (c.sqlAuth === 'entra-user') problems.push({ level: 'error', msg: `Connessione "${c.id}": l'app generata non può usare l'accesso con account personale Microsoft Entra (serve il browser per l'MFA): scegli "Microsoft Entra (service principal)" o l'utente SQL` });
+  const main = proj.connections.find((c) => c.id === proj.project.defaultConnection);
+  if (main && DDL.isFabric(main)) problems.push({ level: 'error', msg: `La connessione principale "${main.id}" è Microsoft Fabric Warehouse: le tabelle di sistema (utenti, permessi, registro) non si possono creare lì (Fabric non ha chiavi né valori predefiniti nel CREATE TABLE, né modo di leggere l'ID generato). Usa MariaDB, PostgreSQL o SQL Server come principale e Fabric come origine dati delle tabelle` });
   if (proj.connections.length && !connIds.has(proj.project.defaultConnection)) problems.push({ level: 'error', msg: `Connessione predefinita "${proj.project.defaultConnection}" inesistente` });
   for (const t of proj.tables) {
     if (!connIds.has(t.connection)) problems.push({ level: 'error', msg: `${t.name}: connessione "${t.connection}" inesistente` });
