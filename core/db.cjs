@@ -62,13 +62,20 @@ async function connect(conn, password) {
     }
     case 'sqlsrv': {
       const mssql = require('mssql');
-      const entra = conn.sqlAuth === 'entra'; // Fabric / Azure SQL: service principal, TLS with a valid certificate
+      // Fabric / Azure SQL: 'entra' = service principal (the generated app signs in the same way), 'entra-user' = personal
+      // account with MFA, designer only (sign-in in the system browser, see electron/entra.cjs). Both: TLS with a valid certificate.
+      const sp = conn.sqlAuth === 'entra';
+      const personal = conn.sqlAuth === 'entra-user';
+      const entra = sp || personal;
+      if (personal && !entraCredential) throw new Error('L\'accesso con account personale Microsoft Entra funziona solo nel designer.');
       const pool = await new mssql.ConnectionPool({
         server: conn.host || 'localhost', port: Number(conn.port) || 1433, database: conn.database,
-        ...(entra
+        ...(sp
           ? { authentication: { type: 'azure-active-directory-service-principal-secret', options: { clientId: conn.user, clientSecret: pw, tenantId: conn.tenant || undefined } } }
-          : { user: conn.user, password: pw }),
-        options: { trustServerCertificate: !entra, encrypt: entra || !!conn.encrypt }, connectionTimeout: entra ? 30000 : 8000,
+          : personal
+            ? { authentication: { type: 'token-credential', options: { credential: entraCredential(conn) } } }
+            : { user: conn.user, password: pw }),
+        options: { trustServerCertificate: !entra, encrypt: entra || !!conn.encrypt }, connectionTimeout: personal ? 120000 : entra ? 30000 : 8000, // personal: time to sign in with MFA
       }).connect();
       return {
         driver: 'sqlsrv',
@@ -418,4 +425,8 @@ async function preview(c, sql, limit = 100) {
   return { columns: rows.length ? Object.keys(rows[0]) : [], rows: rows.slice(0, limit), total: rows.length };
 }
 
-module.exports = { DRIVERS, genericType, connect, listTables, describeTable, describeQuery, preview, tableData, procSql, listProcedures, callProcedure, describeProcedure, sampleParams };
+// Personal Entra sign-in is provided by the Electron main process (electron/entra.cjs): this module stays free of Electron.
+let entraCredential = null;
+const setEntraCredential = (fn) => { entraCredential = fn; };
+
+module.exports = { setEntraCredential, DRIVERS, genericType, connect, listTables, describeTable, describeQuery, preview, tableData, procSql, listProcedures, callProcedure, describeProcedure, sampleParams };

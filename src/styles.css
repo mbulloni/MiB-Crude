@@ -388,3 +388,4 @@ progress { width: 100%; }
 .ld-colbox.act { flex: 0 0 64px; width: 64px; opacity: .65; cursor: default; }
 .ld-col { padding: 6px 8px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--border); }
 .ld-cell { padding: 6px 8px; font-size: 11px; opacity: .6; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.device-code { font: 600 26px/1.4 ui-monospace, monospace; letter-spacing: 4px; text-align: center; padding: 10px; border: 1px solid var(--border); border-radius: 6px; user-select: all; }

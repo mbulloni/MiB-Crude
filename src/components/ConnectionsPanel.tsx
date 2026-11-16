@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { call } from '../api';
+import { call, mc } from '../api';
+import type { EntraPrompt } from '../api';
 import { run, saveSecrets, toast, update, useStore } from '../store';
 import type { Connection } from '../types';
 import { isFabric } from '../dialect';
@@ -18,6 +19,9 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
   const s = (patch: Partial<Connection>) => setC({ ...c, ...patch });
   const id = c.id || slug(c.name || c.database || 'db');
   const entra = c.driver === 'sqlsrv' && c.sqlAuth === 'entra';
+  const personal = c.driver === 'sqlsrv' && c.sqlAuth === 'entra-user';
+  const [who, setWho] = useState<{ username: string } | null>(null);
+  useEffect(() => { if (personal) call('entra:account', { ...c, id: c.id || id }).then(setWho, () => setWho(null)); else setWho(null); }, [personal, c.user, c.tenant]);
   const ext = ({ mysql: 'pdo_mysql', pgsql: 'pdo_pgsql', sqlsrv: 'pdo_sqlsrv', oracle: 'pdo_oci', sqlite: 'pdo_sqlite' } as Record<string, string>)[c.driver];
   const test = () => run('Test connessione…', async () => { const r = await call('db:test', { ...c, id }, pw); toast(`Connessione riuscita (${r.ms} ms)`, 'ok'); });
   const ok = async () => {
@@ -48,9 +52,15 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
         <Row label={c.driver === 'oracle' ? 'Service name' : 'Database'}><Text value={c.database} onChange={(v) => s({ database: v })} /></Row>
         {(c.driver === 'pgsql' || c.driver === 'sqlsrv') && <Row label="Schema"><Text value={c.schema} onChange={(v) => s({ schema: v })} placeholder={c.driver === 'pgsql' ? 'public' : 'dbo'} /></Row>}
         {c.driver === 'sqlsrv' && <Row label="Accesso" hint="Microsoft Fabric Warehouse e Azure SQL richiedono Entra ID: l'applicazione generata accede con un'app registrata (service principal)">
-          <Select value={c.sqlAuth || 'sql'} options={[['sql', 'Utente e password SQL'], ['entra', 'Microsoft Entra (service principal)']]} onChange={(v) => s({ sqlAuth: v as 'sql' | 'entra', encrypt: v === 'entra' ? true : c.encrypt })} /></Row>}
-        <Row label={entra ? 'Client ID' : 'Utente'} hint={entra ? 'ID applicazione (client) dell\'app registrata in Entra' : undefined}><Text value={c.user} onChange={(v) => s({ user: v })} mono={entra} /></Row>
-        <Row label={entra ? 'Client secret' : 'Password'} hint="Salvata solo sul tuo computer (.mibcrude-local), mai nel progetto condiviso"><Text type="password" value={pw} onChange={setPw} /></Row>
+          <Select value={c.sqlAuth || 'sql'} options={[['sql', 'Utente e password SQL'], ['entra', 'Microsoft Entra (service principal)'], ['entra-user', 'Microsoft Entra (account personale, MFA) — solo designer']]} onChange={(v) => s({ sqlAuth: v as 'sql' | 'entra' | 'entra-user', encrypt: v !== 'sql' ? true : c.encrypt })} /></Row>}
+        <Row label={entra ? 'Client ID' : personal ? 'Account (opzionale)' : 'Utente'} hint={entra ? 'ID applicazione (client) dell\'app registrata in Entra' : personal ? 'nome.cognome@azienda.it: suggerisce l\'account nella finestra di accesso' : undefined}><Text value={c.user} onChange={(v) => s({ user: v })} mono={entra} /></Row>
+        {!personal && <Row label={entra ? 'Client secret' : 'Password'} hint="Salvata solo sul tuo computer (.mibcrude-local), mai nel progetto condiviso"><Text type="password" value={pw} onChange={setPw} /></Row>}
+        {personal && <>
+          <Row label="Accesso nel" hint="Il browser di sistema (con MFA) oppure un codice da digitare su un altro dispositivo"><Select value={c.entraMethod || 'browser'} options={[['browser', 'Browser'], ['device', 'Codice dispositivo']]} onChange={(v) => s({ entraMethod: v as 'browser' | 'device' })} /></Row>
+          <Row label="Tenant (opzionale)" hint="Lascia vuoto per l'accesso aziendale standard"><Text value={c.tenant} onChange={(v) => s({ tenant: v })} mono /></Row>
+          <p className="help">{who ? <>Accesso effettuato come <b>{who.username}</b>. <Btn small onClick={async () => { await call('entra:signOut', { ...c, id: c.id || id }); setWho(null); }}>Esci dall'account</Btn></> : 'Nessun accesso effettuato: Prova apre il browser per l\'accesso.'}
+            {' '}Vale solo per il designer (prova, schema, tabelle): l'app generata non ha un browser per l'MFA e per Fabric usa il <i>service principal</i>.</p>
+        </>}
         {entra && <Row label="Tenant" hint="ID della directory (tenant) Entra, usato dal designer per la prova di connessione"><Text value={c.tenant} onChange={(v) => s({ tenant: v })} mono placeholder="00000000-0000-0000-0000-000000000000" /></Row>}
         {c.driver === 'sqlsrv' && <Row label="Fabric Warehouse" hint="Riconosciuto dal nome del server (*.fabric.microsoft.com). Cambia le tabelle create dal designer e dall'app: BIGINT IDENTITY, VARCHAR al posto di NVARCHAR, chiavi e vincoli NOT ENFORCED (il server non impedisce i duplicati), niente modifica del tipo di una colonna esistente"><Check value={isFabric(c)} onChange={(v) => s({ fabric: v })} label="Microsoft Fabric Warehouse" /></Row>}
         {c.driver === 'sqlsrv' && <Row label="Cifratura"><Check value={entra ? true : c.encrypt} onChange={(v) => !entra && s({ encrypt: v })} label={entra ? 'Encrypt (obbligatoria con Entra)' : 'Encrypt'} /></Row>}
@@ -86,5 +96,22 @@ export default function ConnectionsPanel() {
       </Section>
       {edit && <ConnectionDialog initial={edit === 'new' ? null : edit} onClose={() => setEdit(null)} />}
     </div>
+  );
+}
+
+/** Microsoft Entra sign-in in progress (personal account): the system browser is open, or a code is to be typed on another device. */
+export function EntraPromptDialog() {
+  const [p, setP] = useState<EntraPrompt | null>(null);
+  useEffect(() => mc().onEntraPrompt((x) => setP(x.kind === 'done' ? null : x)), []);
+  if (!p || p.kind === 'done') return null;
+  return (
+    <Modal title={`Accesso Microsoft per ${p.name}`} onClose={() => setP(null)}
+      footer={<>{p.kind === 'device' && <><Btn onClick={() => navigator.clipboard.writeText(p.code)}>Copia codice</Btn>
+        <Btn onClick={() => { navigator.clipboard.writeText(p.code); call('entra:openUrl', p.url); }}>Copia e apri la pagina</Btn></>}<span className="grow" /><Btn onClick={() => setP(null)}>Nascondi</Btn></>}>
+      {p.kind === 'browser' ? <p>Completa l'accesso nella finestra del browser che si è aperta. La connessione prosegue da sola appena l'accesso è riuscito.</p> : <>
+        <p>Apri {p.url} e inserisci il codice:</p>
+        <div className="device-code">{p.code}</div>
+      </>}
+    </Modal>
   );
 }

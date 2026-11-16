@@ -21,6 +21,7 @@ const preview = require('./preview.cjs');
 const deploy = require('./deploy.cjs');
 const git = require('./git.cjs');
 const team = require('./team.cjs');
+const entra = require('./entra.cjs');
 const updates = require('./updates.cjs');
 
 let win = null;
@@ -178,6 +179,12 @@ handle('local:set', (name, data) => {
 
 handle('db:drivers', () => D.DRIVERS);
 const REST = require('../core/rest.cjs');
+// Microsoft Entra personal sign-in (designer only): credential for the mssql driver, account shown in the connection dialog
+D.setEntraCredential((conn) => entra.credential(conn, { interactive: true }));
+entra.onPrompt((p) => win?.webContents.send('entra:prompt', p));
+handle('entra:account', (conn) => entra.account(conn));
+handle('entra:signOut', (conn) => entra.signOut(conn));
+handle('entra:openUrl', (url) => (/^https:\/\/([a-z.]+\.)?(microsoft\.com|microsoftonline\.com)\//i.test(url) ? shell.openExternal(url) : null));
 handle('db:test', async (conn, password) => {
   const started = Date.now();
   if (conn.driver === 'rest') { await REST.request(conn, password, 'GET', ''); return { ms: Date.now() - started }; }

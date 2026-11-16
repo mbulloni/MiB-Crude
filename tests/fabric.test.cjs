@@ -101,3 +101,20 @@ test('classic engines: insertUser is a plain insert, the UNIQUE constraint stays
   assert.match(out, /same name again: ok/); // the stand-in table has no constraint; a real one would refuse here
   assert.match(out, /rename bob to ana: ok/);
 });
+
+test('a personal Entra account (MFA) is designer-only: generating the app is refused', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const P = require('../core/project.cjs');
+  const G = require('../core/generator.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcentra-'));
+  try {
+    const proj = P.createProject(path.join(dir, 'p'), 'p');
+    proj.connections = [{ id: 'main', name: 'main', driver: 'sqlsrv', host: 'x.datawarehouse.fabric.microsoft.com', sqlAuth: 'entra-user' }];
+    proj.project.defaultConnection = 'main';
+    const msgs = G.check(proj).filter((p) => p.level === 'error').map((p) => p.msg);
+    assert.ok(msgs.some((m) => /account personale Microsoft Entra/.test(m)), msgs.join(' | '));
+    proj.connections[0].sqlAuth = 'entra'; // service principal: fine
+    assert.ok(!G.check(proj).some((p) => /account personale/.test(p.msg)));
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

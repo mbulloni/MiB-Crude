@@ -7,7 +7,7 @@ import Welcome from './components/Welcome';
 import SearchDialog from './components/SearchDialog';
 import { AskHost, Btn, I, lbl } from './components/ui';
 import ProjectPanel from './components/ProjectPanel';
-import ConnectionsPanel from './components/ConnectionsPanel';
+import ConnectionsPanel, { EntraPromptDialog } from './components/ConnectionsPanel';
 import TablesPanel from './components/TablesPanel';
 import TableEditor from './components/TableEditor';
 import MenuPanel from './components/MenuPanel';
@@ -165,6 +165,7 @@ export default function App() {
       </div>
       {busy && <div className="busy"><span className="spinner" /> {busy}</div>}
       <Toasts toasts={toasts} />
+      <EntraPromptDialog />
       {searching && <SearchDialog onClose={() => setSearching(false)} />}
     </div>
   );
