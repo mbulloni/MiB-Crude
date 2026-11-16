@@ -1,6 +1,6 @@
 # Guida di MiB-Crude
 
-MiB-Crude è un generatore visuale di applicazioni web PHP, per Linux. Nel designer (un'applicazione desktop Electron) si descrive l'applicazione: connessioni ai database, tabelle, campi, pagine, sicurezza, report, grafici, eventi PHP. Con un clic MiB-Crude genera un'applicazione web PHP completa (PHP 7.4 – 8.5, Bootstrap 5, DataTables, ECharts), la mostra in anteprima e la pubblica sul server.
+MiB-Crude è un generatore visuale di applicazioni web PHP, per Linux e Windows. Nel designer (un'applicazione desktop Electron) si descrive l'applicazione: connessioni ai database, tabelle, campi, pagine, sicurezza, report, grafici, eventi PHP. Con un clic MiB-Crude genera un'applicazione web PHP completa (PHP 7.4 – 8.5, Bootstrap 5, DataTables, ECharts), la mostra in anteprima e la pubblica sul server.
 
 Il progetto è una cartella di piccoli file di testo: più sviluppatori lavorano insieme tramite Git o tramite il **server del team** (modifiche in tempo reale, blocco per elemento).
 
@@ -38,12 +38,17 @@ Questa guida descrive ogni funzione e dove si trova. Altri documenti:
 
 Dalle [release GitHub](https://github.com/mbulloni/MiB-Crude/releases):
 
+**Linux**
 - **.deb** (Ubuntu/Debian): `sudo apt install ./mib-crude_X_amd64.deb`
 - **AppImage**: si rende eseguibile e si avvia; non serve installarla.
 
-All'avvio MiB-Crude controlla se c'è una versione nuova (al massimo ogni 12 ore, disattivabile). L'AppImage si sostituisce da sola; il .deb si installa con `pkexec apt`. Il pulsante con la freccia in alto a destra controlla subito.
+**Windows** (x64)
+- **Installer** `MiB-Crude-X-win-x64.exe`: installazione per utente, con scelta della cartella.
+- **Zip portatile** `MiB-Crude-X-win-x64.zip`: si decomprime e si avvia `MiB-Crude.exe`.
 
-Per provare le applicazioni nel designer serve **PHP** sul computer (`php-cli` con i driver dei database usati: `pdo_mysql`, `pdo_pgsql`, `pdo_sqlite`…) oppure **Docker**.
+All'avvio MiB-Crude controlla se c'è una versione nuova (al massimo ogni 12 ore, disattivabile). Su Linux l'AppImage si sostituisce da sola e il .deb si installa con `pkexec apt`; su Windows si apre la pagina della release e si scarica a mano il nuovo pacchetto. Il pulsante con la freccia in alto a destra controlla subito.
+
+Per provare le applicazioni nel designer serve **PHP** sul computer (`php-cli` con i driver dei database usati: `pdo_mysql`, `pdo_pgsql`, `pdo_sqlite`…) oppure **Docker**. Su Windows PHP deve essere raggiungibile come `php.exe` nel `PATH` (o con la variabile d'ambiente `MIBCRUDE_PHP`), il driver per SQL Server/Fabric è `pdo_sqlsrv` e per Git serve `git` nel `PATH`. Password, chiavi e la cache dell'accesso Microsoft sono cifrate con il portachiavi del sistema (su Windows DPAPI).
 
 Da sorgente:
 
@@ -51,7 +56,8 @@ Da sorgente:
 npm install
 npm run dev        # designer in sviluppo (Vite + Electron)
 npm start          # build e avvio
-npm run dist       # AppImage e .deb in release/
+npm run dist       # Linux: AppImage e .deb in release/
+npm run dist:win   # Windows: installer e zip in release/ (anche da Linux, con wine)
 ```
 
 ## 2. Schermata iniziale

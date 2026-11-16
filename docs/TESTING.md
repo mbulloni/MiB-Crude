@@ -20,3 +20,7 @@ Il test crea lo schema demo (`tests/fixtures/demo-schema.cjs`) nel dialetto scel
 ## Versioni PHP
 
 `MIBCRUDE_PHP_BIN=php7.4 npm test` (PHP 7.4) · `MIBCRUDE_TEST_PHP=8.4 npm test` (PHP 8.4 in Docker, immagine da `tests/docker`).
+
+## Windows
+
+I test automatici girano su Linux. Il pacchetto Windows (`npm run dist:win`, cross-compilato con wine) non è coperto da `npm test`: va provato a mano su un PC Windows (installazione, avvio, anteprima con `php.exe` nel `PATH`, accesso Microsoft, Docker Desktop).

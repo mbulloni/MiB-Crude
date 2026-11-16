@@ -1,16 +1,18 @@
 # CLAUDE.md — MiB-Crude
 
-Generatore visuale educativo di applicazioni web PHP per Linux, multisviluppatore. UI e messaggi in italiano.
+Generatore visuale educativo di applicazioni web PHP per Linux e Windows (nato per Linux, poi esteso a Windows), multisviluppatore. UI e messaggi in italiano.
 
 ## Comandi
 - `npm run dev` designer (Vite 5175 + Electron) · `npm start` build+avvio · `npm run typecheck`
 - `npm test` = `node --test tests/*.test.cjs` (e2e su MariaDB `mibcrude_demo` utente `mibcrude`/`mibcrude`, server team)
+- `npm run dist` = AppImage + .deb · `npm run dist:win` = installer NSIS + zip x64 (cross-build da Linux con wine, `npmRebuild` off): pacchetti in `release/`, note in `release/notes-X.md`
 - `npm run server -- --data DIR` server del team; `--add-user NOME` crea utente
 - Screenshot/automazione: `MIBCRUDE_OPEN=<progetto> MIBCRUDE_SCRIPT=<script.cjs> npx electron . --no-sandbox` (script riceve `{win, app}`)
 
 ## Regole
 - Il runtime PHP (`runtime/`) gira su **PHP 7.4 → 8.5**: niente sintassi solo-8 (match, nullsafe, named args, union types, readonly) e niente costrutti deprecati in 8.x (tipi nullabili impliciti `array $x = null` → `?array`, fputcsv/fgetcsv senza `$escape`, `${var}` nelle stringhe). PHP locale = 8.5 (7.4 resta in `/usr/bin/php7.4`). Test: `npm test` (8.5), `MIBCRUDE_PHP_BIN=php7.4 npm test`, `MIBCRUDE_TEST_PHP=8.4 npm test` (Docker, immagine da tests/docker).
 - Formato progetto: file deterministici (`core/project.cjs` stableStringify). Segreti solo in `.mibcrude-local/`. Nuove sezioni del progetto → aggiornare `serialize`, `MANAGED_DIRS`, `team-protocol.cjs` (`itemOf`, `syncable`).
+- Windows: stesso codice, niente rami per sistema salvo: `electron/updates.cjs` (`mode()` = 'manual' fuori da AppImage/.deb → su Windows si apre la pagina della release), `electron/entra.cjs` (cache token: in memoria se il portachiavi è `basic_text`, DPAPI su Windows), `preview.cjs` (`php` dal PATH o `MIBCRUDE_PHP`), `git.cjs` (`git` dal PATH). Percorsi sempre con `path`, mai separatori a mano; i test girano solo su Linux.
 - Eventi: catalogo duplicato in `core/defaults.cjs` (generatore) e `src/events.ts` (designer): tenerli allineati.
 - Stringhe runtime in `runtime/lang/{it,en}.json`; ogni `t('chiave')` nuova va in entrambi.
 - Dopo modifiche a `src/` serve `npx vite build` prima di lanciare Electron senza dev server.

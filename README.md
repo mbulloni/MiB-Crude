@@ -1,12 +1,12 @@
 # MiB-Crude
 
-Generatore visuale di applicazioni web PHP per Linux, con lavoro **multisviluppatore** nativo. Progetto educativo.
+Generatore visuale di applicazioni web PHP per Linux e Windows, con lavoro **multisviluppatore** nativo. Progetto educativo.
 
 ![Designer](docs/screenshots/designer-fields.png)
 
 ## Cosa fa
 
-Parti da un database esistente (**MariaDB/MySQL, PostgreSQL, SQL Server, Oracle, SQLite**), da un **servizio REST JSON** o da una **stored procedure**, oppure crea tabelle e dati da un **modello pronto** (CRM, helpdesk, prenotazioni, archivio documenti). MiB-Crude genera un'applicazione web PHP completa (PHP 7.4 – 8.5), la mostra in anteprima e la pubblica.
+Parti da un database esistente (**MariaDB/MySQL, PostgreSQL, SQL Server (anche Microsoft Fabric Warehouse), Oracle, SQLite**), da un **servizio REST JSON** o da una **stored procedure**, oppure crea tabelle e dati da un **modello pronto** (CRM, helpdesk, prenotazioni, archivio documenti). MiB-Crude genera un'applicazione web PHP completa (PHP 7.4 – 8.5), la mostra in anteprima e la pubblica.
 
 Documentazione completa:
 
@@ -105,10 +105,22 @@ npm install
 npm run dev        # designer in sviluppo
 npm start          # build + avvio
 npm test           # test end-to-end (MariaDB demo + server del team)
-npm run dist       # AppImage e .deb
+npm run dist       # Linux: AppImage e .deb in release/
+npm run dist:win   # Windows: installer NSIS e zip portatile (x64) in release/
 ```
 
-L'app controlla gli aggiornamenti sulle release GitHub all'avvio (al massimo ogni 12 ore, disattivabile): l'AppImage si sostituisce da sola, il `.deb` si installa con `pkexec apt`.
+Pacchetti dalle [release GitHub](https://github.com/mbulloni/MiB-Crude/releases):
+
+| Sistema | Pacchetto | Note |
+|---|---|---|
+| Linux | `.deb` (Ubuntu/Debian), `AppImage` | aggiornamento integrato |
+| Windows | `MiB-Crude-X-win-x64.exe` (installer per utente, cartella a scelta), `MiB-Crude-X-win-x64.zip` (portatile) | aggiornamento manuale |
+
+`npm run dist:win` si lancia anche da Linux (cross-compilazione con wine): i moduli nativi opzionali non vengono ricompilati (`npmRebuild` disattivato). `npm test` e le prove automatiche girano su Linux; il pacchetto Windows non è coperto dai test.
+
+L'app controlla gli aggiornamenti sulle release GitHub all'avvio (al massimo ogni 12 ore, disattivabile): l'AppImage si sostituisce da sola, il `.deb` si installa con `pkexec apt`; su Windows (e nelle copie non pacchettizzate) si apre la pagina della release per scaricare a mano la versione nuova.
+
+Su Windows, per provare le applicazioni nel designer serve `php.exe` nel `PATH` (o la variabile `MIBCRUDE_PHP` con il percorso) oppure Docker Desktop; per Git serve `git` nel `PATH`. Password e chiavi sono protette con DPAPI di Windows (portachiavi di sistema).
 
 Esportazione/importazione di tabelle tra progetti in ZIP (impostazioni, report, grafici ed eventi come file leggibili). I test end-to-end richiedono MariaDB con l'utente `mibcrude`/`mibcrude` sul database `mibcrude_demo` (schema in `tests/fixtures/demo-mysql.sql`) e `php-cli` con `pdo_mysql`.
 
