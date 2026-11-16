@@ -78,11 +78,17 @@ class Table
         return isset($this->def['pages'][$type]) ? $this->def['pages'][$type] : ['enabled' => false];
     }
 
+    /** Read only by the project, or because the table lives on Microsoft Fabric Warehouse (writing there is disabled for now). */
+    public function isReadOnly()
+    {
+        return !empty($this->def['readOnly']) || ($this->db && $this->db->fabric);
+    }
+
     public function enabled($type)
     {
         $p = $this->page($type);
         if (empty($p['enabled'])) return false;
-        if (!empty($this->def['readOnly']) && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return false;
+        if ($this->isReadOnly() && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return false;
         // stored procedure source: writable through the procedures set for insert / update / delete
         if ($this->def['source']['type'] === 'proc' && in_array($type, ['add', 'edit', 'delete', 'import'], true)) return Proc::writes($this, ['add' => 'insert', 'import' => 'insert', 'edit' => 'update', 'delete' => 'delete'][$type]);
         return true;
@@ -107,6 +113,7 @@ class Table
     public function writeTable()
     {
         $s = $this->def['source'];
+        if ($this->db && $this->db->fabric) return null; // Fabric: no writes for now
         if ($s['type'] === 'table') return $s['table'];
         if ($s['type'] === 'rest') return empty($this->def['readOnly']) ? $s['path'] : null;
         if ($s['type'] === 'proc') return null;

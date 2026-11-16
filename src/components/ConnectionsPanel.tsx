@@ -88,7 +88,7 @@ export default function ConnectionsPanel() {
             {p.connections.map((c) => <tr key={c.id}>
               <td className="mono">{c.id}</td><td>{c.name}</td><td>{DRIVERS.find((d) => d[0] === c.driver)?.[1]}</td>
               <td className="mono">{c.driver === 'sqlite' ? c.file : `${c.host}:${c.port}`}</td><td>{c.database}</td><td>{used(c.id)}</td>
-              <td><input type="radio" checked={p.project.defaultConnection === c.id} onChange={() => update((d) => { d.project.defaultConnection = c.id; })} /></td>
+              <td><input type="radio" disabled={isFabric(c)} title={isFabric(c) ? 'Fabric non può essere la connessione principale' : undefined} checked={p.project.defaultConnection === c.id} onChange={() => update((d) => { d.project.defaultConnection = c.id; })} /></td>
               <td className="actions"><Btn small icon="pencil" onClick={() => setEdit(c)} />
                 <Btn small icon="trash" kind="ghost" disabled={used(c.id) > 0} title={used(c.id) ? 'In uso da alcune tabelle' : 'Elimina'} onClick={() => update((d) => { d.connections = d.connections.filter((x) => x.id !== c.id); })} /></td>
             </tr>)}

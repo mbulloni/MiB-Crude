@@ -109,3 +109,28 @@ test('Fabric cannot be the main connection of an app (system tables need keys, d
     assert.ok(!G.check(proj).some((p) => /connessione principale.*Fabric/.test(p.msg)));
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('tables on Fabric are read only for now (runtime), other engines are unchanged', () => {
+  const run = (mode) => require('node:child_process').execFileSync('php', [path.join(__dirname, 'php', 'fabric_readonly.php'), path.join(__dirname, '..'), mode], { encoding: 'utf8' }).trim();
+  assert.equal(run('fabric'), 'list=on view=on add=off edit=off delete=off import=off writeTable=null readOnly=yes');
+  assert.equal(run('classic'), 'list=on view=on add=on edit=on delete=on import=on writeTable=T readOnly=no');
+});
+
+test('the generator says that tables on a Fabric connection are read only', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const P = require('../core/project.cjs');
+  const G = require('../core/generator.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcro-'));
+  try {
+    const proj = P.createProject(path.join(dir, 'p'), 'p');
+    proj.connections = [
+      { id: 'main', name: 'main', driver: 'mysql', host: 'localhost' },
+      { id: 'dwh', name: 'dwh', driver: 'sqlsrv', host: 'x.datawarehouse.fabric.microsoft.com', sqlAuth: 'entra' },
+    ];
+    proj.project.defaultConnection = 'main';
+    proj.tables = [{ name: 'A', connection: 'dwh', fields: [], keys: [], pages: {}, source: { type: 'table', table: 'A' } }];
+    const warn = G.check(proj).filter((p) => p.level === 'warning' && /Fabric.*sola lettura/.test(p.msg));
+    assert.equal(warn.length, 1, JSON.stringify(G.check(proj).map((p) => p.msg)));
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

@@ -125,6 +125,11 @@ function check(proj, opts = {}) {
     if (opts.preview) problems.push({ level: 'warning', msg: `Connessione "${c.id}": l'anteprima usa il tuo account Microsoft Entra con un token che dura circa un'ora; per pubblicare serve "Microsoft Entra (service principal)"` });
     else problems.push({ level: 'error', msg: `Connessione "${c.id}": per pubblicare l'app non si può usare l'account personale Microsoft Entra (serve il browser per l'MFA): scegli "Microsoft Entra (service principal)" o l'utente SQL. L'anteprima del designer funziona anche con l'account personale` });
   }
+  // Microsoft Fabric Warehouse tables are read only for now (the runtime refuses the writes): say so once per connection
+  for (const c of proj.connections) {
+    const n = proj.tables.filter((t) => t.connection === c.id).length;
+    if (DDL.isFabric(c) && n) problems.push({ level: 'warning', msg: `Connessione "${c.id}" (Microsoft Fabric): ${n === 1 ? 'la tabella è' : `le ${n} tabelle sono`} in sola lettura (inserimento, modifica, eliminazione e importazione sono disattivati per ora)` });
+  }
   const main = proj.connections.find((c) => c.id === proj.project.defaultConnection);
   if (main && DDL.isFabric(main)) problems.push({ level: 'error', msg: `La connessione principale "${main.id}" è Microsoft Fabric Warehouse: le tabelle di sistema (utenti, permessi, registro) non si possono creare lì (Fabric non ha chiavi né valori predefiniti nel CREATE TABLE, né modo di leggere l'ID generato). Usa MariaDB, PostgreSQL o SQL Server come principale e Fabric come origine dati delle tabelle` });
   if (proj.connections.length && !connIds.has(proj.project.defaultConnection)) problems.push({ level: 'error', msg: `Connessione predefinita "${proj.project.defaultConnection}" inesistente` });
