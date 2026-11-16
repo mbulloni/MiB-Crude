@@ -404,33 +404,60 @@ class SysPage
             return;
         }
         $app = App::$i;
-        $eq = Theme::flavor($app) === 'equation';
-        $n = 0;
+        self::draw($def, $order, $p, function ($it) use ($app) { return self::freeBlock($app, $it); }, 'sys:' . $page);
+    }
+
+    /**
+     * Same for a page of a table (search, print, import): the design is the table's own layout (layout.<page>.grid, as for add/edit/view)
+     * and the free blocks are those of the table pages, snippets included.
+     */
+    public static function showTable(Table $t, $page, array $order, array $vars, $default = null)
+    {
+        $p = function ($block) use ($page, $vars) { return self::part($page, $block, $vars); };
+        $def = isset($t->def['layout'][$page]) ? $t->def['layout'][$page] : null;
+        if (!is_array($def) || empty($def['grid']) || !is_array($def['grid'])) {
+            if ($default) $default($p); else foreach ($order as $b) echo $p($b);
+            return;
+        }
+        $def['items'] = $def['grid'];
+        self::draw($def, $order, $p, function ($it) use ($t, $page) { return Layout::gridBlock($t, $it, $page); }, $t->name . ':' . $page);
+    }
+
+    /** The free grid: system blocks through $p, the others through $free; CSS and JavaScript of the page. */
+    private static function draw(array $def, array $order, $p, $free, $name)
+    {
+        $app = App::$i;
         $items = array_values($def['items']);
         if (!empty($def['css'])) echo '<style>' . str_replace('</style', '<\/style', $def['css']) . '</style>';
         echo '<div class="mc-grid" id="mc-page">';
         foreach ($items as $it) {
             $type = isset($it['type']) ? $it['type'] : '';
             echo '<div class="mc-cell" data-block="' . h(isset($it['id']) ? $it['id'] : '') . '" data-type="' . h($type) . '" style="' . h(Layout::cellStyle($it)) . '">';
-            if ($type === 'sys') {
-                echo isset($it['block']) && in_array($it['block'], $order, true) ? $p($it['block']) : '';
-            } elseif (in_array($type, ['html', 'code', 'image', 'frame', 'button'], true)) {
-                $i = 0;
-                $it = (new Reports($app))->resolveItem($it, $i);
-                if ($it) {
-                    $title = $app->label(isset($it['title']) ? $it['title'] : '', '');
-                    $bare = isset($it['card']) && !$it['card'];
-                    include __DIR__ . '/../views/partials/dash_block.php';
-                }
-            }
+            if ($type === 'sys') echo isset($it['block']) && in_array($it['block'], $order, true) ? $p($it['block']) : '';
+            elseif (in_array($type, ['html', 'code', 'image', 'frame', 'button', 'snippet'], true)) echo $free($it);
             echo '</div>';
         }
         echo '</div>';
-        $name = 'sys:' . $page;
         $gridItems = [];
         foreach ($items as $g) $gridItems[] = ['id' => isset($g['id']) ? $g['id'] : '', 'type' => isset($g['type']) ? $g['type'] : ''];
         $items = $gridItems;
         include __DIR__ . '/../views/partials/dash_script.php';
+    }
+
+    /** A free block of a system page (text, code, image, web page, button). */
+    private static function freeBlock(App $app, array $it)
+    {
+        if ((isset($it['type']) ? $it['type'] : '') === 'snippet') return ''; // snippets need a table (its events)
+        $eq = Theme::flavor($app) === 'equation';
+        $n = 0;
+        $i = 0;
+        $it = (new Reports($app))->resolveItem($it, $i);
+        if (!$it) return '';
+        $title = $app->label(isset($it['title']) ? $it['title'] : '', '');
+        $bare = isset($it['card']) && !$it['card'];
+        ob_start();
+        include __DIR__ . '/../views/partials/dash_block.php';
+        return ob_get_clean();
     }
 }
 

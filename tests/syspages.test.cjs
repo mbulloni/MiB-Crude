@@ -7,7 +7,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const net = require('node:net');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
+const W = require('../core/wizard.cjs');
 const P = require('../core/project.cjs');
 const G = require('../core/generator.cjs');
 
@@ -22,7 +23,7 @@ async function serve(dir, mutate) {
   proj.security.registration = { ...proj.security.registration, enabled: true };
   proj.security.passwordReset = { enabled: true };
   proj.security.captcha = { login: false, register: false };
-  mutate(proj);
+  await mutate(proj);
   const out = path.join(dir, 'app');
   G.generate(proj, { outDir: out, secrets: { connections: {} }, preview: true });
   fs.mkdirSync(path.join(out, 'data'), { recursive: true });
@@ -86,8 +87,9 @@ test('a designed system page: blocks rearranged, free blocks, page CSS and JavaS
         block('b3', 'links', 1, 12, 12, 2), // «providers» left out on purpose
       ] },
       { name: 'home', title: {}, items: [block('b1', 'cards', 1, 1, 12, 6), block('b2', 'title', 1, 7, 12, 2)] },
+      { name: 'admin', title: {}, items: [block('b1', 'menu', 1, 1, 12, 2), block('b2', 'title', 1, 3, 12, 2), block('b3', 'content', 1, 5, 12, 12)] },
     ];
-    proj.lang = { it: { 'login.submit': 'Entra in Acme' } };
+    proj.lang = { it: { 'login.submit': 'Entra in Acme', 'admin.title': 'Pannello Acme' } };
   });
   try {
     const login = await s.call('p=login');
@@ -103,7 +105,72 @@ test('a designed system page: blocks rearranged, free blocks, page CSS and JavaS
     const home = await s.call('p=home');
     assert.match(home, /id="mc-page"/);
     assert.ok(home.indexOf('data-block="b1"') < home.indexOf('<h1 class="h4 mb-3">'), 'cards block (b1) comes before the title (b2)');
+    const admin = await s.call('p=admin&s=users');
+    assert.match(admin, /id="mc-page"/);
+    assert.ok(admin.indexOf('nav nav-pills') < admin.indexOf('<h1 class="h4 mb-3"><i class="bi bi-shield-lock"></i> Pannello Acme'), 'the section menu (b1) comes before the title (b2), with the text override');
+    assert.match(admin, /name="username"|Nome utente/); // the content block (users table) is there
     // pages without a design are untouched
     assert.doesNotMatch(await s.call('p=profile'), /id="mc-page"/);
+  } finally { s.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+/** A sqlite table "items" imported in the project, security off: the table pages can be fetched without signing in. */
+async function withTable(proj, dir, tweak) {
+  const db = path.join(dir, 'items.sqlite');
+  execFileSync('php', ['-r', `$d = new PDO('sqlite:${db}'); $d->exec('create table items (id integer primary key autoincrement, name text not null, qty integer)'); for ($i = 1; $i <= 5; $i++) $d->exec("insert into items (name, qty) values ('Item $i', $i)");`]);
+  proj.connections = [{ id: 'main', name: 'main', driver: 'sqlite', file: db }];
+  proj.security.enabled = false;
+  await W.importTables(proj, proj.connections[0], '', ['items']);
+  const t = proj.tables[0];
+  for (const pg of ['list', 'search', 'print', 'import', 'export', 'delete']) t.pages[pg] = { ...(t.pages[pg] || {}), enabled: true };
+  for (const f of t.fields) f.show = { ...f.show, list: true, search: true, print: true, import: true };
+  tweak(t, proj);
+}
+
+test('table pages (search, print, import) without a design keep the standard markup', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcsys-'));
+  const s = await serve(dir, (proj) => withTable(proj, dir, () => {}));
+  try {
+    const search = await s.call('p=search&t=items');
+    assert.match(search, /mc-search-row/);
+    assert.match(search, /Ricerca avanzata/);
+    assert.doesNotMatch(search, /id="mc-page"/);
+    const print = await s.call('p=print&t=items');
+    assert.match(print, /table table-sm table-bordered/);
+    assert.match(print, /5 record/);
+    const imp = await s.call('p=import&t=items');
+    assert.match(imp, /type="file"/);
+    assert.doesNotMatch(imp, /id="mc-page"/);
+  } finally { s.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('designed table pages: blocks rearranged or left out, free blocks, PHP snippets, page CSS and JavaScript', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcsys-'));
+  const s = await serve(dir, (proj) => withTable(proj, dir, (t) => {
+    t.layout = {
+      search: { css: '.zz-search{color:blue}', js: 'window.zzSearch = 1;', grid: [
+        { id: 'b1', type: 'html', x: 1, y: 1, w: 12, h: 3, card: false, html: { it: '<p class="zz-search">Cerca con calma</p>' } },
+        { id: 'b2', type: 'sys', block: 'form', x: 1, y: 4, w: 12, h: 10 }, // the title block is left out
+        { id: 'b3', type: 'snippet', event: 'Snippet_blocco1', x: 1, y: 14, w: 12, h: 2 },
+      ] },
+      print: { grid: [{ id: 'b1', type: 'sys', block: 'count', x: 1, y: 1, w: 12, h: 1 }] }, // only the number of records
+      import: { grid: [{ id: 'b1', type: 'sys', block: 'form', x: 1, y: 1, w: 12, h: 9 }, { id: 'b2', type: 'sys', block: 'title', x: 1, y: 10, w: 12, h: 2 }] },
+    };
+    proj.events[t.name] = { Snippet_blocco1: "<?php\necho '<b>SNIPPET-OK</b>';\nreturn true;\n" };
+  }));
+  try {
+    const search = await s.call('p=search&t=items');
+    assert.match(search, /id="mc-page"/);
+    assert.ok(search.indexOf('Cerca con calma') < search.indexOf('mc-search-row'), 'the free text sits above the form');
+    assert.doesNotMatch(search, /<h1 class="h4 mb-3">/); // the title block was not placed
+    assert.match(search, /\.zz-search\{color:blue\}/);
+    assert.match(search, /window\.zzSearch = 1;/);
+    assert.match(search, /SNIPPET-OK/);
+    const print = await s.call('p=print&t=items');
+    assert.match(print, /5 record/);
+    assert.doesNotMatch(print, /table table-sm table-bordered/); // the table block was not placed
+    const imp = await s.call('p=import&t=items');
+    assert.ok(imp.indexOf('type="file"') < imp.indexOf('<h1 class="h4 mb-3">'), 'the form comes before the title');
+    assert.match(imp, /data-block="b2" data-type="sys"/);
   } finally { s.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
 });

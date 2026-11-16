@@ -4,7 +4,7 @@ import { update, useStore } from '../store';
 import type { Dashboard, DashItem, Table } from '../types';
 import CodeEditor from './CodeEditor';
 import { PageGuide, PropagateDialog } from './PageHelp';
-import { SYS_PAGES, sysBlock } from '../syspages';
+import type { SysBlock } from '../syspages';
 import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
 
 const COLS = 12, ROW = 40, GAP = 12;
@@ -79,11 +79,13 @@ type Drag = { i: number; mode: 'move' | 'resize'; x0: number; y0: number; orig: 
 export interface TableCtx { table: Table; page: string; readOnly?: boolean; onSnippet: () => void; onCopy: () => void }
 
 /** System page mode (login, profile, home…): the blocks of the page itself plus the free blocks, no tables or fields. */
-export interface SysCtx { page: string }
+/** `blocks` = the system blocks of the page; with a `table` (search, print, import pages) snippet blocks are possible too. */
+export interface SysCtx { page: string; blocks: SysBlock[]; table?: Table; onSnippet?: () => void }
 
 export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void; ctx?: TableCtx; sys?: SysCtx }) {
   /** Label, icon and help of a block (system blocks come from the page definition). */
-  const kindOf = (b: DashItem) => (b.type === 'sys' && sys ? { label: sysBlock(sys.page, b.block || '')?.label || 'Blocco', icon: sysBlock(sys.page, b.block || '')?.icon || 'layout-text-window' } : KINDS[b.type] || KINDS.html);
+  const sysB = (id?: string) => sys?.blocks.find((q) => q.id === id);
+  const kindOf = (b: DashItem) => (b.type === 'sys' && sys ? { label: sysB(b.block)?.label || 'Blocco', icon: sysB(b.block)?.icon || 'layout-text-window' } : KINDS[b.type] || KINDS.html);
   const p = useStore((s) => s.proj)!;
   const [tab, setTab] = useState<'layout' | 'css' | 'js'>('layout');
   const [sel, setSel] = useState('');
@@ -106,7 +108,7 @@ export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (
   // A filter block on the list works only on fields marked for search.
   const ensureSearch = (name: string) => update((d) => { const f = d.tables.find((y) => y.name === ctx!.table.name)?.fields.find((y) => y.name === name); if (f && !f.show.search) f.show = { ...f.show, search: true }; });
   const addSys = (blockId: string) => set((x) => {
-    const b = sysBlock(sys!.page, blockId)!;
+    const b = sysB(blockId)!;
     const ids = new Set(x.items.map((i) => i.id));
     let n = x.items.length + 1; while (ids.has(`b${n}`)) n++;
     x.items.push({ id: `b${n}`, type: 'sys', block: blockId, x: 1, y: Math.max(0, ...x.items.map((i) => (i.y || 1) + (i.h || 6) - 1)) + 1, w: b.w, h: b.h });
@@ -132,7 +134,7 @@ export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (
     if (type === 'datalist') it.h = 12;
     if (type === 'code') it.code = '<div id="mio-blocco">Ciao</div>';
     if (type === 'button') it.title = { it: 'Apri' };
-    if (type === 'snippet') { let k = 1; const evs = p.events[ctx!.table.name] || {}; while (evs[`Snippet_blocco${k}`]) k++; it.event = `Snippet_blocco${k}`; setTimeout(() => update((q) => { q.events[ctx!.table.name] = { ...(q.events[ctx!.table.name] || {}), [it.event!]: "<?php\n// Codice PHP mostrato nella pagina\necho '<div class=\"alert alert-info\">Blocco personalizzato</div>';\nreturn true;\n" }; }), 0); }
+    if (type === 'snippet') { let k = 1; const tbl = (ctx?.table || sys?.table)!; const evs = p.events[tbl.name] || {}; while (evs[`Snippet_blocco${k}`]) k++; it.event = `Snippet_blocco${k}`; setTimeout(() => update((q) => { q.events[tbl.name] = { ...(q.events[tbl.name] || {}), [it.event!]: "<?php\n// Codice PHP mostrato nella pagina\necho '<div class=\"alert alert-info\">Blocco personalizzato</div>';\nreturn true;\n" }; }), 0); }
     x.items.push(it); setSel(it.id!);
   });
 
@@ -161,7 +163,7 @@ export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (
       case 'count': case 'kpi': return `${lbl(p.tables.find((t) => t.name === it.table)?.caption, it.table || '')} · ${it.fn || 'count'}${it.field ? ' ' + it.field : ''}`;
       case 'field': return ctx ? lbl(ctx.table.fields.find((f) => f.name === it.field)?.label, it.field || '') : `${it.table || ''}.${it.field || ''}`;
       case 'snippet': return it.event || '';
-      case 'sys': return sys ? sysBlock(sys.page, it.block || '')?.hint.slice(0, 70) || '' : '';
+      case 'sys': return sysB(it.block)?.hint.slice(0, 70) || '';
       case 'toolbar': return 'Titolo e pulsanti della lista';
       case 'datalist': return 'Lista dei record';
       case 'list': return it.table || '';
@@ -194,8 +196,8 @@ export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (
       <div className="inline wrap" style={{ margin: '8px 0' }}>
         <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
         {!sys && <><Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} /></>}
-        {sys && <>{SYS_PAGES.find((q) => q.id === sys.page)!.blocks.map((b) => <Btn key={b.id} small kind="primary" icon={b.icon} title={b.hint} disabled={d.items.some((q) => q.type === 'sys' && q.block === b.id)} onClick={() => addSys(b.id)}>{b.label}</Btn>)}<span style={{ width: 12 }} /></>}
-        {((sys ? ['html', 'code', 'image', 'frame', 'button'] : ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'field', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
+        {sys && <>{sys.blocks.map((b) => <Btn key={b.id} small kind="primary" icon={b.icon} title={b.hint} disabled={d.items.some((q) => q.type === 'sys' && q.block === b.id)} onClick={() => addSys(b.id)}>{b.label}</Btn>)}<span style={{ width: 12 }} /></>}
+        {((sys ? (sys.table ? ['html', 'code', 'image', 'frame', 'button', 'snippet'] : ['html', 'code', 'image', 'frame', 'button']) : ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'field', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
           <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || ((t === 'toolbar' || t === 'datalist') && d.items.some((q) => q.type === t)) || (t === 'field' && !!ctx && ctx.page !== 'list' && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
         {ctx && ctx.page !== 'list' && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>
@@ -227,7 +229,7 @@ export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (
             {it.type === 'datalist' && ctx && <Row label="Colonne" hint="Le colonne sono i campi con «Lista» spuntato nella scheda Campi (ordine incluso).">
               <span className="inline"><b>{ctx.table.fields.filter((f) => f.show.list).length}</b> su {ctx.table.fields.length}
                 <Btn small icon="list-columns" onClick={() => useStore.getState().set({ nav: { kind: 'table', id: ctx.table.name, tab: 'fields' } })}>Apri Campi</Btn></span></Row>}
-            {it.type === 'snippet' && <Row label="Evento" hint="Il codice PHP del blocco è nella scheda Eventi."><span className="inline"><b>{it.event}</b><Btn small onClick={ctx!.onSnippet}>Apri</Btn></span></Row>}
+            {it.type === 'snippet' && <Row label="Evento" hint="Il codice PHP del blocco è nella scheda Eventi."><span className="inline"><b>{it.event}</b><Btn small onClick={(ctx?.onSnippet || sys?.onSnippet)!}>Apri</Btn></span></Row>}
             {it.type === 'field' && !ctx && <>
               <Row label="Campo"><Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} /></Row>
               <Row label="Record" hint="Chiave singola. «Parametro URL»: il valore arriva da index.php?p=dashboard&d=…&NOME=…"><span className="inline">
@@ -243,7 +245,7 @@ export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (
             {it.type === 'image' && <Row label="Testo alternativo"><Text value={it.alt} onChange={(v) => edit((q) => { q.alt = v; })} /></Row>}
             {it.type === 'button' && <><Row label="Icona" hint="Nome Bootstrap Icons, es. arrow-right"><Text value={it.icon} onChange={(v) => edit((q) => { q.icon = v; })} /></Row>
               <Row label="Apri"><Check value={it.newWindow} onChange={(v) => edit((q) => { q.newWindow = v; })} label="In una nuova scheda" /></Row></>}
-            {it.type === 'sys' && sys && <p className="help">{sysBlock(sys.page, it.block || '')?.hint} Il contenuto del blocco non si modifica qui; i testi stanno nella sezione «Testi e etichette» sotto l'editor.</p>}
+            {it.type === 'sys' && sys && <p className="help">{sysB(it.block)?.hint} Il contenuto del blocco non si modifica qui; i testi stanno nella sezione «Testi e etichette» sotto l'editor.</p>}
             {it.type !== 'code' && it.type !== 'image' && it.type !== 'frame' && it.type !== 'snippet' && it.type !== 'sys' && !(it.type === 'field' && ctx) && <Row label={it.type === 'button' ? 'Etichetta' : 'Titolo'}><LangText value={it.title} onChange={(v) => edit((q) => { q.title = v; })} /></Row>}
             {['html', 'code', 'image'].includes(it.type) && <Row label="Stile CSS" hint="Es. background:#eef; padding:12px"><Text value={it.style} mono onChange={(v) => edit((q) => { q.style = v; })} /></Row>}
             <Row label="Posizione"><span className="inline">

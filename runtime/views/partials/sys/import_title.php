@@ -1,0 +1,2 @@
+<?php /** Table page block. Scope: the variables of the view. @var \MiB\App $app @var \MiB\Table $t */ ?>
+<h1 class="h4 mb-3"><?= h($t->caption()) ?> <small class="text-secondary fw-normal">— <?= h(t('page.import')) ?></small></h1>

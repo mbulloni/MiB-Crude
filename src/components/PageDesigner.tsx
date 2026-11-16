@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { toast, update, useStore } from '../store';
 import type { DashItem, Dashboard, Field, Table } from '../types';
 import ListDesigner from './ListDesigner';
+import TablePageSys from './TablePageSys';
 import PageBuilder, { FIELD_H, normalize } from './PageBuilder';
 import { Btn, Check, Modal, Row, Tabs, lbl } from './ui';
 
@@ -126,16 +127,7 @@ export default function PageDesigner({ t, readOnly }: { t: Table; readOnly?: boo
       <ListDesigner t={t} readOnly={readOnly} onCopy={() => setCopy(true)} />
     </div>
   );
-  if (!isLayout) return (
-    <div className="pd">
-      <div className="inline wrap">{tabs}</div>
-      <div className="pd-canvas" style={{ padding: 16 }}>
-        <p className="help">{page === 'delete' ? 'La pagina Elimina chiede conferma e rimuove il record: non ha layout da configurare. I permessi stanno in Sicurezza.'
-          : `${PICK_HELP[page]} I campi di questa pagina si scelgono nella scheda Campi (colonna «${PAGES.find(([k]) => k === page)![1]}»); qui non c'è altro da disegnare.`}</p>
-        <Btn small icon="list-columns" onClick={() => useStore.getState().set({ nav: { kind: 'table', id: t.name, tab: 'fields' } })}>Apri Campi</Btn>
-      </div>
-    </div>
-  );
+  if (!isLayout) return <TablePageSys t={t} page={page} tabs={tabs} readOnly={readOnly} />; // search, print, import, export, delete
   const dash: Dashboard = { name: `${t.name}:${page}`, title: {}, items: grid || [], css: t.layout?.[page]?.css, js: t.layout?.[page]?.js };
   const set = (fn: (x: Dashboard) => void) => {
     if (readOnly) return;

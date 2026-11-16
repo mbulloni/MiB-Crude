@@ -1,0 +1,2 @@
+<?php /** System page block. Scope: the variables of the view. @var \MiB\App $app */ ?>
+<ul class="nav nav-pills mb-3"><?php foreach ($sections as $k => $l): ?><li class="nav-item"><a class="nav-link<?= $k === $section ? ' active' : '' ?>" href="<?= h($app->url('admin', ['s' => $k])) ?>"><?= h($l) ?></a></li><?php endforeach ?></ul>
