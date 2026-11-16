@@ -79,3 +79,25 @@ test('app system tables on classic SQL Server keep NVARCHAR and inline keys', ()
   assert.match(sql, /NVARCHAR\(150\)/);
   assert.doesNotMatch(sql, /NOT ENFORCED|NONCLUSTERED/);
 });
+
+const usersUnique = (mode) => execFileSync('php', [path.join(__dirname, 'php', 'users_unique.php'), path.join(__dirname, '..'), mode], { encoding: 'utf8' });
+
+test('Fabric: username uniqueness is enforced by the app (insert, rename, concurrent sign-ups)', () => {
+  const out = usersUnique('fabric');
+  assert.match(out, /same name again: duplicate \(23000\)/);
+  assert.match(out, /rows named ana: 1/);
+  assert.match(out, /other name: ok/);
+  assert.match(out, /rename bob to ana: duplicate \(23000\)/);
+  assert.match(out, /rename bob to bob \(itself\): ok/);
+  assert.match(out, /rename bob to carl: ok/);
+  assert.match(out, /race: first row keeps its place: ok/);
+  assert.match(out, /race: second row is removed: duplicate \(23000\)/);
+  assert.match(out, /rows named dan: 1/);
+});
+
+test('classic engines: insertUser is a plain insert, the UNIQUE constraint stays in charge', () => {
+  const out = usersUnique('classic');
+  assert.match(out, /first id: set/);
+  assert.match(out, /same name again: ok/); // the stand-in table has no constraint; a real one would refuse here
+  assert.match(out, /rename bob to ana: ok/);
+});

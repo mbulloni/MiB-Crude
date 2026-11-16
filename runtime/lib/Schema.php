@@ -97,6 +97,41 @@ class Schema
         ];
     }
 
+    /**
+     * Inserts a user and returns its id. Fabric Warehouse does not enforce UNIQUE (username), so there the application does:
+     * the name is checked before the insert and, if two sign-ups raced past that check, the row with the lowest id wins.
+     * On the other engines the UNIQUE constraint does the job and this is a plain insert.
+     * @throws DuplicateKey
+     */
+    public static function insertUser(Db $db, array $vals)
+    {
+        if (!$db->fabric) return $db->insert(self::t('users'), $vals, 'id');
+        self::requireFreeUsername($db, $vals['username'], null);
+        $id = $db->insert(self::t('users'), $vals, 'id');
+        self::keepFirstUser($db, $vals['username'], $id);
+        return $id;
+    }
+
+    /** Fabric only: refuses a username already used by another user (except $exceptId, the user being edited). @throws DuplicateKey */
+    public static function requireFreeUsername(Db $db, $username, $exceptId)
+    {
+        if (!$db->fabric) return;
+        $sql = 'SELECT COUNT(*) FROM ' . $db->table(self::t('users')) . ' WHERE ' . $db->q('username') . ' = ?';
+        $params = [$username];
+        if ($exceptId !== null) { $sql .= ' AND ' . $db->q('id') . ' <> ?'; $params[] = $exceptId; }
+        if ((int)$db->value($sql, $params) > 0) throw new DuplicateKey('Username already in use');
+    }
+
+    /** After an insert: when the same username now exists on a row with a lower id, the new row ($id) is removed. @throws DuplicateKey */
+    public static function keepFirstUser(Db $db, $username, $id)
+    {
+        $first = $db->value('SELECT MIN(' . $db->q('id') . ') FROM ' . $db->table(self::t('users')) . ' WHERE ' . $db->q('username') . ' = ?', [$username]);
+        if ($id !== null && $first !== null && (string)$first !== (string)$id) {
+            $db->delete(self::t('users'), ['id' => $id]);
+            throw new DuplicateKey('Username already in use');
+        }
+    }
+
     /** Groups and rights from the designer, inserted once. */
     private static function seed(Db $db)
     {
@@ -109,4 +144,10 @@ class Schema
             foreach ($tables as $table => $rights) $db->insert(self::t('rights'), ['group_id' => $group, 'table_name' => $table, 'rights' => $rights]);
         }
     }
+}
+
+/** What a UNIQUE violation looks like to the callers that already catch PDOException (SQLSTATE 23000). */
+class DuplicateKey extends \PDOException
+{
+    protected $code = '23000';
 }
