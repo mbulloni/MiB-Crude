@@ -31,7 +31,12 @@ class Db
                 $dsn = "pgsql:host=$host;" . ($port ? "port=$port;" : '') . "dbname=$db";
                 break;
             case 'sqlsrv':
-                $dsn = "sqlsrv:Server=$host" . ($port ? ",$port" : '') . ";Database=$db;TrustServerCertificate=1";
+                $entra = isset($c['sqlAuth']) && $c['sqlAuth'] === 'entra';
+                // Entra (Fabric / Azure SQL): user = client id, password = client secret of the service principal; TLS is always on
+                // and the certificate is checked. Otherwise as before: certificate accepted, encryption only when asked.
+                $dsn = "sqlsrv:Server=$host" . ($port ? ",$port" : '') . ";Database=$db"
+                    . ($entra ? ';Authentication=ActiveDirectoryServicePrincipal;Encrypt=1;TrustServerCertificate=0'
+                        : ';TrustServerCertificate=1' . (!empty($c['encrypt']) ? ';Encrypt=1' : ''));
                 break;
             case 'oracle':
                 $dsn = "oci:dbname=//$host:" . ($port ?: 1521) . "/$db;charset=AL32UTF8";

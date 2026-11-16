@@ -16,6 +16,7 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
   useEffect(() => { call('php:info').then(setPhp); }, []);
   const s = (patch: Partial<Connection>) => setC({ ...c, ...patch });
   const id = c.id || slug(c.name || c.database || 'db');
+  const entra = c.driver === 'sqlsrv' && c.sqlAuth === 'entra';
   const ext = ({ mysql: 'pdo_mysql', pgsql: 'pdo_pgsql', sqlsrv: 'pdo_sqlsrv', oracle: 'pdo_oci', sqlite: 'pdo_sqlite' } as Record<string, string>)[c.driver];
   const test = () => run('Test connessione…', async () => { const r = await call('db:test', { ...c, id }, pw); toast(`Connessione riuscita (${r.ms} ms)`, 'ok'); });
   const ok = async () => {
@@ -45,9 +46,12 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
         <Row label="Server"><span className="inline"><Text value={c.host} onChange={(v) => s({ host: v })} /><input className="inp num" type="number" value={c.port ?? ''} onChange={(e) => s({ port: Number(e.target.value) })} /></span></Row>
         <Row label={c.driver === 'oracle' ? 'Service name' : 'Database'}><Text value={c.database} onChange={(v) => s({ database: v })} /></Row>
         {(c.driver === 'pgsql' || c.driver === 'sqlsrv') && <Row label="Schema"><Text value={c.schema} onChange={(v) => s({ schema: v })} placeholder={c.driver === 'pgsql' ? 'public' : 'dbo'} /></Row>}
-        <Row label="Utente"><Text value={c.user} onChange={(v) => s({ user: v })} /></Row>
-        <Row label="Password" hint="Salvata solo sul tuo computer (.mibcrude-local), mai nel progetto condiviso"><Text type="password" value={pw} onChange={setPw} /></Row>
-        {c.driver === 'sqlsrv' && <Row label="Cifratura"><Check value={c.encrypt} onChange={(v) => s({ encrypt: v })} label="Encrypt" /></Row>}
+        {c.driver === 'sqlsrv' && <Row label="Accesso" hint="Microsoft Fabric Warehouse e Azure SQL richiedono Entra ID: l'applicazione generata accede con un'app registrata (service principal)">
+          <Select value={c.sqlAuth || 'sql'} options={[['sql', 'Utente e password SQL'], ['entra', 'Microsoft Entra (service principal)']]} onChange={(v) => s({ sqlAuth: v as 'sql' | 'entra', encrypt: v === 'entra' ? true : c.encrypt })} /></Row>}
+        <Row label={entra ? 'Client ID' : 'Utente'} hint={entra ? 'ID applicazione (client) dell\'app registrata in Entra' : undefined}><Text value={c.user} onChange={(v) => s({ user: v })} mono={entra} /></Row>
+        <Row label={entra ? 'Client secret' : 'Password'} hint="Salvata solo sul tuo computer (.mibcrude-local), mai nel progetto condiviso"><Text type="password" value={pw} onChange={setPw} /></Row>
+        {entra && <Row label="Tenant" hint="ID della directory (tenant) Entra, usato dal designer per la prova di connessione"><Text value={c.tenant} onChange={(v) => s({ tenant: v })} mono placeholder="00000000-0000-0000-0000-000000000000" /></Row>}
+        {c.driver === 'sqlsrv' && <Row label="Cifratura"><Check value={entra ? true : c.encrypt} onChange={(v) => !entra && s({ encrypt: v })} label={entra ? 'Encrypt (obbligatoria con Entra)' : 'Encrypt'} /></Row>}
       </>}
       {php && c.driver !== 'rest' && <p className="help">{php.ok ? <>PHP locale {php.version}: {php.modules.includes(ext) ? <span className="ok"><I n="check-circle" /> {ext} presente</span> : <span className="warn"><I n="exclamation-triangle" /> {ext} assente{php.docker ? ' — l\'anteprima userà Docker' : ' — installalo per l\'anteprima'}</span>}</> : php.error}</p>}
     </Modal>

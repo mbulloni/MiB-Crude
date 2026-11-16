@@ -62,9 +62,13 @@ async function connect(conn, password) {
     }
     case 'sqlsrv': {
       const mssql = require('mssql');
+      const entra = conn.sqlAuth === 'entra'; // Fabric / Azure SQL: service principal, TLS with a valid certificate
       const pool = await new mssql.ConnectionPool({
-        server: conn.host || 'localhost', port: Number(conn.port) || 1433, user: conn.user, password: pw, database: conn.database,
-        options: { trustServerCertificate: true, encrypt: !!conn.encrypt }, connectionTimeout: 8000,
+        server: conn.host || 'localhost', port: Number(conn.port) || 1433, database: conn.database,
+        ...(entra
+          ? { authentication: { type: 'azure-active-directory-service-principal-secret', options: { clientId: conn.user, clientSecret: pw, tenantId: conn.tenant || undefined } } }
+          : { user: conn.user, password: pw }),
+        options: { trustServerCertificate: !entra, encrypt: entra || !!conn.encrypt }, connectionTimeout: entra ? 30000 : 8000,
       }).connect();
       return {
         driver: 'sqlsrv',
