@@ -11,7 +11,7 @@ const msal = require('@azure/msal-node');
 
 // Public client of the Azure CLI: accepted by most tenants for Azure SQL / Fabric with a loopback redirect.
 const DEFAULT_CLIENT = '04b07795-8ddb-461a-bbee-02f9e1bf7b46';
-const SQL_SCOPE = 'https://database.windows.net//.default';
+const SQL_SCOPE = 'https://database.windows.net/.default'; // the audience the SQL drivers ask for (a double slash gives a different one, rejected)
 const cacheFile = () => path.join(app.getPath('userData'), 'entra-cache.bin');
 
 let memory = null; // serialized cache when the keyring is unavailable

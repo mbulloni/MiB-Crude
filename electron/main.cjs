@@ -314,10 +314,10 @@ handle('themes:remove', (id) => Themes.remove(Themes.DEFAULT_LIB, id));
 
 // --- generate, preview, deploy ---------------------------------------------------------
 
-handle('gen:check', (proj) => G.check(proj));
+handle('gen:check', (proj, opts = {}) => G.check(proj, { preview: !!opts.preview }));
 handle('gen:generate', (proj, opts = {}) => {
   const c = need();
-  const res = G.generate({ ...proj, dir: c.dir }, { secrets: secrets(), debug: !!opts.debug, force: !!opts.force });
+  const res = G.generate({ ...proj, dir: c.dir }, { secrets: secrets(), debug: !!opts.debug, force: !!opts.force, preview: !!opts.preview });
   const php = preview.phpInfo();
   res.lint = php.ok ? G.lint(res.outDir, php.bin) : [];
   return res;
@@ -366,7 +366,18 @@ handle('update:check', () => updates.check());
 handle('update:install', () => updates.install((p) => win && win.webContents.send('update:progress', p)));
 handle('update:restart', () => updates.restart());
 handle('php:lintEvent', (code, args) => preview.lintSnippet(code, args));
-handle('preview:start', (proj) => preview.start({ ...proj, dir: need().dir }, P.outputDir({ ...proj, dir: need().dir })));
+// Preview with a personal Entra account: sign in here (MFA in the browser, silent when cached) and hand the PHP of the preview a
+// short-lived access token per connection through the environment (never written to a file). The token lasts about an hour.
+async function previewTokens(proj) {
+  const env = {};
+  for (const c of proj.connections) {
+    if (c.driver !== 'sqlsrv' || c.sqlAuth !== 'entra-user') continue;
+    const r = await entra.token(c, [entra.SQL_SCOPE], { interactive: true });
+    env[G.tokenEnvName(c.id)] = r.accessToken;
+  }
+  return env;
+}
+handle('preview:start', async (proj) => preview.start({ ...proj, dir: need().dir }, P.outputDir({ ...proj, dir: need().dir }), await previewTokens(proj)));
 handle('preview:stop', () => preview.stopAll());
 handle('preview:status', () => preview.status());
 handle('preview:open', (url, internal) => {
@@ -377,6 +388,7 @@ handle('preview:open', (url, internal) => {
   return true;
 });
 handle('deploy:run', async (proj, profile, password) => {
+  if (proj.connections.some((c) => c.sqlAuth === 'entra-user')) throw new Error('Il progetto usa l\'account personale Microsoft Entra: per pubblicare serve il service principal (o l\'utente SQL)');
   const out = P.outputDir({ ...proj, dir: need().dir });
   return deploy.run(out, profile, password, P.localPath(need().dir, `deploy-state-${profile.id}.json`), (p) => win.webContents.send('deploy:progress', p));
 });

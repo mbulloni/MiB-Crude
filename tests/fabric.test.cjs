@@ -60,7 +60,7 @@ test('ALTER TABLE for Fabric: nullable ADD only, no ALTER COLUMN, no IDENTITY on
     ['ALTER TABLE [t] ADD CONSTRAINT [PK_t] PRIMARY KEY NONCLUSTERED ([a]) NOT ENFORCED']);
 });
 
-test('a personal Entra account (MFA) is designer-only: generating the app is refused', () => {
+test('a personal Entra account (MFA): fine for the designer preview, refused for publishing', () => {
   const fs = require('node:fs');
   const os = require('node:os');
   const P = require('../core/project.cjs');
@@ -68,13 +68,29 @@ test('a personal Entra account (MFA) is designer-only: generating the app is ref
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcentra-'));
   try {
     const proj = P.createProject(path.join(dir, 'p'), 'p');
-    proj.connections = [{ id: 'main', name: 'main', driver: 'sqlsrv', host: 'x.datawarehouse.fabric.microsoft.com', sqlAuth: 'entra-user' }];
+    proj.connections = [
+      { id: 'main', name: 'main', driver: 'mysql', host: 'localhost' },
+      { id: 'polaris', name: 'POLARIS', driver: 'sqlsrv', host: 'x.datawarehouse.fabric.microsoft.com', sqlAuth: 'entra-user' },
+    ];
     proj.project.defaultConnection = 'main';
-    const msgs = G.check(proj).filter((p) => p.level === 'error').map((p) => p.msg);
-    assert.ok(msgs.some((m) => /account personale Microsoft Entra/.test(m)), msgs.join(' | '));
-    proj.connections[0].sqlAuth = 'entra'; // service principal: fine
+    const publish = G.check(proj).filter((p) => p.level === 'error').map((p) => p.msg);
+    assert.ok(publish.some((m) => /per pubblicare.*account personale Microsoft Entra/.test(m)), publish.join(' | '));
+    const preview = G.check(proj, { preview: true });
+    assert.ok(!preview.some((p) => p.level === 'error' && /account personale/.test(p.msg)));
+    assert.ok(preview.some((p) => p.level === 'warning' && /anteprima usa il tuo account/.test(p.msg)));
+    assert.throws(() => G.generate(proj, { outDir: path.join(dir, 'out'), secrets: {} }), /per pubblicare/); // publishing refuses
+    proj.connections[1].sqlAuth = 'entra'; // service principal: fine for publishing
     assert.ok(!G.check(proj).some((p) => /account personale/.test(p.msg)));
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('the access token of a connection travels in MIBCRUDE_TOKEN_<ID> (same rule in Db.php)', () => {
+  const G = require('../core/generator.cjs');
+  assert.equal(G.tokenEnvName('polaris'), 'MIBCRUDE_TOKEN_POLARIS');
+  assert.equal(G.tokenEnvName('my-dwh.1'), 'MIBCRUDE_TOKEN_MY_DWH_1');
+  const php = require('node:fs').readFileSync(path.join(__dirname, '..', 'runtime', 'lib', 'Db.php'), 'utf8');
+  assert.match(php, /getenv\('MIBCRUDE_TOKEN_' \. strtoupper\(preg_replace\('\/\[\^A-Za-z0-9\]\/', '_', \$id\)\)\)/);
+  assert.match(php, /MultipleActiveResultSets=false/); // Fabric does not support MARS, which the PHP driver turns on by default
 });
 
 test('Fabric cannot be the main connection of an app (system tables need keys, defaults and a generated id)', () => {

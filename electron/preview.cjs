@@ -63,7 +63,8 @@ function dockerImage(drivers) {
   return image;
 }
 
-async function start(proj, outDir) {
+/** `env` = extra environment variables of the PHP process (access tokens of personal Entra accounts): they reach PHP without touching the disk or the command line. */
+async function start(proj, outDir, env = {}) {
   stopAll();
   if (!fs.existsSync(path.join(outDir, 'index.php'))) throw new Error('Genera prima l\'applicazione');
   const i = phpInfo(true);
@@ -86,12 +87,13 @@ async function start(proj, outDir) {
     dockerPrepend = ['-v', `${dir}:/mibcrude-preview:ro`];
   }
   if (i.ok && !missing.length) {
-    proc = spawn(i.bin, [...prepend, '-S', `127.0.0.1:${port}`, '-t', outDir], { cwd: outDir });
+    proc = spawn(i.bin, [...prepend, '-S', `127.0.0.1:${port}`, '-t', outDir], { cwd: outDir, env: { ...process.env, ...env } });
   } else if (i.docker) {
     mode = 'docker';
     const image = dockerImage(missing);
-    proc = spawn('docker', ['run', '--rm', '--network', 'host', '-v', `${outDir}:/app`, ...dockerPrepend, '-w', '/app', image, 'php',
-      ...(ntlmUser ? ['-d', 'auto_prepend_file=/mibcrude-preview/ntlm-user.php'] : []), '-S', `127.0.0.1:${port}`, '-t', '/app']);
+    // `-e NAME` without a value: docker takes it from its own environment, so a token never appears in the command line
+    proc = spawn('docker', ['run', '--rm', '--network', 'host', '-v', `${outDir}:/app`, ...dockerPrepend, ...Object.keys(env).flatMap((k) => ['-e', k]), '-w', '/app', image, 'php',
+      ...(ntlmUser ? ['-d', 'auto_prepend_file=/mibcrude-preview/ntlm-user.php'] : []), '-S', `127.0.0.1:${port}`, '-t', '/app'], { env: { ...process.env, ...env } });
   } else {
     throw new Error(i.ok ? `Il PHP locale (${i.version}) non ha i driver ${missing.map((d) => PDO_EXT[d]).join(', ')} e Docker non è disponibile` : i.error);
   }

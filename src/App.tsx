@@ -85,7 +85,7 @@ async function generateAndPreview() {
   const proj = useStore.getState().proj!;
   await run('Generazione…', async () => {
     if (useStore.getState().dirty) await save();
-    const res = await call('gen:generate', proj, { debug: true });
+    const res = await call('gen:generate', proj, { debug: true, preview: true });
     if (res.lint?.length) toast(`Errori PHP negli eventi: ${res.lint.map((l: any) => l.file).join(', ')}`, 'err');
     const st = await call('preview:start', proj);
     await call('preview:open', st.url, false);

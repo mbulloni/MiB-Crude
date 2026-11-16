@@ -35,10 +35,22 @@ class Db
                 break;
             case 'sqlsrv':
                 $entra = isset($c['sqlAuth']) && $c['sqlAuth'] === 'entra';
+                if (isset($c['sqlAuth']) && $c['sqlAuth'] === 'entra-user') {
+                    // Personal Microsoft Entra account: only the designer's preview, which signs in (MFA) and hands over a short-lived access token
+                    // in MIBCRUDE_TOKEN_<ID>; a published app has no such token
+                    $token = getenv('MIBCRUDE_TOKEN_' . strtoupper(preg_replace('/[^A-Za-z0-9]/', '_', $id)));
+                    if ($token === false || $token === '') throw new \RuntimeException("Connection $id uses a personal Microsoft Entra account: it works only in the designer's preview (restart the preview to renew the access token, valid about one hour)");
+                    $this->pdo = new PDO("sqlsrv:Server=$host" . ($port ? ",$port" : '') . ";Database=$db;Encrypt=1;TrustServerCertificate=0;MultipleActiveResultSets=false;AccessToken=$token", null, null, [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_CASE => PDO::CASE_NATURAL,
+                    ]);
+                    return;
+                }
                 // Entra (Fabric / Azure SQL): user = client id, password = client secret of the service principal; TLS is always on
                 // and the certificate is checked. Otherwise as before: certificate accepted, encryption only when asked.
                 $dsn = "sqlsrv:Server=$host" . ($port ? ",$port" : '') . ";Database=$db"
-                    . ($entra ? ';Authentication=ActiveDirectoryServicePrincipal;Encrypt=1;TrustServerCertificate=0'
+                    . ($entra ? ';Authentication=ActiveDirectoryServicePrincipal;Encrypt=1;TrustServerCertificate=0' . ($this->fabric ? ';MultipleActiveResultSets=false' : '') // Fabric does not support MARS, which the driver turns on by default
                         : ';TrustServerCertificate=1' . (!empty($c['encrypt']) ? ';Encrypt=1' : ''));
                 break;
             case 'oracle':

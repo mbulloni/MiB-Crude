@@ -109,13 +109,22 @@ function eventClass(className, group, events, extraMethods) {
 
 // --- validation before generating ----------------------------------------------
 
-function check(proj) {
+/** Name of the environment variable that carries a connection's access token to the preview (same rule as runtime/lib/Db.php). */
+const tokenEnvName = (id) => 'MIBCRUDE_TOKEN_' + String(id).toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
+function check(proj, opts = {}) {
   const problems = [];
   const tableNames = new Set(proj.tables.map((t) => t.name));
   const connIds = new Set(proj.connections.map((c) => c.id));
   if (!proj.connections.length) problems.push({ level: 'error', msg: 'Nessuna connessione al database' });
   if (proj.connections.find((c) => c.id === proj.project.defaultConnection)?.driver === 'rest') problems.push({ level: 'error', msg: 'La connessione principale deve essere un database (utenti, permessi e registro vivono lì), non un servizio REST' });
-  for (const c of proj.connections) if (c.sqlAuth === 'entra-user') problems.push({ level: 'error', msg: `Connessione "${c.id}": l'app generata non può usare l'accesso con account personale Microsoft Entra (serve il browser per l'MFA): scegli "Microsoft Entra (service principal)" o l'utente SQL` });
+  // Personal Entra account (MFA): the designer's preview signs in with it and hands the app a short-lived token; a published app has
+  // no browser for the MFA, so generating for publication is refused
+  for (const c of proj.connections) {
+    if (c.sqlAuth !== 'entra-user') continue;
+    if (opts.preview) problems.push({ level: 'warning', msg: `Connessione "${c.id}": l'anteprima usa il tuo account Microsoft Entra con un token che dura circa un'ora; per pubblicare serve "Microsoft Entra (service principal)"` });
+    else problems.push({ level: 'error', msg: `Connessione "${c.id}": per pubblicare l'app non si può usare l'account personale Microsoft Entra (serve il browser per l'MFA): scegli "Microsoft Entra (service principal)" o l'utente SQL. L'anteprima del designer funziona anche con l'account personale` });
+  }
   const main = proj.connections.find((c) => c.id === proj.project.defaultConnection);
   if (main && DDL.isFabric(main)) problems.push({ level: 'error', msg: `La connessione principale "${main.id}" è Microsoft Fabric Warehouse: le tabelle di sistema (utenti, permessi, registro) non si possono creare lì (Fabric non ha chiavi né valori predefiniti nel CREATE TABLE, né modo di leggere l'ID generato). Usa MariaDB, PostgreSQL o SQL Server come principale e Fabric come origine dati delle tabelle` });
   if (proj.connections.length && !connIds.has(proj.project.defaultConnection)) problems.push({ level: 'error', msg: `Connessione predefinita "${proj.project.defaultConnection}" inesistente` });
@@ -162,7 +171,7 @@ function autoMenu(proj) {
 function generate(proj, opts = {}) {
   const out = opts.outDir || P.outputDir(proj);
   const secrets = opts.secrets || P.readSecrets(proj.dir);
-  const problems = check(proj);
+  const problems = check(proj, { preview: !!opts.preview });
   if (problems.some((p) => p.level === 'error') && !opts.force) {
     const e = new Error('Il progetto contiene errori:\n' + problems.filter((p) => p.level === 'error').map((p) => '• ' + p.msg).join('\n'));
     e.problems = problems;
@@ -384,4 +393,4 @@ function lint(outDir, phpBin = 'php') {
   return errors;
 }
 
-module.exports = { php, phpFile, generate, check, lint, hashPassword, eventBody, ident, RUNTIME };
+module.exports = { php, phpFile, generate, check, tokenEnvName, lint, hashPassword, eventBody, ident, RUNTIME };

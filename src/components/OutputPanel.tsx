@@ -23,15 +23,15 @@ export default function OutputPanel() {
     call('local:get', 'deploy').then((d) => setProfiles(d || []));
     return mc().onDeployProgress(setProgress);
   }, []);
-  const generate = (debug: boolean) => run('Generazione…', async () => {
+  const generate = (debug: boolean, preview = false) => run('Generazione…', async () => {
     if (useStore.getState().dirty) await save();
-    const r = await call('gen:generate', p, { debug });
+    const r = await call('gen:generate', p, { debug, preview });
     setResult(r);
     setProblems(r.problems);
     toast(`Applicazione generata in ${r.ms} ms (${r.changed.length + r.copied} file aggiornati)`, 'ok');
   });
   const startPreview = () => run('Avvio anteprima…', async () => {
-    if (!result) await generate(true);
+    if (!result) await generate(true, true);
     const st = await call('preview:start', p);
     setPrev(st);
     await call('preview:open', st.url, false);
