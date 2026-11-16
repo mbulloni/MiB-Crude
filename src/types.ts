@@ -45,7 +45,8 @@ export interface Security {
 export interface Report { name: string; title: L; table: string; groups: { field: string; interval?: string; desc?: boolean }[]; aggregates: { field: string; fn: string }[]; columns: string[]; showDetails: boolean; crosstab?: { field: string; interval?: string; desc?: boolean } }
 export interface Chart { name: string; title: L; table: string; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean; modifyJs?: string }
 export interface DashItem {
-  type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field' | 'snippet' | 'toolbar' | 'datalist';
+  type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field' | 'snippet' | 'toolbar' | 'datalist' | 'sys';
+  block?: string; // 'sys' block: id of the block of a system page (login form, profile password…)
   id?: string; table?: string; ref?: string; field?: string; fn?: string; width?: number; height?: number; rows?: number; title?: L; html?: L;
   // free layout on the 12-column grid (x, w in columns; y, h in rows of 40px)
   x?: number; y?: number; w?: number; h?: number;
@@ -61,11 +62,11 @@ export interface ProjectMeta {
 }
 export interface Project {
   dir: string; project: ProjectMeta; connections: Connection[]; tables: Table[]; events: Record<string, Record<string, string>>;
-  menu: { items: MenuItem[] }; security: Security; lang: Record<string, Record<string, string>>; reports: Report[]; charts: Chart[]; dashboards: Dashboard[];
+  menu: { items: MenuItem[] }; security: Security; lang: Record<string, Record<string, string>>; reports: Report[]; charts: Chart[]; dashboards: Dashboard[]; syspages: Dashboard[];
 }
 export interface Secrets { connections?: Record<string, string>; oidc?: Record<string, string>; mailPassword?: string; smsPassword?: string; geocodeKey?: string; encryptionKey?: string; deploy?: Record<string, string>; team?: { url: string; user: string; token: string; project: string } }
 export interface TeamState { connected: boolean; user: string; project: string; role: string; locks: Record<string, { user: string; since: number }>; presence: { id: string; user: string; focus: string }[]; conflicts: string[] }
 
 export type Nav =
-  | { kind: 'project' | 'connections' | 'tables' | 'menu' | 'security' | 'events' | 'reports' | 'charts' | 'dashboards' | 'pages' | 'lang' | 'output' | 'team' }
+  | { kind: 'project' | 'connections' | 'tables' | 'menu' | 'security' | 'events' | 'reports' | 'charts' | 'dashboards' | 'pages' | 'syspages' | 'lang' | 'output' | 'team' }
   | { kind: 'table'; id: string; tab?: string };

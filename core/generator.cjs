@@ -330,6 +330,7 @@ function generate(proj, opts = {}) {
     reports: byName(proj.reports),
     charts: byName(proj.charts),
     dashboards: byName(proj.dashboards),
+    syspages: byName(proj.syspages),
     mail: proj.project.mail || {},
     debug: !!opts.debug,
     systemPrefix: proj.project.systemPrefix || 'mc_',

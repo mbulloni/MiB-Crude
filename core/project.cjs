@@ -12,6 +12,7 @@
 //   security.json              login, groups, permissions, providers
 //   lang/<code>.json           custom translations
 //   reports/, charts/, dashboards/   one file each
+//   syspages/<page>.json       design of a system page (login, register, forgot, reset, profile, home): free-grid blocks, css, js
 //   custom/                    files copied as-is into the generated app
 //   .mibcrude-local/           per-developer, never committed (secrets, output, ui state)
 
@@ -159,6 +160,7 @@ function createProject(dir, name) {
     reports: [],
     charts: [],
     dashboards: [],
+    syspages: [],
   };
   saveProject(proj);
   writeIfChanged(path.join(dir, '.gitignore'), `${LOCAL_DIR}/\noutput/\n`);
@@ -200,6 +202,7 @@ function loadProject(dir) {
     reports: listJson(path.join(dir, 'reports')),
     charts: listJson(path.join(dir, 'charts')),
     dashboards: listJson(path.join(dir, 'dashboards')),
+    syspages: listJson(path.join(dir, 'syspages')),
   };
 }
 
@@ -212,7 +215,7 @@ function serialize(proj) {
   for (const c of proj.connections) files[`connections/${safeName(c.id)}.json`] = stableStringify(c);
   for (const t of proj.tables) files[`tables/${safeName(t.name)}.json`] = stableStringify(t);
   for (const [code, dict] of Object.entries(proj.lang || {})) files[`lang/${safeName(code)}.json`] = stableStringify(dict);
-  for (const kind of ['reports', 'charts', 'dashboards']) for (const r of proj[kind] || []) files[`${kind}/${safeName(r.name)}.json`] = stableStringify(r);
+  for (const kind of ['reports', 'charts', 'dashboards', 'syspages']) for (const r of proj[kind] || []) files[`${kind}/${safeName(r.name)}.json`] = stableStringify(r);
   for (const [group, evs] of Object.entries(proj.events || {})) {
     // JS_* are client-side (JavaScript) events, everything else is PHP.
     for (const [name, code] of Object.entries(evs)) if (code != null && code.trim() !== '') files[`events/${safeName(group)}/${safeName(name)}.${name.startsWith('JS_') ? 'js' : 'php'}`] = code.endsWith('\n') ? code : code + '\n';
@@ -221,7 +224,7 @@ function serialize(proj) {
 }
 
 // Folders whose contents are fully owned by the serializer (stale files are deleted).
-const MANAGED_DIRS = ['connections', 'tables', 'lang', 'reports', 'charts', 'dashboards', 'events'];
+const MANAGED_DIRS = ['connections', 'tables', 'lang', 'reports', 'charts', 'dashboards', 'syspages', 'events'];
 
 function walk(dir, base = dir, out = []) {
   let entries = [];

@@ -262,6 +262,16 @@ Eventi dell'applicazione: avvio, prima e dopo il login, login fallito, registraz
 
 **Report & Chart Builder** web (opzione del progetto): gli utenti dell'app creano report e grafici propri, rispettando i loro permessi, e li possono condividere.
 
+**Pagine di sistema** (voce *Pagine di sistema* nella barra a sinistra): le pagine dell'app non legate a una tabella (**Accesso, Registrazione, Password dimenticata, Nuova password, Profilo, Home**) si personalizzano come le pagine delle tabelle.
+- **Aspetto standard**: finché non la personalizzi, la pagina esce com'è sempre (nessuna differenza). *Personalizza questa pagina* la trasforma in una griglia libera di 12 colonne con i **blocchi della pagina** (per esempio per l'accesso: *Modulo di accesso*, *Accesso con provider*, *Collegamenti*; per il profilo: *Titolo*, *Cambio password*, *Verifica in due passaggi*, *Chiave API*; per la home: *Titolo*, *Dashboard*, *Riquadri delle tabelle*). Un blocco tolto si rimette con il suo pulsante.
+- **Blocchi liberi**: *Testo*, *Codice* (HTML/CSS/JavaScript non filtrato), *Immagine*, *Pagina web*, *Pulsante*, da mettere attorno ai blocchi della pagina. Le schede *Stile (CSS)* e *JavaScript* valgono per quella pagina (`mcPage` come nelle altre pagine a griglia).
+- **Testi e etichette**: sotto l'editor, i testi della pagina per ogni lingua del progetto (es. «Accedi», «Nome utente»). Sono le stesse frasi della scheda *Lingue* e valgono anche nelle altre pagine che le usano. Vuoto o uguale all'originale = testo standard.
+- *Ripristina l'aspetto standard* scarta blocchi, CSS e JavaScript della pagina (i testi modificati restano).
+- Nelle pagine di accesso e registrazione il contenitore è una scheda stretta: per un layout più largo usa il CSS della pagina.
+- Le pagine di tabella senza design (Ricerca avanzata, Stampa, Esporta, Importa, Elimina) e l'amministrazione verranno nelle prossime versioni.
+
+![Pagine di sistema](screenshots/designer-pagine-sistema.png)
+
 ## 11. Impostazioni e stile
 
 In alto il riepilogo del progetto (titolo, lingue, menu, tema, funzioni attive, attività, tema grafico); a sinistra sei categorie: **Generale**, **Aspetto**, **Funzioni** (riquadri con interruttore), **Automazione**, **Comunicazione**, **Mappe**. L'ultima categoria aperta viene ricordata.

@@ -367,6 +367,73 @@ class Layout
     }
 }
 
+/**
+ * Pages of the application that are not tied to a table (login, registration, password, profile, home): split in blocks
+ * (views/partials/sys/<page>_<block>.php) that the designer can rearrange on the free grid, together with the free blocks
+ * (text, code, image, web page, button), page CSS and JavaScript. Without a design the blocks come out in the standard order.
+ */
+class SysPage
+{
+    /** Design of a page ({items, css, js}) or null when the page keeps its standard look. */
+    public static function def($page)
+    {
+        $d = isset(App::$i->config['syspages'][$page]) ? App::$i->config['syspages'][$page] : null;
+        return is_array($d) && !empty($d['items']) && is_array($d['items']) ? $d : null;
+    }
+
+    /** HTML of one block of a page, with the variables of the view in scope. */
+    public static function part($page, $block, array $vars)
+    {
+        $name = $page . '_' . $block;
+        $file = __DIR__ . '/../views/partials/sys/' . $name . '.php';
+        if (!preg_match('/^[a-z0-9_]+$/', $name) || !is_file($file)) return '';
+        $render = static function ($__file, array $__vars) { extract($__vars); ob_start(); include $__file; return ob_get_clean(); };
+        return $render($file, $vars);
+    }
+
+    /**
+     * Prints a page. $order = its blocks in the standard order; $default (optional) prints the standard markup when the blocks need
+     * wrappers; it receives a function that returns the HTML of a block.
+     */
+    public static function show($page, array $order, array $vars, $default = null)
+    {
+        $p = function ($block) use ($page, $vars) { return self::part($page, $block, $vars); };
+        $def = self::def($page);
+        if (!$def) {
+            if ($default) $default($p); else foreach ($order as $b) echo $p($b);
+            return;
+        }
+        $app = App::$i;
+        $eq = Theme::flavor($app) === 'equation';
+        $n = 0;
+        $items = array_values($def['items']);
+        if (!empty($def['css'])) echo '<style>' . str_replace('</style', '<\/style', $def['css']) . '</style>';
+        echo '<div class="mc-grid" id="mc-page">';
+        foreach ($items as $it) {
+            $type = isset($it['type']) ? $it['type'] : '';
+            echo '<div class="mc-cell" data-block="' . h(isset($it['id']) ? $it['id'] : '') . '" data-type="' . h($type) . '" style="' . h(Layout::cellStyle($it)) . '">';
+            if ($type === 'sys') {
+                echo isset($it['block']) && in_array($it['block'], $order, true) ? $p($it['block']) : '';
+            } elseif (in_array($type, ['html', 'code', 'image', 'frame', 'button'], true)) {
+                $i = 0;
+                $it = (new Reports($app))->resolveItem($it, $i);
+                if ($it) {
+                    $title = $app->label(isset($it['title']) ? $it['title'] : '', '');
+                    $bare = isset($it['card']) && !$it['card'];
+                    include __DIR__ . '/../views/partials/dash_block.php';
+                }
+            }
+            echo '</div>';
+        }
+        echo '</div>';
+        $name = 'sys:' . $page;
+        $gridItems = [];
+        foreach ($items as $g) $gridItems[] = ['id' => isset($g['id']) ? $g['id'] : '', 'type' => isset($g['type']) ? $g['type'] : ''];
+        $items = $gridItems;
+        include __DIR__ . '/../views/partials/dash_script.php';
+    }
+}
+
 /** Menu tree filtered by permissions, independent from the markup (used by every layout/theme). */
 class Menu
 {

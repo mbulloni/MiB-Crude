@@ -4,6 +4,7 @@ import { update, useStore } from '../store';
 import type { Dashboard, DashItem, Table } from '../types';
 import CodeEditor from './CodeEditor';
 import { PageGuide, PropagateDialog } from './PageHelp';
+import { SYS_PAGES, sysBlock } from '../syspages';
 import { Btn, Check, I, LangText, Num, Row, Section, Select, Tabs, Text, lbl } from './ui';
 
 const COLS = 12, ROW = 40, GAP = 12;
@@ -18,6 +19,7 @@ const KINDS: Record<string, { label: string; icon: string; w: number; h: number 
   image: { label: 'Immagine', icon: 'image', w: 4, h: 6 }, frame: { label: 'Pagina web', icon: 'window', w: 12, h: 9 },
   button: { label: 'Pulsante', icon: 'cursor', w: 3, h: 2 }, snippet: { label: 'Snippet PHP', icon: 'filetype-php', w: 12, h: 3 },
   toolbar: { label: 'Barra comandi', icon: 'tools', w: 12, h: 2 }, datalist: { label: 'Elenco record', icon: 'table', w: 12, h: 12 },
+  sys: { label: 'Blocco della pagina', icon: 'layout-text-window', w: 12, h: 4 },
 };
 
 const HINTS: Record<string, string> = {
@@ -76,14 +78,19 @@ type Drag = { i: number; mode: 'move' | 'resize'; x0: number; y0: number; orig: 
 /** Table page mode: same editor, blocks plus the editable fields of the table (no CSS/JS tabs, no other-page propagation). */
 export interface TableCtx { table: Table; page: string; readOnly?: boolean; onSnippet: () => void; onCopy: () => void }
 
-export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void; ctx?: TableCtx }) {
+/** System page mode (login, profile, home…): the blocks of the page itself plus the free blocks, no tables or fields. */
+export interface SysCtx { page: string }
+
+export default function PageBuilder({ d, set, ctx, sys }: { d: Dashboard; set: (fn: (x: Dashboard) => void) => void; ctx?: TableCtx; sys?: SysCtx }) {
+  /** Label, icon and help of a block (system blocks come from the page definition). */
+  const kindOf = (b: DashItem) => (b.type === 'sys' && sys ? { label: sysBlock(sys.page, b.block || '')?.label || 'Blocco', icon: sysBlock(sys.page, b.block || '')?.icon || 'layout-text-window' } : KINDS[b.type] || KINDS.html);
   const p = useStore((s) => s.proj)!;
   const [tab, setTab] = useState<'layout' | 'css' | 'js'>('layout');
   const [sel, setSel] = useState('');
   const [dlg, setDlg] = useState<'' | 'guide' | 'propagate'>('');
   const seen = () => { try { return localStorage.getItem('mc-pb-guide') === '1'; } catch { return true; } };
   const closeGuide = () => { try { localStorage.setItem('mc-pb-guide', '1'); } catch { /* ignore */ } setDlg(''); };
-  useEffect(() => { if (!ctx && !d.items.length && !seen()) setDlg('guide'); }, [d.name]);
+  useEffect(() => { if (!ctx && !sys && !d.items.length && !seen()) setDlg('guide'); }, [d.name]);
   const [prev, setPrev] = useState<DashItem[] | null>(null);
   const drag = useRef<Drag | null>(null);
   const canvas = useRef<HTMLDivElement>(null);
@@ -98,6 +105,13 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
 
   // A filter block on the list works only on fields marked for search.
   const ensureSearch = (name: string) => update((d) => { const f = d.tables.find((y) => y.name === ctx!.table.name)?.fields.find((y) => y.name === name); if (f && !f.show.search) f.show = { ...f.show, search: true }; });
+  const addSys = (blockId: string) => set((x) => {
+    const b = sysBlock(sys!.page, blockId)!;
+    const ids = new Set(x.items.map((i) => i.id));
+    let n = x.items.length + 1; while (ids.has(`b${n}`)) n++;
+    x.items.push({ id: `b${n}`, type: 'sys', block: blockId, x: 1, y: Math.max(0, ...x.items.map((i) => (i.y || 1) + (i.h || 6) - 1)) + 1, w: b.w, h: b.h });
+    setSel(`b${n}`);
+  });
   const add = (type: Type) => set((x) => {
     const k = KINDS[type];
     const ids = new Set(x.items.map((i) => i.id));
@@ -147,6 +161,7 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
       case 'count': case 'kpi': return `${lbl(p.tables.find((t) => t.name === it.table)?.caption, it.table || '')} · ${it.fn || 'count'}${it.field ? ' ' + it.field : ''}`;
       case 'field': return ctx ? lbl(ctx.table.fields.find((f) => f.name === it.field)?.label, it.field || '') : `${it.table || ''}.${it.field || ''}`;
       case 'snippet': return it.event || '';
+      case 'sys': return sys ? sysBlock(sys.page, it.block || '')?.hint.slice(0, 70) || '' : '';
       case 'toolbar': return 'Titolo e pulsanti della lista';
       case 'datalist': return 'Lista dei record';
       case 'list': return it.table || '';
@@ -178,8 +193,9 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
     {tab === 'layout' && <>
       <div className="inline wrap" style={{ margin: '8px 0' }}>
         <Btn small icon="question-circle" onClick={() => setDlg('guide')}>Guida</Btn>
-        <Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} />
-        {((ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'field', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
+        {!sys && <><Btn small icon="files" disabled={ctx?.readOnly} onClick={() => (ctx ? ctx.onCopy() : setDlg('propagate'))}>Applica ad altre pagine</Btn><span style={{ width: 12 }} /></>}
+        {sys && <>{SYS_PAGES.find((q) => q.id === sys.page)!.blocks.map((b) => <Btn key={b.id} small kind="primary" icon={b.icon} title={b.hint} disabled={d.items.some((q) => q.type === 'sys' && q.block === b.id)} onClick={() => addSys(b.id)}>{b.label}</Btn>)}<span style={{ width: 12 }} /></>}
+        {((sys ? ['html', 'code', 'image', 'frame', 'button'] : ctx ? (ctx.page === 'list' ? ['toolbar', 'datalist', 'field', 'count', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet'] : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button', 'snippet']) : ['count', 'field', 'chart', 'list', 'report', 'html', 'code', 'image', 'frame', 'button']) as Type[]).map((t) =>
           <Btn key={t} small icon={KINDS[t].icon} disabled={ctx?.readOnly || ((t === 'toolbar' || t === 'datalist') && d.items.some((q) => q.type === t)) || (t === 'field' && !!ctx && ctx.page !== 'list' && !unplaced.length) || (t === 'chart' && !p.charts.length) || (t === 'report' && !p.reports.length) || ((t === 'count' || t === 'list' || t === 'field') && !p.tables.length)} onClick={() => add(t)}>{KINDS[t].label}</Btn>)}
         {ctx && ctx.page !== 'list' && <><span style={{ width: 12 }} /><Btn small icon="plus-circle" disabled={ctx.readOnly || !unplaced.length} onClick={() => addAllFields()}>Tutti i campi mancanti ({unplaced.length})</Btn></>}
       </div>
@@ -188,7 +204,7 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
       <div className="pb-wrap">
         <div className="pb-canvas" ref={canvas} style={{ gridAutoRows: ROW, gap: GAP, minHeight: rows * (ROW + GAP) }} onPointerDown={() => setSel('')}>
           {items.map((b, i) => {
-            const k = KINDS[b.type] || KINDS.html;
+            const k = kindOf(b);
             return <div key={b.id || i} className={`pb-block ${b.id === sel ? 'on' : ''} ${prev && drag.current?.i === i ? 'drag' : ''}`}
               style={{ gridColumn: `${b.x || 1} / span ${b.w || 6}`, gridRow: `${b.y || 1} / span ${b.h || 6}` }}
               onPointerDown={(e) => { e.stopPropagation(); start(e, i, 'move'); }}>
@@ -201,7 +217,7 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
           })}
         </div>
         {it && <div className="pb-insp">
-          <Section title={`${(KINDS[it.type] || KINDS.html).label} · ${it.id}`} help={ctx && it.type === 'field' ? (ctx.page === 'list' ? 'Filtro su un campo della tabella: scrivi o scegli un valore e la lista si filtra. Mettilo dove vuoi (sopra la tabella, accanto ai pulsanti).' : 'Un campo di questa tabella, nel punto che vuoi: editabile in Modifica e Nuovo, in sola lettura in Visualizza. Larghezza e altezza si cambiano trascinando il quadratino del blocco.') : HINTS[it.type]}>
+          <Section title={`${kindOf(it).label} · ${it.id}`} help={ctx && it.type === 'field' ? (ctx.page === 'list' ? 'Filtro su un campo della tabella: scrivi o scegli un valore e la lista si filtra. Mettilo dove vuoi (sopra la tabella, accanto ai pulsanti).' : 'Un campo di questa tabella, nel punto che vuoi: editabile in Modifica e Nuovo, in sola lettura in Visualizza. Larghezza e altezza si cambiano trascinando il quadratino del blocco.') : HINTS[it.type]}>
             {(['count', 'kpi', 'list'].includes(it.type) || (it.type === 'field' && !ctx)) && <Row label="Tabella"><Select value={it.table} options={tables} onChange={(v) => edit((q) => { q.table = v; if (q.type === 'field') q.field = fieldsOf(v)[0]?.[0]; })} /></Row>}
             {(it.type === 'count' || it.type === 'kpi') && <Row label="Valore"><span className="inline"><Select value={it.fn || 'count'} options={FNS} onChange={(v) => edit((q) => { q.fn = v; })} />
               {it.fn && it.fn !== 'count' && <Select value={it.field} options={fieldsOf(it.table)} onChange={(v) => edit((q) => { q.field = v; })} />}</span></Row>}
@@ -227,7 +243,8 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
             {it.type === 'image' && <Row label="Testo alternativo"><Text value={it.alt} onChange={(v) => edit((q) => { q.alt = v; })} /></Row>}
             {it.type === 'button' && <><Row label="Icona" hint="Nome Bootstrap Icons, es. arrow-right"><Text value={it.icon} onChange={(v) => edit((q) => { q.icon = v; })} /></Row>
               <Row label="Apri"><Check value={it.newWindow} onChange={(v) => edit((q) => { q.newWindow = v; })} label="In una nuova scheda" /></Row></>}
-            {it.type !== 'code' && it.type !== 'image' && it.type !== 'frame' && it.type !== 'snippet' && !(it.type === 'field' && ctx) && <Row label={it.type === 'button' ? 'Etichetta' : 'Titolo'}><LangText value={it.title} onChange={(v) => edit((q) => { q.title = v; })} /></Row>}
+            {it.type === 'sys' && sys && <p className="help">{sysBlock(sys.page, it.block || '')?.hint} Il contenuto del blocco non si modifica qui; i testi stanno nella sezione «Testi e etichette» sotto l'editor.</p>}
+            {it.type !== 'code' && it.type !== 'image' && it.type !== 'frame' && it.type !== 'snippet' && it.type !== 'sys' && !(it.type === 'field' && ctx) && <Row label={it.type === 'button' ? 'Etichetta' : 'Titolo'}><LangText value={it.title} onChange={(v) => edit((q) => { q.title = v; })} /></Row>}
             {['html', 'code', 'image'].includes(it.type) && <Row label="Stile CSS" hint="Es. background:#eef; padding:12px"><Text value={it.style} mono onChange={(v) => edit((q) => { q.style = v; })} /></Row>}
             <Row label="Posizione"><span className="inline">
               {(['x', 'y', 'w', 'h'] as const).map((k) => <span key={k} className="inline">{{ x: 'Col', y: 'Riga', w: 'Largh.', h: 'Alt.' }[k]} <Num value={it[k]} min={1} max={k === 'y' || k === 'h' ? 200 : COLS} onChange={(v) => edit((q) => { q[k] = Number(v) || 1; })} /></span>)}</span></Row>
@@ -239,8 +256,8 @@ export default function PageBuilder({ d, set, ctx }: { d: Dashboard; set: (fn: (
       <CodeEditor language="css" value={d.css || ''} onChange={(v) => set((x) => { x.css = v; })} height={360} /></Section>}
     {tab === 'js' && <Section title="JavaScript della pagina" help="Eseguito a pagina caricata. Disponibile mcPage: mcPage.items[id].value (indicatori e campi), mcPage.el(id) (elemento del blocco), mcPage.chart(id) (Promise dell'istanza ECharts), mcPage.ready(fn).">
       <CodeEditor language="javascript" value={d.js || ''} onChange={(v) => set((x) => { x.js = v; })} height={360} /></Section>}
-    {!ctx && <Row label="Titolo"><Check value={!d.hideTitle} onChange={(v) => set((x) => { x.hideTitle = !v; })} label="Mostra il titolo in cima alla pagina" /></Row>}
+    {!ctx && !sys && <Row label="Titolo"><Check value={!d.hideTitle} onChange={(v) => set((x) => { x.hideTitle = !v; })} label="Mostra il titolo in cima alla pagina" /></Row>}
     {dlg === 'guide' && <PageGuide onClose={closeGuide} onInsertJs={(code) => set((x) => { x.js = (x.js ? x.js + '\n\n' : '') + code; })} />}
-    {!ctx && dlg === 'propagate' && <PropagateDialog d={d} selected={sel} onClose={() => setDlg('')} />}
+    {!ctx && !sys && dlg === 'propagate' && <PropagateDialog d={d} selected={sel} onClose={() => setDlg('')} />}
   </>;
 }

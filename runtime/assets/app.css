@@ -126,3 +126,4 @@ td.mc-saved { background: color-mix(in srgb, var(--bs-success) 18%, transparent)
 
 .mc-formgrid { grid-auto-rows: minmax(40px, auto); }
 .mc-formgrid .mc-cell { overflow: visible; }
+.mc-cell[data-type="sys"] { overflow: auto; }

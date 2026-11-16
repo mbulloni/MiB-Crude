@@ -1,0 +1,3 @@
+<?php /** System page block. Scope: the variables of the view. @var \MiB\App $app */ ?>
+<?php if ($dashboards): ?><div class="mb-3 d-flex flex-wrap gap-2"><?php foreach ($dashboards as $dn => $dd): if (!$app->security->can('dashboard:' . $dn, 'S')) continue; ?>
+  <a class="btn btn-outline-primary" href="<?= h($app->url('dashboard', ['d' => $dn])) ?>"><i class="bi bi-speedometer2"></i> <?= h($app->label($dd['title'], $dn)) ?></a><?php endforeach ?></div><?php endif ?>

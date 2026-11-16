@@ -10,6 +10,7 @@ function itemOf(rel) {
   if ((m = rel.match(/^events\/_global\//))) return 'events:_global';
   if ((m = rel.match(/^events\/([^/]+)\//))) return `table:${m[1]}`;
   if ((m = rel.match(/^(report|chart|dashboard)s\/(.+)\.json$/))) return `${m[1]}:${m[2]}`;
+  if ((m = rel.match(/^syspages\/(.+)\.json$/))) return `syspage:${m[1]}`;
   if (rel.startsWith('connections/')) return 'connections';
   if (rel.startsWith('lang/')) return 'lang';
   if (rel === 'security.json') return 'security';
@@ -22,7 +23,7 @@ function itemOf(rel) {
 // Which project paths may travel over the wire (never local/secret/output files).
 function syncable(rel) {
   if (rel.includes('..') || rel.startsWith('/') || rel.startsWith(P.LOCAL_DIR) || rel.startsWith('.git/') || rel.startsWith('output/')) return false;
-  return /^(mibcrude\.json|menu\.json|security\.json|\.gitignore|(connections|tables|lang|reports|charts|dashboards)\/[^/]+\.json|events\/[^/]+\/[^/]+\.(php|js)|custom\/.+|public\/.+)$/.test(rel);
+  return /^(mibcrude\.json|menu\.json|security\.json|\.gitignore|(connections|tables|lang|reports|charts|dashboards|syspages)\/[^/]+\.json|events\/[^/]+\/[^/]+\.(php|js)|custom\/.+|public\/.+)$/.test(rel);
 }
 
 module.exports = { itemOf, syncable, hash: P.hash };

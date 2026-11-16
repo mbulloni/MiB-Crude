@@ -14,6 +14,7 @@ import MenuPanel from './components/MenuPanel';
 import SecurityPanel from './components/SecurityPanel';
 import GlobalEvents from './components/GlobalEvents';
 import { ChartsPanel, DashboardsPanel, PagesPanel, ReportsPanel } from './components/ReportsPanel';
+import SysPagesPanel from './components/SysPagesPanel';
 import LanguagesPanel from './components/LanguagesPanel';
 import OutputPanel from './components/OutputPanel';
 import TeamPanel, { itemOfNav, useTeamLocks } from './components/TeamPanel';
@@ -53,6 +54,7 @@ function Sidebar() {
       <NavItem nav={{ kind: 'charts' }} icon="bar-chart" label="Grafici" badge={p.charts.length || undefined} />
       <NavItem nav={{ kind: 'dashboards' }} icon="speedometer2" label="Dashboard" badge={p.dashboards.filter((x) => !x.page).length || undefined} />
       <NavItem nav={{ kind: 'pages' }} icon="layout-wtf" label="Pagine" badge={p.dashboards.filter((x) => x.page).length || undefined} />
+      <NavItem nav={{ kind: 'syspages' }} icon="window-stack" label="Pagine di sistema" badge={(p.syspages || []).filter((x) => x.items.length).length || undefined} />
       <NavItem nav={{ kind: 'lang' }} icon="translate" label="Lingue" />
       <div className="sb-group">Rilascio</div>
       <NavItem nav={{ kind: 'output' }} icon="rocket-takeoff" label="Genera e pubblica" />
@@ -75,6 +77,7 @@ function Main() {
     case 'charts': return <ChartsPanel />;
     case 'dashboards': return <DashboardsPanel />;
     case 'pages': return <PagesPanel />;
+    case 'syspages': return <SysPagesPanel />;
     case 'lang': return <LanguagesPanel />;
     case 'output': return <OutputPanel />;
     case 'team': return <TeamPanel />;
