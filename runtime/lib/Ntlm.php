@@ -83,7 +83,7 @@ class Ntlm
         $c = self::cfg($app);
         if (empty($c['createTables'])) return;
         $db = self::db($app);
-        $vc = function ($n) use ($db) { return ($db->driver === 'oracle' ? 'VARCHAR2' : ($db->driver === 'sqlsrv' ? 'NVARCHAR' : 'VARCHAR')) . "($n)"; };
+        $vc = function ($n) use ($db) { return $db->varchar($n); };
         $q = function ($n) use ($db) { return $db->q($n); };
         $ddl = [
             $c['userTable'] => 'CREATE TABLE ' . self::qt($db, $c['userTable']) . " ({$q($c['userCol'])} {$vc(255)}, {$q($c['groupCol'])} {$vc(255)} NOT NULL, {$q($c['areaCol'])} {$vc(255)} NOT NULL)",

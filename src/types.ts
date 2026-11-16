@@ -3,7 +3,7 @@ export type L = Record<string, string>;
 
 /** API paging of a REST datasource (see runtime/lib/Rest.php). */
 export interface RestPaging { mode: '' | 'page' | 'offset'; pageParam?: string; firstPage?: number; offsetParam?: string; sizeParam?: string; pageSize?: number; totalPath?: string; searchParam?: string; sortParam?: string; dirParam?: string }
-export interface Connection { id: string; name: string; driver: 'mysql' | 'pgsql' | 'sqlsrv' | 'oracle' | 'sqlite' | 'rest'; url?: string; auth?: 'none' | 'bearer' | 'basic' | 'header' | 'query'; host?: string; port?: number | string; database?: string; user?: string; schema?: string; file?: string; encrypt?: boolean; sqlAuth?: 'sql' | 'entra'; tenant?: string }
+export interface Connection { id: string; name: string; driver: 'mysql' | 'pgsql' | 'sqlsrv' | 'oracle' | 'sqlite' | 'rest'; url?: string; auth?: 'none' | 'bearer' | 'basic' | 'header' | 'query'; host?: string; port?: number | string; database?: string; user?: string; schema?: string; file?: string; encrypt?: boolean; sqlAuth?: 'sql' | 'entra'; tenant?: string; fabric?: boolean }
 
 export interface Lookup {
   kind: 'table' | 'list'; table?: string; key?: string; display?: string; where?: string; orderBy?: string;

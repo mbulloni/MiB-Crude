@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { call } from '../api';
 import { run, saveSecrets, toast, update, useStore } from '../store';
 import type { Connection } from '../types';
+import { isFabric } from '../dialect';
 import { Btn, Check, Empty, Hero, I, Modal, Row, Section, Select, Text, slug } from './ui';
 
 const DRIVERS: [Connection['driver'], string][] = [['mysql', 'MariaDB / MySQL'], ['pgsql', 'PostgreSQL'], ['sqlsrv', 'SQL Server'], ['oracle', 'Oracle'], ['sqlite', 'SQLite'], ['rest', 'Servizio REST (JSON)']];
@@ -51,6 +52,7 @@ export function ConnectionDialog({ initial, onClose }: { initial: Connection | n
         <Row label={entra ? 'Client ID' : 'Utente'} hint={entra ? 'ID applicazione (client) dell\'app registrata in Entra' : undefined}><Text value={c.user} onChange={(v) => s({ user: v })} mono={entra} /></Row>
         <Row label={entra ? 'Client secret' : 'Password'} hint="Salvata solo sul tuo computer (.mibcrude-local), mai nel progetto condiviso"><Text type="password" value={pw} onChange={setPw} /></Row>
         {entra && <Row label="Tenant" hint="ID della directory (tenant) Entra, usato dal designer per la prova di connessione"><Text value={c.tenant} onChange={(v) => s({ tenant: v })} mono placeholder="00000000-0000-0000-0000-000000000000" /></Row>}
+        {c.driver === 'sqlsrv' && <Row label="Fabric Warehouse" hint="Riconosciuto dal nome del server (*.fabric.microsoft.com). Cambia le tabelle create dal designer e dall'app: BIGINT IDENTITY, VARCHAR al posto di NVARCHAR, chiavi e vincoli NOT ENFORCED (il server non impedisce i duplicati), niente modifica del tipo di una colonna esistente"><Check value={isFabric(c)} onChange={(v) => s({ fabric: v })} label="Microsoft Fabric Warehouse" /></Row>}
         {c.driver === 'sqlsrv' && <Row label="Cifratura"><Check value={entra ? true : c.encrypt} onChange={(v) => !entra && s({ encrypt: v })} label={entra ? 'Encrypt (obbligatoria con Entra)' : 'Encrypt'} /></Row>}
       </>}
       {php && c.driver !== 'rest' && <p className="help">{php.ok ? <>PHP locale {php.version}: {php.modules.includes(ext) ? <span className="ok"><I n="check-circle" /> {ext} presente</span> : <span className="warn"><I n="exclamation-triangle" /> {ext} assente{php.docker ? ' — l\'anteprima userà Docker' : ' — installalo per l\'anteprima'}</span>}</> : php.error}</p>}

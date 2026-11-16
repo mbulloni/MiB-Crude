@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { call } from '../api';
 import { replaceProject, run, toast, update, useStore } from '../store';
 import type { Project, RestPaging, Table } from '../types';
+import { dialectOf } from '../dialect';
 import CodeEditor from './CodeEditor';
 import PhprMergeDialog from './PhprMerge';
 import { Btn, Check, Empty, Hero, I, Modal, Row, Select, Text, ask, lbl, slug } from './ui';
@@ -54,7 +55,7 @@ function SqlViewDialog({ onClose, conn: conn0 }: { onClose: () => void; conn: st
 /** Create a table or modify the structure of an existing one. */
 function StructureDialog({ conn, table, onClose, onDone }: { conn: string; table: string | null; onClose: () => void; onDone: (name: string, created: boolean, addToProject: boolean) => void }) {
   const p = useStore((s) => s.proj)!;
-  const driver = p.connections.find((c) => c.id === conn)?.driver || 'mysql';
+  const driver = dialectOf(p.connections.find((c) => c.id === conn));
   const [name, setName] = useState(table || '');
   const [cols, setCols] = useState<Col[]>(table ? [] : [{ name: 'id', type: 'int', size: '', scale: '', pk: true, autoInc: true, nullable: false, default: '', orig: null }]);
   const [before, setBefore] = useState<Col[]>([]);
@@ -145,7 +146,7 @@ function ScriptDialog({ onClose, conn }: { onClose: () => void; conn: string }) 
   const p = useStore((s) => s.proj)!;
   const tables = [...new Set(p.tables.filter((t) => t.connection === conn).map(baseOf).filter(Boolean))];
   const [sel, setSel] = useState<Set<string>>(new Set(tables));
-  const [dialect, setDialect] = useState(p.connections.find((c) => c.id === conn)?.driver || 'mysql');
+  const [dialect, setDialect] = useState<string>(dialectOf(p.connections.find((c) => c.id === conn)));
   const [data, setData] = useState(false);
   const [limit, setLimit] = useState(1000);
   const ok = () => run('Generazione script…', async () => {
@@ -156,7 +157,7 @@ function ScriptDialog({ onClose, conn }: { onClose: () => void; conn: string }) 
   return (
     <Modal title="Crea script SQL" onClose={onClose} footer={<><Btn onClick={onClose}>Annulla</Btn><Btn kind="primary" icon="file-earmark-code" onClick={ok}>Genera e salva</Btn></>}>
       <p className="help">Script per ricreare tabelle (e dati) su un altro server, anche di tipo diverso.</p>
-      <Row label="Database di destinazione"><Select value={dialect} options={[['mysql', 'MariaDB / MySQL'], ['pgsql', 'PostgreSQL'], ['sqlsrv', 'SQL Server'], ['oracle', 'Oracle'], ['sqlite', 'SQLite']]} onChange={(v) => setDialect(v as any)} /></Row>
+      <Row label="Database di destinazione"><Select value={dialect} options={[['mysql', 'MariaDB / MySQL'], ['pgsql', 'PostgreSQL'], ['sqlsrv', 'SQL Server'], ['fabric', 'Microsoft Fabric Warehouse'], ['oracle', 'Oracle'], ['sqlite', 'SQLite']]} onChange={(v) => setDialect(v as any)} /></Row>
       <Row label="Dati"><span className="inline"><Check label="Includi i dati, righe max" value={data} onChange={setData} /><input className="inp num" type="number" value={limit} onChange={(e) => setLimit(Number(e.target.value))} /></span></Row>
       <div className="checklist">{tables.map((t) => <Check key={t} label={t} value={sel.has(t)} onChange={(v) => { const n = new Set(sel); v ? n.add(t) : n.delete(t); setSel(n); }} />)}</div>
     </Modal>
@@ -375,7 +376,7 @@ export default function TablesPanel() {
   };
   const dropTable = (connId: string, name: string) => run('Eliminazione…', async () => {
     if (!confirm(`ATTENZIONE: eliminare definitivamente la tabella "${name}" e tutti i suoi dati dal database ${connId}?`)) return;
-    const st = await call<string[]>('ddl:build', 'drop', p.connections.find((c) => c.id === connId)!.driver, name);
+    const st = await call<string[]>('ddl:build', 'drop', dialectOf(p.connections.find((c) => c.id === connId)), name);
     await call('db:exec', p, connId, st);
     if (p.tables.some((t) => t.name === name)) update((d) => { d.tables = d.tables.filter((t) => t.name !== name); });
     load(connId);

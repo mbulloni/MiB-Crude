@@ -8,6 +8,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const P = require('./project.cjs');
+const DDL = require('./ddl.cjs');
 const { TABLE_EVENTS, GLOBAL_EVENTS } = require('./defaults.cjs');
 
 const RUNTIME = path.join(__dirname, '..', 'runtime');
@@ -282,7 +283,7 @@ function generate(proj, opts = {}) {
     const { id, driver, host, port, database, user, schema, file } = c;
     connections[id] = { driver, host: host || '', port: port || '', database: database || '', user: user || '', schema: schema || '', file: file || '' };
     if (driver === 'rest') Object.assign(connections[id], { url: c.url || '', auth: c.auth || 'none' });
-    if (driver === 'sqlsrv') Object.assign(connections[id], { encrypt: !!c.encrypt || c.sqlAuth === 'entra', sqlAuth: c.sqlAuth || 'sql' });
+    if (driver === 'sqlsrv') Object.assign(connections[id], { encrypt: !!c.encrypt || c.sqlAuth === 'entra', sqlAuth: c.sqlAuth || 'sql', fabric: DDL.isFabric(c) });
   }
   const byName = (list) => Object.fromEntries((list || []).map((x) => [x.name, x]));
   const settings = { ...proj.project.settings };

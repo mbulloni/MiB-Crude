@@ -138,7 +138,7 @@ function lit(dialect, val, col) {
 async function apply(proj, conn, password, templateId, opts = {}) {
   const tpl = TEMPLATES.find((t) => t.id === templateId);
   if (!tpl) throw new Error(`Modello sconosciuto: ${templateId}`);
-  const dialect = conn.driver;
+  const dialect = DDL.dialectOf(conn);
   const created = [];
   const c = await D.connect(conn, password);
   try {

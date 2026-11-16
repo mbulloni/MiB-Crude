@@ -9,6 +9,8 @@ class Db
     /** @var PDO */
     public $pdo;
     public $driver;
+    /** @var bool Microsoft Fabric Warehouse (SQL Server dialect with its own DDL rules) */
+    public $fabric = false;
     public $id;
     public $schema;
     /** @var Rest|null REST connections have no PDO */
@@ -18,6 +20,7 @@ class Db
     {
         $this->id = $id;
         $this->driver = $c['driver'];
+        $this->fabric = $this->driver === 'sqlsrv' && !empty($c['fabric']);
         $this->schema = isset($c['schema']) ? $c['schema'] : '';
         $host = isset($c['host']) && $c['host'] !== '' ? $c['host'] : 'localhost';
         $port = isset($c['port']) ? $c['port'] : '';
@@ -167,6 +170,23 @@ class Db
             foreach ($r as $k => $v) if (is_resource($v)) $r[$k] = stream_get_contents($v);
         }
         return $rows;
+    }
+
+    /** VARCHAR type of the engine (Oracle VARCHAR2, SQL Server NVARCHAR; Fabric has no NVARCHAR). */
+    public function varchar($n)
+    {
+        return ($this->driver === 'oracle' ? 'VARCHAR2' : ($this->driver === 'sqlsrv' && !$this->fabric ? 'NVARCHAR' : 'VARCHAR')) . "($n)";
+    }
+
+    /**
+     * ", PRIMARY KEY (...)" table clause for a CREATE TABLE. Fabric keeps keys as metadata only: NONCLUSTERED ... NOT ENFORCED
+     * (a duplicate is never rejected by the engine).
+     * @param string[] $cols
+     */
+    public function primaryKey(array $cols)
+    {
+        $list = implode(', ', array_map([$this, 'q'], $cols));
+        return $this->fabric ? ", PRIMARY KEY NONCLUSTERED ($list) NOT ENFORCED" : ", PRIMARY KEY ($list)";
     }
 
     /**
