@@ -19,7 +19,7 @@ Documentazione completa:
 
 - **Origini dati**: tabelle, query SQL (anche modificabili), risorse **REST** (paginazione e filtri nella sintassi dell'API: `?campo=valore`, json-server, Strapi o personalizzata; cache), **stored procedure** (parametri da valori, sessione, utente o indirizzo; scrittura tramite procedure di inserimento, modifica ed eliminazione; filtri)
 - **Campi**: 17 formati di visualizzazione e 19 controlli di modifica; lookup da tabella o elenco, a cascata, completamento automatico, selezione multipla, «aggiungi nuovo»; file e immagini (cartella o BLOB, miniature); testo formattato; QR code; firma; validazioni; **campi cifrati** nel database (AES-256)
-- **Master-dettaglio** dalle chiavi esterne; creazione e modifica di tabelle; script SQL in ogni dialetto; sincronizzazione con il database
+- **Master-dettaglio** dalle chiavi esterne; **viste unite** di più tabelle (join e colonne scelte a clic, senza SQL; relazioni anche trascinando i campi nel diagramma); creazione e modifica di tabelle; script SQL in ogni dialetto; sincronizzazione con il database
 
 ### Pagine
 

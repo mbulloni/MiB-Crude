@@ -22,8 +22,14 @@ export interface Field {
 export interface Detail { table: string; masterKeys: string[]; detailKeys: string[]; showIn: string[]; listPreview?: boolean }
 export interface ProcParam { name: string; from?: 'value' | 'session' | 'user' | 'get' | 'null'; value?: string; sample?: string; default?: string }
 
+/** Vista unita: two or more project tables, their joins and the chosen columns (see core/joinview.cjs). */
+export interface JoinStep { table: string; type: 'inner' | 'left'; from: string; on: { left: string; right: string }[] }
+export interface JoinDef { base: string; joins: JoinStep[]; columns: { table: string; name: string; as: string }[] }
+/** Shape saved by the first version (two tables only); the designer reads both. */
+export interface JoinDefV1 { type: 'inner' | 'left'; left: { table: string }; right: { table: string }; on: { left: string; right: string }[]; columns: { side: 'left' | 'right'; name: string; as: string }[] }
+
 export interface Table {
-  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest' | 'proc'; table?: string; sql?: string; procedure?: string; params?: ProcParam[]; write?: Partial<Record<'insert' | 'update' | 'delete', { procedure?: string; params?: { name: string; from?: string; value?: string }[] }>>; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number };
+  name: string; connection: string; source: { type: 'table' | 'sql' | 'rest' | 'proc'; table?: string; sql?: string; join?: JoinDef | JoinDefV1; procedure?: string; params?: ProcParam[]; write?: Partial<Record<'insert' | 'update' | 'delete', { procedure?: string; params?: { name: string; from?: string; value?: string }[] }>>; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
   api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
   layout?: Record<string, { grid?: DashItem[]; css?: string; js?: string; sections?: { title: L; fields: string[]; style?: 'card' | 'tab' | 'step'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;

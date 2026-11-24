@@ -13,9 +13,14 @@ import { ConnectionDialog } from './ConnectionsPanel';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
 import { ProcDialog } from './ProcSection';
 import DataDialog, { type DataSource } from './DataDialog';
+import JoinViewDialog, { type JoinPre } from './JoinViewDialog';
+import { normalizeJoin } from '../joinview';
 
+type FieldRef = { table: string; field: string };
 type DbTable = { name: string; type: string };
 type Col = { name: string; type: string; size: number | string; scale: number | string; pk: boolean; autoInc: boolean; nullable: boolean; default: string; orig?: string | null };
+/** A drop on the diagram is followed by a click on the container: it must not close the menu the drop just opened. */
+let keepMenuUntil = 0;
 type Menu = { x: number; y: number; items: ([string, string, () => void] | '-')[] } | null;
 
 const DDL_TYPES: [string, string][] = [['int', 'INT'], ['bigint', 'BIGINT'], ['decimal', 'DECIMAL'], ['float', 'FLOAT'], ['varchar', 'VARCHAR'], ['text', 'TEXT'], ['date', 'DATE'], ['datetime', 'DATETIME'], ['time', 'TIME'], ['bool', 'BOOLEAN'], ['blob', 'BLOB']];
@@ -284,28 +289,56 @@ function importBundle(b: any) {
 
 // --- diagram ----------------------------------------------------------------------------------
 
-function Diagram({ selected, onSelect, expanded, onOpen, onMenu }: { selected: string; onSelect: (n: string) => void; expanded: Set<string>; onOpen: (n: string) => void; onMenu: (e: React.MouseEvent, t: Table) => void }) {
+function Diagram({ selected, onSelect, expanded, onOpen, onMenu, onLink, onFieldLink }: { selected: string; onSelect: (n: string) => void; expanded: Set<string>; onOpen: (n: string) => void; onMenu: (e: React.MouseEvent, t: Table) => void; onLink: (e: React.MouseEvent, master: string, index: number) => void; onFieldLink: (e: React.MouseEvent, from: FieldRef, to: FieldRef) => void }) {
   const p = useStore((s) => s.proj)!;
   const drag = useRef<{ name: string; dx: number; dy: number } | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [ff, setFf] = useState<Record<string, string>>({});
+  const [fd, setFd] = useState<null | { table: string; field: string; x: number; y: number; cx: number; cy: number }>(null);
+  const [over, setOver] = useState('');
+  const FIELD_H = 18, FIELDS_SHOWN = 14, FIELDS_MAX = 300;
+  const fieldsOf = (t: Table) => { const q = (ff[t.name] || '').toLowerCase(); return q ? t.fields.filter((f) => f.name.toLowerCase().includes(q)) : t.fields; };
+  const rel = (e: { clientX: number; clientY: number }) => { const el = boxRef.current!; const r = el.getBoundingClientRect(); return { x: e.clientX - r.left + el.scrollLeft, y: e.clientY - r.top + el.scrollTop }; };
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
   const W = 200;
   const at = (t: Table, i: number) => pos[t.name] || (t as any).diagram || { x: 20 + (i % 4) * (W + 40), y: 20 + Math.floor(i / 4) * 230 };
-  const boxH = (t: Table) => 30 + (expanded.has(t.name) ? Math.min(t.fields.length, 14) * 18 + (t.fields.length > 14 ? 18 : 0) : 0);
+  const boxH = (t: Table) => 30 + (expanded.has(t.name) ? Math.min(t.fields.length, FIELDS_SHOWN) * FIELD_H + (t.fields.length > FIELDS_SHOWN ? 36 : 8) : 0);
   const tables = p.tables;
   const idx = Object.fromEntries(tables.map((t, i) => [t.name, i]));
   const lines: { x1: number; y1: number; x2: number; y2: number; key: string }[] = [];
-  for (const t of tables) for (const d of t.details) {
+  for (const t of tables) for (const [di, d] of t.details.entries()) {
     const dt = tables.find((x) => x.name === d.table);
     if (!dt) continue;
     const a = at(t, idx[t.name]);
     const b = at(dt, idx[dt.name]);
     // Leave from the side facing the detail box.
     const right = b.x >= a.x + W / 2;
-    lines.push({ x1: right ? a.x + W : a.x, y1: a.y + 15, x2: right ? b.x : b.x + W, y2: b.y + 15, key: `${t.name}>${d.table}`, dir: right ? 1 : -1 } as any);
+    lines.push({ x1: right ? a.x + W : a.x, y1: a.y + 15, x2: right ? b.x : b.x + W, y2: b.y + 15, key: `${t.name}>${d.table}#${di}`, master: t.name, di, label: `${t.name} → ${d.table}`, dir: right ? 1 : -1 } as any);
+  }
+  for (const t of tables) {
+    const j = normalizeJoin(t.source.join);
+    if (!j) continue;
+    for (const step of j.joins) {
+      const side = step.table;
+      const st = tables.find((x) => x.name === side);
+      if (!st) continue;
+      const a = at(t, idx[t.name]);
+      const b = at(st, idx[st.name]);
+      const right = b.x >= a.x + W / 2;
+      lines.push({ x1: right ? a.x + W : a.x, y1: a.y + 15, x2: right ? b.x : b.x + W, y2: b.y + 15, key: `join:${t.name}>${side}`, join: true, label: `${t.name}: ${side} — ${step.type === 'inner' ? 'solo record con corrispondenza' : `tutti i record di ${step.from}`}`, dir: right ? 1 : -1 } as any);
+    }
+    const bt = tables.find((x) => x.name === j.base);
+    if (bt) {
+      const a = at(t, idx[t.name]);
+      const b = at(bt, idx[bt.name]);
+      const right = b.x >= a.x + W / 2;
+      lines.push({ x1: right ? a.x + W : a.x, y1: a.y + 15, x2: right ? b.x : b.x + W, y2: b.y + 15, key: `join:${t.name}>${j.base}`, join: true, label: `${t.name}: tabella di partenza ${j.base}`, dir: right ? 1 : -1 } as any);
+    }
   }
   const maxX = Math.max(800, ...tables.map((t, i) => at(t, i).x + W + 40));
   const maxY = Math.max(500, ...tables.map((t, i) => at(t, i).y + boxH(t) + 40));
   const onMove = (e: React.MouseEvent) => {
+    if (fd) { const c = rel(e); setFd({ ...fd, cx: c.x, cy: c.y }); return; }
     const d = drag.current;
     if (!d) return;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -314,15 +347,28 @@ function Diagram({ selected, onSelect, expanded, onOpen, onMenu }: { selected: s
     setPos({ ...pos, [d.name]: { x: Math.max(0, e.clientX - r.left + sc - d.dx), y: Math.max(0, e.clientY - r.top + st - d.dy) } });
   };
   const onUp = () => {
+    if (fd) setFd(null);
     const d = drag.current;
     drag.current = null;
     if (d && pos[d.name]) update((pr) => { const t = pr.tables.find((x) => x.name === d.name); if (t) (t as any).diagram = pos[d.name]; });
   };
   return (
-    <div className="diagram" onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
+    <div className={`diagram ${fd ? "linking" : ""}`} ref={boxRef} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
       <svg width={maxX} height={maxY} className="diagram-lines">
         <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" /></marker></defs>
-        {lines.map((l: any) => <path key={l.key} d={`M${l.x1},${l.y1} C${l.x1 + 60 * l.dir},${l.y1} ${l.x2 - 60 * l.dir},${l.y2} ${l.x2},${l.y2}`} markerEnd="url(#arr)" />)}
+        {lines.map((l: any) => {
+          const d = `M${l.x1},${l.y1} C${l.x1 + 60 * l.dir},${l.y1} ${l.x2 - 60 * l.dir},${l.y2} ${l.x2},${l.y2}`;
+          if (l.join) return <g key={l.key} className="dg-joinline"><path d={d}><title>{l.label}</title></path></g>;
+          return (
+            <g key={l.key} className="dg-link">
+              <path d={d} markerEnd="url(#arr)" />
+              <path d={d} className="dg-hit" onClick={(e) => { e.stopPropagation(); onLink(e, l.master, l.di); }} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onLink(e, l.master, l.di); }}>
+                <title>{`Relazione ${l.label}: clic per eliminarla`}</title>
+              </path>
+            </g>
+          );
+        })}
+        {fd && Math.hypot(fd.cx - fd.x, fd.cy - fd.y) > 4 && <path className="dg-drag" d={`M${fd.x},${fd.y} L${fd.cx},${fd.cy}`} />}
       </svg>
       {tables.map((t, i) => {
         const a = at(t, i);
@@ -331,8 +377,25 @@ function Diagram({ selected, onSelect, expanded, onOpen, onMenu }: { selected: s
             onMouseDown={(e) => { onSelect(t.name); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); drag.current = { name: t.name, dx: e.clientX - r.left, dy: e.clientY - r.top }; }}
             onDoubleClick={() => onOpen(t.name)} onContextMenu={(e) => onMenu(e, t)}>
             <div className="dg-head"><I n={t.source.type === 'sql' ? 'code-square' : 'table'} /> <span className="grow">{t.name}</span></div>
-            {expanded.has(t.name) && <div className="dg-fields">{t.fields.slice(0, 14).map((f) => <div key={f.name}>{f.pk ? <I n="key-fill" className="accent" /> : <span className="dg-dot" />} {f.name} <small className="muted">{f.type}</small></div>)}
-              {t.fields.length > 14 && <div className="muted">… altri {t.fields.length - 14}</div>}</div>}
+            {expanded.has(t.name) && <div className="dg-fields" onMouseDown={(e) => e.stopPropagation()}>
+              {t.fields.length > FIELDS_SHOWN && <input className="inp dg-filter" placeholder={`Cerca tra ${t.fields.length} campi…`} value={ff[t.name] || ''} onChange={(e) => setFf({ ...ff, [t.name]: e.target.value })} />}
+              <div className="dg-scroll" style={{ maxHeight: FIELDS_SHOWN * FIELD_H }}>
+                {fieldsOf(t).slice(0, FIELDS_MAX).map((f) => {
+                  const id = `${t.name}.${f.name}`;
+                  return (
+                    <div key={f.name} className={`dg-field ${fd && over === id && fd.table !== t.name ? 'drop' : ''} ${fd && fd.table === t.name && fd.field === f.name ? 'src' : ''}`}
+                      title="Trascina su un campo di un'altra tabella per collegarle"
+                      onMouseDown={(e) => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); onSelect(t.name); const c = rel(e); setFd({ table: t.name, field: f.name, x: c.x, y: c.y, cx: c.x, cy: c.y }); }}
+                      onMouseEnter={() => setOver(id)}
+                      onMouseUp={(e) => { if (fd && fd.table !== t.name) { e.stopPropagation(); const from = { table: fd.table, field: fd.field }; setFd(null); onFieldLink(e, from, { table: t.name, field: f.name }); } }}>
+                      {f.pk ? <I n="key-fill" className="accent" /> : <span className="dg-dot" />} {f.name} <small className="muted">{f.type}</small>
+                    </div>
+                  );
+                })}
+                {fieldsOf(t).length > FIELDS_MAX && <div className="muted">… altri {fieldsOf(t).length - FIELDS_MAX}: affina la ricerca</div>}
+                {!fieldsOf(t).length && <div className="muted">Nessun campo</div>}
+              </div>
+            </div>}
           </div>
         );
       })}
@@ -352,11 +415,11 @@ export default function TablesPanel() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<Menu>(null);
   const [merging, setMerging] = useState(false);
-  const [dlg, setDlg] = useState<null | { kind: 'sql' | 'proc' | 'data' | 'structure' | 'advanced' | 'relation' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table; src?: DataSource }>(null);
+  const [dlg, setDlg] = useState<null | { pre?: JoinPre; kind: 'sql' | 'proc' | 'data' | 'structure' | 'advanced' | 'relation' | 'join' | 'script' | 'conn' | 'template' | 'rest'; conn?: string; table?: string | null; t?: Table; src?: DataSource }>(null);
 
   const load = (connId: string) => call<DbTable[]>('db:tables', p, connId).then((r) => setDbt((x) => ({ ...x, [connId]: r }))).catch((e) => toast(`${connId}: ${e.message}`, 'err'));
   useEffect(() => { p.connections.forEach((c) => load(c.id)); }, [p.connections.length]);
-  useEffect(() => { const close = () => setMenu(null); window.addEventListener('click', close); return () => window.removeEventListener('click', close); }, []);
+  useEffect(() => { const close = () => { if (Date.now() < keepMenuUntil) return; setMenu(null); }; window.addEventListener('click', close); return () => window.removeEventListener('click', close); }, []);
 
   const goTable = (name: string) => useStore.getState().set({ nav: { kind: 'table', id: name } });
   const addToProject = (connId: string, names: string[]) => run('Aggiunta al progetto…', async () => {
@@ -428,6 +491,42 @@ export default function TablesPanel() {
     toast(`${n} tabelle importate`, 'ok');
   });
 
+  /** A field dropped on a field of another table: ask what to create. */
+  const fieldLink = (e: React.MouseEvent, a: FieldRef, b: FieldRef) => {
+    const ta = p.tables.find((x) => x.name === a.table);
+    const tb = p.tables.find((x) => x.name === b.table);
+    if (!ta || !tb) return;
+    const why = ta.source.type !== 'table' ? `${ta.name} non è una tabella del database` : tb.source.type !== 'table' ? `${tb.name} non è una tabella del database` : ta.connection !== tb.connection ? 'le tabelle stanno su connessioni diverse' : '';
+    const ends = `${a.table}.${a.field} → ${b.table}.${b.field}`;
+    keepMenuUntil = Date.now() + 400;
+    setMenu({ x: e.clientX, y: e.clientY, items: [
+      ['diagram-3', `Master-dettaglio: ${ends}`, () => {
+        if (ta.details.some((d) => d.table === b.table && d.masterKeys.join() === a.field && d.detailKeys.join() === b.field)) return toast('Questa relazione esiste già', 'info');
+        update((pr) => { pr.tables.find((x) => x.name === a.table)!.details.push({ table: b.table, masterKeys: [a.field], detailKeys: [b.field], showIn: ['list', 'view', 'edit'] }); });
+        toast(`Relazione creata: ${ends}`, 'ok');
+      }],
+      '-',
+      ...(why
+        ? [['info-circle', `Vista unita non possibile: ${why}`, () => {}] as [string, string, () => void]]
+        : [['intersect', 'Vista unita: solo i record presenti in entrambe', () => setDlg({ kind: 'join', pre: { left: a, right: b, type: 'inner' } })] as [string, string, () => void],
+          ['intersect', `Vista unita: tutti i record di ${a.table}`, () => setDlg({ kind: 'join', pre: { left: a, right: b, type: 'left' } })] as [string, string, () => void]]),
+    ] });
+  };
+
+  const linkMenu = (e: React.MouseEvent, master: string, index: number) => {
+    const d = p.tables.find((x) => x.name === master)?.details[index];
+    if (!d) return;
+    setMenu({ x: e.clientX, y: e.clientY, items: [
+      ['gear', `Apri il master-dettaglio di ${master}`, () => goTable(master)],
+      '-',
+      ['trash', `Elimina la relazione ${master} → ${d.table}`, () => {
+        if (!confirm(`Eliminare la relazione ${master} → ${d.table}?\nLe due tabelle restano nel progetto: non si vedranno più le righe collegate nelle schede.`)) return;
+        update((pr) => { pr.tables.find((x) => x.name === master)!.details.splice(index, 1); });
+        toast('Relazione eliminata', 'ok');
+      }],
+    ] });
+  };
+
   const tableMenu = (e: React.MouseEvent, t: Table) => {
     e.preventDefault(); e.stopPropagation();
     const names = multi.size > 1 && multi.has(t.name) ? [...multi] : [t.name];
@@ -443,6 +542,8 @@ export default function TablesPanel() {
       ['file-earmark-bar-graph', 'Nuovo report', () => newReport(t)],
       ['bar-chart', 'Nuovo grafico', () => newChart(t)],
       ['diagram-3', 'Nuova relazione', () => setDlg({ kind: 'relation', table: t.name })],
+      ...(t.source.join ? [['intersect', 'Modifica vista unita', () => setDlg({ kind: 'join', t })] as [string, string, () => void]] : []),
+      ['intersect', 'Nuova vista unita', () => setDlg({ kind: 'join' })],
       '-',
       ['box-arrow-up', names.length > 1 ? `Esporta ${names.length} tabelle` : 'Esporta tabella', () => doExport(names)],
       ['arrow-repeat', 'Sincronizza database', sync],
@@ -538,6 +639,7 @@ export default function TablesPanel() {
         <Btn small icon="arrows-expand" onClick={() => setExpanded(new Set(p.tables.map((t) => t.name)))} title="Mostra tutti i campi" />
         <Btn small icon="arrows-collapse" onClick={() => setExpanded(new Set())} title="Nascondi tutti i campi" />
         <Btn small icon="diagram-3" onClick={() => setDlg({ kind: 'relation' })} disabled={p.tables.length < 2}>Relazione</Btn>
+        <Btn small icon="intersect" onClick={() => setDlg({ kind: 'join' })} disabled={p.tables.length < 2} title="Unisce due tabelle in una vista, scegliendo le colonne da mostrare">Vista unita</Btn>
         <span className="sep" />
         <span className="ds-group">Database</span>
         <Btn small icon="arrow-repeat" onClick={sync} title="Allinea il progetto alla struttura del database">Sincronizza</Btn>
@@ -592,7 +694,7 @@ export default function TablesPanel() {
           </div>
         </div>
         <div className="ds-main">
-          {p.tables.length ? <Diagram selected={selected} onSelect={setSelected} expanded={expanded} onOpen={goTable} onMenu={tableMenu} />
+          {p.tables.length ? <Diagram selected={selected} onSelect={setSelected} expanded={expanded} onOpen={goTable} onMenu={tableMenu} onLink={linkMenu} onFieldLink={fieldLink} />
             : <Empty icon="ui-checks" title="Seleziona le tabelle"><p>Spunta a sinistra le tabelle da gestire nell'applicazione, oppure crea una nuova tabella.</p></Empty>}
         </div>
       </div>
@@ -609,6 +711,7 @@ export default function TablesPanel() {
         else if (p.tables.some((t) => t.name === name)) run('Aggiornamento…', async () => { const r = await call('wizard:refresh', useStore.getState().proj, name); setProj(r.proj, p.dir); });
       }} />}
       {dlg?.kind === 'advanced' && dlg.t && <AdvancedDialog t={dlg.t} onClose={() => setDlg(null)} />}
+      {dlg?.kind === 'join' && <JoinViewDialog t={dlg.t} pre={dlg.pre} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'relation' && <RelationDialog master={dlg.table || undefined} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'script' && <ScriptDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'rest' && <RestDialog conn={dlg.conn!} onClose={() => setDlg(null)} />}

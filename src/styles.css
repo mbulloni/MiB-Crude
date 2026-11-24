@@ -389,3 +389,46 @@ progress { width: 100%; }
 .ld-col { padding: 6px 8px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--border); }
 .ld-cell { padding: 6px 8px; font-size: 11px; opacity: .6; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .device-code { font: 600 26px/1.4 ui-monospace, monospace; letter-spacing: 4px; text-align: center; padding: 10px; border: 1px solid var(--border); border-radius: 6px; user-select: all; }
+
+/* Vista unita (JoinViewDialog) */
+.jv-item { display: flex; align-items: center; gap: 8px; }
+.jv-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jv-as { width: 45%; flex: none; }
+
+.diagram-lines .dg-hit { stroke: transparent; stroke-width: 14; opacity: 1; pointer-events: stroke; cursor: pointer; }
+.diagram-lines .dg-link:hover path:first-child { stroke-width: 3.2; opacity: 1; }
+
+/* Diagramma: campi scorrevoli, trascinamento per collegare */
+.dg-filter { width: 100%; margin-bottom: 4px; height: 24px; font-size: 11.5px; }
+.dg-scroll { overflow-y: auto; }
+.dg-field { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: crosshair; border-radius: 3px; padding-right: 2px; }
+.dg-field:hover { background: var(--accent-soft); }
+.dg-field.src { background: var(--accent-soft); font-weight: 600; }
+.dg-field.drop { background: var(--accent); color: #fff; }
+.dg-field.drop .muted { color: inherit; }
+.diagram.linking { cursor: crosshair; user-select: none; }
+.diagram-lines path.dg-drag { stroke-dasharray: 5 4; stroke-width: 2; opacity: 1; }
+.diagram-lines .dg-joinline path { stroke-dasharray: 3 4; stroke: var(--warn); opacity: .85; }
+
+/* Vista unita: dialogo a più tabelle */
+
+.jv-badge { margin-left: 8px; font-size: 11px; padding: 1px 8px; border-radius: 10px; background: var(--head); color: var(--muted); }
+.jv-badge.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* Vista unita: una scheda per tabella, affiancate */
+.modal.wide:has(.jv) { width: min(1560px, 97vw); max-height: 94vh; }
+.jv-top .row { flex: 1; min-width: 260px; }
+.jv-board { display: flex; gap: 12px; overflow-x: auto; align-items: stretch; padding: 4px 2px 12px; margin-bottom: 8px; }
+.jv-card { flex: 0 0 310px; display: flex; flex-direction: column; gap: 8px; border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel); min-width: 0; }
+.jv-card.used { border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--panel)); }
+.jv-card.base { box-shadow: 0 0 0 2px var(--accent-soft); }
+.jv-card.jv-new { flex-basis: 220px; align-items: flex-start; justify-content: flex-start; background: transparent; }
+.jv-card-head { display: flex; align-items: center; gap: 6px; }
+.jv-card-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jv-card-sub { display: flex; justify-content: space-between; align-items: center; }
+.jv-link { display: flex; flex-direction: column; gap: 5px; padding: 8px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.jv-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.jv-card select { width: 100%; min-width: 0; }
+.jv-pair { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 4px; align-items: center; }
+.jv-list { overflow-y: auto; max-height: 340px; min-height: 120px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; }
+.jv-as { width: 42%; flex: none; }

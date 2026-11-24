@@ -116,6 +116,7 @@ Tipi di origine dati:
 |---|---|---|
 | **Tabella** | spunta nell'elenco | lettura e scrittura |
 | **Query SQL** (vista) | *Nuova query SQL* | sola lettura; diventa modificabile indicando la *tabella da aggiornare* |
+| **Vista unita** | *Vista unita* (barra del diagramma, menu della tabella, o trascinando un campo su un campo di un'altra tabella) | unisce **due o più tabelle** dello stesso database: si sceglie la tabella di partenza, si aggiungono le altre (a mano o con *Aggiungi le tabelle collegate nel diagramma*, che usa le relazioni master-dettaglio già disegnate), per ognuna i campi collegati e il tipo di unione (tutti i record della tabella a cui si collega, oppure solo quelli con corrispondenza) e, con una spunta, le colonne da mostrare con il nome visibile; nessun SQL da scrivere e nessun oggetto creato nel database (l'SQL è generato nel progetto); sola lettura, riapribile dal menu *Modifica vista unita* |
 | **REST** | *Nuova origine REST* | una risorsa di un'API JSON |
 | **Stored procedure** | *Da stored procedure* | il risultato di una procedura |
 | **Da modello** | *Da modello* | tabelle, dati di esempio, menu, report, grafici e dashboard pronti, su qualunque database: *CRM clienti* (aziende, contatti, attività con kanban e calendario), *Helpdesk ticket*, *Calendario risorse*, *Archivio documenti* |

@@ -16,6 +16,7 @@ const os = require('node:os');
 const P = require('../core/project.cjs');
 const D = require('../core/db.cjs');
 const W = require('../core/wizard.cjs');
+const J = require('../core/joinview.cjs');
 const G = require('../core/generator.cjs');
 const preview = require('./preview.cjs');
 const deploy = require('./deploy.cjs');
@@ -233,6 +234,24 @@ handle('db:procPreview', async (proj, connId, name, params) => W.withConnection(
 handle('wizard:procedure', async (proj, connId, name, procedure, params) => {
   await W.addProcedure(proj, connById(proj, connId), pwOf(connId), name, procedure, params);
   return proj;
+});
+// Joined view of two project tables, picked in the designer: the definition lives in source.join, the SQL is generated from it
+handle('join:sql', (proj, def) => J.build(proj, def));
+handle('wizard:joinview', async (proj, name, def) => {
+  const { sql, connection } = J.build(proj, def);
+  const ds = await W.addSqlView(proj, connById(proj, connection), pwOf(connection), name, sql);
+  ds.source.join = def;
+  return proj;
+});
+handle('wizard:joinupdate', async (proj, table, def) => {
+  const t = proj.tables.find((x) => x.name === table);
+  if (!t || !t.source.join) throw new Error(`"${table}" non è una vista unita`);
+  const { sql, connection } = J.build(proj, def);
+  t.source.sql = sql;
+  t.source.join = def;
+  t.connection = connection;
+  const res = await W.refreshTable(proj, connById(proj, connection), pwOf(connection), table);
+  return { proj, ...res };
 });
 handle('wizard:refresh', async (proj, table) => {
   const t = proj.tables.find((x) => x.name === table);
