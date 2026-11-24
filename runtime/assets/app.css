@@ -112,7 +112,8 @@ td.mc-saved { background: color-mix(in srgb, var(--bs-success) 18%, transparent)
 .mc-steps .mc-step-dot.active .badge, .mc-steps .mc-step-dot.done .badge { background: var(--bs-primary); color: #fff; }
 
 /* dashboards and pages with free layout: 12 columns, rows of 40px */
-.mc-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 40px; gap: 12px; }
+/* not on the list table, which also carries the class mc-grid (it would stop being a table: rows 40px high, the scroll body one row tall) */
+.mc-grid:not(table) { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 40px; gap: 12px; }
 .mc-cell { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .mc-cell > .card, .mc-cell > .mc-code, .mc-cell > iframe, .mc-cell > a { flex: 1 1 auto; min-height: 0; }
 .mc-cell > .card > .card-body { min-height: 0; }
