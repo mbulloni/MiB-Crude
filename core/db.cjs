@@ -402,7 +402,9 @@ async function tableData(c, conn, src, opts = {}) {
     const parts = name.includes('.') ? name.split('.') : (conn.schema && c.driver !== 'mysql' && c.driver !== 'sqlite' ? [conn.schema, name] : [name]);
     from = parts.map(q).join('.');
   }
-  const where = opts.where && String(opts.where).trim() ? ` WHERE ${opts.where}` : '';
+  // tests picked in the viewer + free-text search + SQL typed by hand (core/filters.cjs)
+  const cond = require('./filters.cjs').build(c.driver, { filters: opts.filters, search: opts.search, columns: opts.columns, where: opts.where });
+  const where = cond ? ` WHERE ${cond}` : '';
   const limit = Math.max(1, Math.min(1000, Number(opts.limit) || 100));
   const offset = Math.max(0, Number(opts.offset) || 0);
   const order = opts.sort ? `${q(opts.sort)} ${String(opts.dir).toLowerCase() === 'desc' ? 'DESC' : 'ASC'}` : '';

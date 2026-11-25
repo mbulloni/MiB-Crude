@@ -10,6 +10,7 @@
 //   node server/mibcrude-server.cjs --data ./team-data [--port 7300] [--host 0.0.0.0]
 //   node server/mibcrude-server.cjs --data ./team-data --add-user mario [--role admin]
 //   node server/mibcrude-server.cjs --data ./team-data --list-users
+//   --announce: also tell the local network that the server is here (UDP beacon, port 7301), so the designers can list it
 // Put it behind a TLS reverse proxy (wss://) when used over the internet.
 
 const fs = require('node:fs');
@@ -18,6 +19,8 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const { execFile } = require('node:child_process');
 const { WebSocketServer } = require('ws');
+const os = require('node:os');
+const dgram = require('node:dgram');
 const { itemOf, syncable, hash } = require('../core/team-protocol.cjs');
 
 const VERSION = 1;
@@ -55,7 +58,10 @@ if (has('list-users')) {
   const port = Number(arg('port', 7300));
   const host = arg('host', '0.0.0.0');
   if (!Object.keys(readUsers()).length) console.log(`Nessun utente: crea il primo con --data ${DATA} --add-user <nome> --role admin`);
-  return startServer(port, host).then(() => console.log(`MiB-Crude team server in ascolto su ws://${host}:${port} (dati: ${DATA})`));
+  return startServer(port, host).then(() => {
+    console.log(`MiB-Crude team server in ascolto su ws://${host}:${port} (dati: ${DATA})`);
+    if (has('announce')) startBeacon(port);
+  });
 }
 
 // --- project storage --------------------------------------------------------------
@@ -262,6 +268,37 @@ function startServer(port, host) {
   return new Promise((resolve) => server.listen(port, host, () => resolve(server)));
 }
 
+// --- beacon: "I am a team server" on the local network ------------------------------------
+
+const BEACON_PORT = Number(process.env.MIBCRUDE_BEACON_PORT || 7301);
+
+/** Names of the projects on this server (no secrets, no users). */
+function projectNames() {
+  try { return fs.readdirSync(path.join(DATA, 'projects'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).slice(0, 50); } catch { return []; }
+}
+
+/** Every few seconds a small UDP packet to the broadcast addresses (and to this computer): the designers listen and list it. */
+function startBeacon(port) {
+  const sock = dgram.createSocket('udp4');
+  sock.on('error', () => {});
+  sock.bind(() => {
+    sock.setBroadcast(true);
+    const targets = new Set(['255.255.255.255', '127.0.0.1']);
+    for (const list of Object.values(os.networkInterfaces())) for (const a of list || []) {
+      if (a.family !== 'IPv4' || a.internal || !a.netmask) continue;
+      const ip = a.address.split('.').map(Number), mask = a.netmask.split('.').map(Number);
+      targets.add(ip.map((b, i) => (b & mask[i]) | (~mask[i] & 255)).join('.'));
+    }
+    const send = () => {
+      const msg = Buffer.from(JSON.stringify({ app: 'mibcrude-team', v: VERSION, name: os.hostname(), port, projects: projectNames() }));
+      for (const t of targets) sock.send(msg, BEACON_PORT, t, () => {});
+    };
+    send();
+    setInterval(send, 3000).unref();
+  });
+  return sock;
+}
+
 if (require.main === module) cli();
 
-module.exports = { startServer, cli };
+module.exports = { startServer, cli, startBeacon, BEACON_PORT };

@@ -1,3 +1,4 @@
+import { FilterBuilder } from './FilterBuilder';
 import { useState } from 'react';
 import { toast, update, useStore } from '../store';
 import type { Chart, Dashboard, DashItem, Report } from '../types';
@@ -8,6 +9,11 @@ import { Btn, Check, Empty, Hero, I, LangText, Num, Row, Section, Select, ask, l
 
 const FNS: [string, string][] = [['sum', 'Somma'], ['avg', 'Media'], ['count', 'Conteggio'], ['min', 'Minimo'], ['max', 'Massimo']];
 const INTERVALS: [string, string][] = [['', 'Valore'], ['year', 'Anno'], ['quarter', 'Trimestre'], ['month', 'Mese'], ['week', 'Settimana'], ['day', 'Giorno'], ['letter', 'Iniziale'], ['tens', 'Decine']];
+
+function useFullFieldsOf(table: string) {
+  const p = useStore((s) => s.proj)!;
+  return p.tables.find((x) => x.name === table)?.fields || [];
+}
 
 function useFieldsOf(table: string) {
   const p = useStore((s) => s.proj)!;
@@ -62,8 +68,11 @@ export function ReportsPanel() {
 function ReportEditor({ r, set }: { r: Report; set: (fn: (x: Report) => void) => void }) {
   const p = useStore((s) => s.proj)!;
   const fields = useFieldsOf(r.table);
+  const full = useFullFieldsOf(r.table);
   return <>
-    <Section title="Dati"><Row label="Tabella / query"><Select value={r.table} options={p.tables.map((t) => [t.name, lbl(t.caption, t.name)] as [string, string])} onChange={(v) => set((x) => { x.table = v; x.groups = []; x.aggregates = []; x.columns = []; })} /></Row></Section>
+    <Section title="Dati"><Row label="Tabella / query"><Select value={r.table} options={p.tables.map((t) => [t.name, lbl(t.caption, t.name)] as [string, string])} onChange={(v) => set((x) => { x.table = v; x.groups = []; x.aggregates = []; x.columns = []; delete x.filters; })} /></Row>
+      <Row label="Per chi lo consulta"><Check label="Barra di ricerca, filtri e raggruppamento rapido (conteggi e somme)" value={r.tools !== false} onChange={(v) => set((x) => { if (v) delete x.tools; else x.tools = false; })} /></Row>
+      <Row label="Filtra i dati" hint="Il report considera solo i record che rispettano queste condizioni (si aggiungono ai filtri della tabella)."><FilterBuilder fields={full} value={r.filters} onChange={(v) => set((x) => { if (v) x.filters = v; else delete x.filters; })} /></Row></Section>
     <Section title="Raggruppamenti" actions={<Btn small icon="plus-lg" onClick={() => set((x) => { x.groups.push({ field: fields[0]?.[0] || '' }); })}>Livello</Btn>}>
       {r.groups.map((g, i) => <div className="inline" key={i}><span className="muted">{i + 1}.</span>
         <Select value={g.field} options={fields} onChange={(v) => set((x) => { x.groups[i].field = v; })} />
@@ -71,9 +80,9 @@ function ReportEditor({ r, set }: { r: Report; set: (fn: (x: Report) => void) =>
         <Check label="Decrescente" value={g.desc} onChange={(v) => set((x) => { x.groups[i].desc = v; })} />
         <Btn small kind="ghost" icon="x-lg" onClick={() => set((x) => { x.groups.splice(i, 1); })} /></div>)}
     </Section>
-    <Section title="Totali (per gruppo e generale)" actions={<Btn small icon="plus-lg" onClick={() => set((x) => { x.aggregates.push({ field: fields[0]?.[0] || '', fn: 'sum' }); })}>Totale</Btn>}>
-      {r.aggregates.map((a, i) => <div className="inline" key={i}><Select value={a.fn} options={FNS} onChange={(v) => set((x) => { x.aggregates[i].fn = v; })} /> di
-        <Select value={a.field} options={fields} onChange={(v) => set((x) => { x.aggregates[i].field = v; })} />
+    <Section title="Totali (per gruppo e generale)" actions={<Btn small icon="plus-lg" onClick={() => set((x) => { x.aggregates.push({ field: '', fn: 'count' }); })}>Totale</Btn>}>
+      {r.aggregates.map((a, i) => <div className="inline" key={i}><Select value={a.fn} options={FNS} onChange={(v) => set((x) => { x.aggregates[i].fn = v; if (v !== 'count' && !x.aggregates[i].field) x.aggregates[i].field = fields[0]?.[0] || ''; })} /> di
+        <Select value={a.field} options={a.fn === 'count' ? [['', '(i record)'] as [string, string], ...fields] : fields} onChange={(v) => set((x) => { x.aggregates[i].field = v; })} />
         <Btn small kind="ghost" icon="x-lg" onClick={() => set((x) => { x.aggregates.splice(i, 1); })} /></div>)}
     </Section>
     <Section title="Campi incrociati (crosstab)" help="Le colonne del report diventano i valori di un campo (per esempio i mesi o le aree): ogni cella mostra i totali per riga (raggruppamenti) e colonna, con i totali di riga e di colonna; un clic su una cella apre la lista filtrata">
@@ -102,22 +111,25 @@ export function ChartsPanel() {
 function ChartEditor({ c, set }: { c: Chart; set: (fn: (x: Chart) => void) => void }) {
   const p = useStore((s) => s.proj)!;
   const fields = useFieldsOf(c.table);
+  const full = useFullFieldsOf(c.table);
   return <>
     <Section title="Grafico">
-      <Row label="Tabella / query"><Select value={c.table} options={p.tables.map((t) => [t.name, lbl(t.caption, t.name)] as [string, string])} onChange={(v) => set((x) => { x.table = v; x.series = []; })} /></Row>
+      <Row label="Tabella / query"><Select value={c.table} options={p.tables.map((t) => [t.name, lbl(t.caption, t.name)] as [string, string])} onChange={(v) => set((x) => { x.table = v; x.series = []; delete x.filters; })} /></Row>
       <Row label="Tipo"><Select value={c.type} options={[['bar', 'Colonne'], ['hbar', 'Barre orizzontali'], ['line', 'Linee'], ['area', 'Area'], ['scatter', 'Dispersione'], ['pie', 'Torta'], ['doughnut', 'Ciambella'], ['rose', 'Rosa (Nightingale)'], ['funnel', 'Imbuto'], ['treemap', 'Treemap'], ['gauge', 'Indicatore (gauge)'], ['radar', 'Radar']]} onChange={(v) => set((x) => { x.type = v; })} /></Row>
       <Row label="Categorie (asse X)"><span className="inline"><Select value={c.labelField} options={fields} onChange={(v) => set((x) => { x.labelField = v; })} /><Select value={c.labelInterval || ''} options={INTERVALS} onChange={(v) => set((x) => { x.labelInterval = v; })} /></span></Row>
       <Row label="Opzioni"><span className="chips"><Check label="Ordina per valore" value={c.sortByValue} onChange={(v) => set((x) => { x.sortByValue = v; })} /><Check label="Serie impilate" value={c.stacked} onChange={(v) => set((x) => { x.stacked = v; })} /></span></Row>
       <Row label="Mostra solo i primi"><Num value={c.limit} onChange={(v) => set((x) => { x.limit = v || undefined; })} /></Row>
+      <Row label="Per chi lo consulta"><Check label="Barra di ricerca, filtri e raggruppamento rapido" value={c.tools !== false} onChange={(v) => set((x) => { if (v) delete x.tools; else x.tools = false; })} /></Row>
+      <Row label="Filtra i dati" hint="Il grafico considera solo i record che rispettano queste condizioni."><FilterBuilder fields={full} value={c.filters} onChange={(v) => set((x) => { if (v) x.filters = v; else delete x.filters; })} /></Row>
     </Section>
     <Section title="Personalizzazione JavaScript" help="Codice eseguito nel browser prima di disegnare il grafico, con l'API AnyChart dei progetti .phpr (chart.getSeriesAt(0).labels()…, chart.legend()…, chart.yAxis(1)…, anychart.scales.linear()) tradotta su ECharts. Importato dagli eventi JS_ModifyChart."
       actions={!c.modifyJs ? <Btn small icon="plus-lg" onClick={() => set((x) => { x.modifyJs = '// chart: grafico, anychart: utilità (format.number, scales.linear)\nchart.legend().position("bottom");\n'; })}>Aggiungi codice</Btn>
         : <Btn small kind="ghost" icon="trash" onClick={() => set((x) => { delete x.modifyJs; })}>Rimuovi</Btn>}>
       {c.modifyJs !== undefined && <CodeEditor language="javascript" value={c.modifyJs} onChange={(v) => set((x) => { x.modifyJs = v; })} height="220px" />}
     </Section>
-    <Section title="Serie (valori)" actions={<Btn small icon="plus-lg" onClick={() => set((x) => { x.series.push({ field: fields[0]?.[0] || '', fn: 'sum' }); })}>Serie</Btn>} help="Senza serie: conteggio dei record per categoria.">
-      {c.series.map((s, i) => <div className="inline" key={i}><Select value={s.fn} options={FNS} onChange={(v) => set((x) => { x.series[i].fn = v; })} /> di
-        <Select value={s.field} options={fields} onChange={(v) => set((x) => { x.series[i].field = v; })} />
+    <Section title="Serie (valori)" actions={<Btn small icon="plus-lg" onClick={() => set((x) => { x.series.push({ field: '', fn: 'count' }); })}>Serie</Btn>} help="Senza serie: conteggio dei record per categoria.">
+      {c.series.map((s, i) => <div className="inline" key={i}><Select value={s.fn} options={FNS} onChange={(v) => set((x) => { x.series[i].fn = v; if (v !== 'count' && !x.series[i].field) x.series[i].field = fields[0]?.[0] || ''; })} /> di
+        <Select value={s.field} options={s.fn === 'count' ? [['', '(i record)'] as [string, string], ...fields] : fields} onChange={(v) => set((x) => { x.series[i].field = v; })} />
         <input type="color" value={s.color || '#2f6fd6'} onChange={(e) => set((x) => { x.series[i].color = e.target.value; })} />
         <Btn small kind="ghost" icon="x-lg" onClick={() => set((x) => { x.series.splice(i, 1); })} /></div>)}
     </Section>

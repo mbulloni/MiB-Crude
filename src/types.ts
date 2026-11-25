@@ -1,6 +1,9 @@
 // Project shapes (mirror of core/project.cjs and core/defaults.cjs).
 export type L = Record<string, string>;
 
+/** One test of a fixed filter (data source, report, chart): the record is shown only if all tests are true. */
+export interface Cond { field: string; op: string; v?: string; v2?: string }
+
 /** API paging of a REST datasource (see runtime/lib/Rest.php). */
 export interface RestPaging { mode: '' | 'page' | 'offset'; pageParam?: string; firstPage?: number; offsetParam?: string; sizeParam?: string; pageSize?: number; totalPath?: string; searchParam?: string; sortParam?: string; dirParam?: string }
 export interface Connection { id: string; name: string; driver: 'mysql' | 'pgsql' | 'sqlsrv' | 'oracle' | 'sqlite' | 'rest'; url?: string; auth?: 'none' | 'bearer' | 'basic' | 'header' | 'query'; host?: string; port?: number | string; database?: string; user?: string; schema?: string; file?: string; encrypt?: boolean; sqlAuth?: 'sql' | 'entra' | 'entra-user'; entraMethod?: 'browser' | 'device'; tenant?: string; fabric?: boolean }
@@ -31,7 +34,7 @@ export interface JoinDefV1 { type: 'inner' | 'left'; left: { table: string }; ri
 export interface Table {
   name: string; connection: string; source: { type: 'table' | 'sql' | 'rest' | 'proc'; table?: string; sql?: string; join?: JoinDef | JoinDefV1; procedure?: string; params?: ProcParam[]; write?: Partial<Record<'insert' | 'update' | 'delete', { procedure?: string; params?: { name: string; from?: string; value?: string }[] }>>; updateTable?: string; path?: string; dataPath?: string; itemPath?: string; itemDataPath?: string; updateMethod?: string; paging?: RestPaging; filterMode?: '' | 'equals' | 'json-server' | 'strapi' | 'custom'; filterOps?: Record<string, string>; cacheSeconds?: number };
   caption: L; keys: string[]; fields: Field[]; pages: Record<string, any>; details: Detail[]; audit: boolean;
-  api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
+  api: { enabled: boolean; methods: string[] }; readOnly: boolean; where?: string; filters?: Cond[]; icon?: string; hideFromMenu?: boolean; hideFromHome?: boolean;
   layout?: Record<string, { grid?: DashItem[]; css?: string; js?: string; sections?: { title: L; fields: string[]; style?: 'card' | 'tab' | 'step'; columns?: number; blocks?: { type: 'html' | 'snippet'; html?: L; event?: string }[] }[] }>;
   buttons?: { id: string; label: L; icon?: string; pages: string[]; row?: boolean }[];
 }
@@ -48,8 +51,8 @@ export interface Security {
   permissions: Record<string, Record<string, string>>; ownership: Record<string, { field: string }>;
   providers: { ldap: { enabled: boolean; host: string; port: number; baseDn: string; domain: string; bindDn: string; userFilter: string; useTls: boolean; groupMap: Record<string, string> }; oidc: Oidc[]; saml: any };
 }
-export interface Report { name: string; title: L; table: string; groups: { field: string; interval?: string; desc?: boolean }[]; aggregates: { field: string; fn: string }[]; columns: string[]; showDetails: boolean; crosstab?: { field: string; interval?: string; desc?: boolean } }
-export interface Chart { name: string; title: L; table: string; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean; modifyJs?: string }
+export interface Report { name: string; title: L; table: string; tools?: boolean; filters?: Cond[]; groups: { field: string; interval?: string; desc?: boolean }[]; aggregates: { field: string; fn: string }[]; columns: string[]; showDetails: boolean; crosstab?: { field: string; interval?: string; desc?: boolean } }
+export interface Chart { name: string; title: L; table: string; tools?: boolean; filters?: Cond[]; type: string; labelField: string; labelInterval?: string; series: { field: string; fn: string; label?: L; color?: string }[]; limit?: number; sortByValue?: boolean; stacked?: boolean; modifyJs?: string }
 export interface DashItem {
   type: 'count' | 'kpi' | 'chart' | 'report' | 'list' | 'html' | 'code' | 'image' | 'frame' | 'button' | 'field' | 'snippet' | 'toolbar' | 'datalist' | 'sys';
   block?: string; // 'sys' block: id of the block of a system page (login form, profile password…)
@@ -70,7 +73,10 @@ export interface Project {
   dir: string; project: ProjectMeta; connections: Connection[]; tables: Table[]; events: Record<string, Record<string, string>>;
   menu: { items: MenuItem[] }; security: Security; lang: Record<string, Record<string, string>>; reports: Report[]; charts: Chart[]; dashboards: Dashboard[]; syspages: Dashboard[];
 }
-export interface Secrets { connections?: Record<string, string>; oidc?: Record<string, string>; mailPassword?: string; smsPassword?: string; geocodeKey?: string; encryptionKey?: string; deploy?: Record<string, string>; team?: { url: string; user: string; token: string; project: string } }
+export interface Secrets { connections?: Record<string, string>; oidc?: Record<string, string>; mailPassword?: string; smsPassword?: string; geocodeKey?: string; encryptionKey?: string; deploy?: Record<string, string>; teamServers?: { url: string; user: string; token: string; project: string }[]; team?: { url: string; user: string; token: string; project: string } }
+/** Team server run from the designer, and the ones found on the network. */
+export interface LocalTeamServer { running: boolean; port: number; dir: string; user: string; lan?: boolean; pid?: number; urls?: string[]; since?: number }
+export interface FoundTeamServer { name: string; host: string; port: number; url: string; projects: string[] }
 export interface TeamState { connected: boolean; user: string; project: string; role: string; locks: Record<string, { user: string; since: number }>; presence: { id: string; user: string; focus: string }[]; conflicts: string[] }
 
 export type Nav =

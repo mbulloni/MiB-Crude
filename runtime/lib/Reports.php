@@ -10,6 +10,94 @@ class Reports
     const MAX_ROWS = 50000;
     private $app;
 
+    const AGG_FNS = ['sum', 'avg', 'count', 'min', 'max'];
+    const INTERVALS = ['year', 'quarter', 'month', 'week', 'day'];
+
+    /** "Count" with no field counts the records: it counts the key. */
+    public static function normAgg(Table $t, array $a)
+    {
+        if (isset($a['fn']) && $a['fn'] === 'count' && empty($a['field'])) {
+            $a['rows'] = true;
+            $a['field'] = !empty($t->def['keys']) ? $t->def['keys'][0] : (isset($t->def['fields'][0]['name']) ? $t->def['fields'][0]['name'] : '');
+        }
+        return $a;
+    }
+
+    /** Column title of a total / series: "Sum Amount", or "Number of records". */
+    public static function aggLabel(Table $t, array $a)
+    {
+        return !empty($a['rows']) ? t('agg.rows') : t('agg.' . $a['fn']) . ' ' . $t->fieldLabel($a['field']);
+    }
+
+    /** Report/chart tools (search, filters, quick grouping) are on unless the designer turned them off. */
+    public static function toolsOn(array $def)
+    {
+        return !isset($def['tools']) || $def['tools'] !== false;
+    }
+
+    /** Names of the fields a viewer may group or total by (those shown in the list). */
+    private static function toolFields(Table $t)
+    {
+        return array_map(function ($f) { return $f['name']; }, $t->fields('list'));
+    }
+
+    /** Groups asked on the page (gb[] = field, gi[] = interval), only on allowed fields. */
+    private static function askedGroups(Table $t, $max)
+    {
+        $ok = self::toolFields($t);
+        $out = [];
+        $gb = isset($_GET['gb']) && is_array($_GET['gb']) ? array_values($_GET['gb']) : [];
+        $gi = isset($_GET['gi']) && is_array($_GET['gi']) ? array_values($_GET['gi']) : [];
+        foreach ($gb as $i => $f) {
+            if (!is_string($f) || !in_array($f, $ok, true) || count($out) >= $max) continue;
+            $iv = isset($gi[$i]) && is_string($gi[$i]) && in_array($gi[$i], self::INTERVALS, true) ? $gi[$i] : '';
+            $out[] = ['field' => $f, 'interval' => $iv];
+        }
+        return $out;
+    }
+
+    /** Totals asked on the page (ag[i][fn], ag[i][field]); a "count" without field counts the records. */
+    private static function askedAggs(Table $t, $max)
+    {
+        $ok = self::toolFields($t);
+        $out = [];
+        foreach (isset($_GET['ag']) && is_array($_GET['ag']) ? $_GET['ag'] : [] as $a) {
+            if (!is_array($a) || empty($a['fn']) || !in_array($a['fn'], self::AGG_FNS, true) || count($out) >= $max) continue;
+            $f = isset($a['field']) && is_string($a['field']) ? $a['field'] : '';
+            if ($f !== '' && !in_array($f, $ok, true)) continue;
+            if ($f === '' && $a['fn'] !== 'count') continue;
+            $out[] = self::normAgg($t, ['fn' => $a['fn'], 'field' => $f]);
+        }
+        return $out;
+    }
+
+    /** The report as the viewer changed it on the page (groups and totals); the saved definition is never touched. */
+    private function adhocReport(Table $t, array $def)
+    {
+        if (empty($_GET['adhoc']) || !self::toolsOn($def)) return $def;
+        $groups = self::askedGroups($t, 3);
+        $aggs = self::askedAggs($t, 4);
+        if ($groups && !$aggs) $aggs = [self::normAgg($t, ['fn' => 'count', 'field' => ''])];
+        $def['groups'] = $groups;
+        $def['aggregates'] = $aggs;
+        unset($def['crosstab']);
+        $def['showDetails'] = !$groups || !empty($def['showDetails']);
+        if (empty($def['columns'])) $def['columns'] = array_slice(self::toolFields($t), 0, 6);
+        $def['adhoc'] = true;
+        return $def;
+    }
+
+    /** Same for a chart: first group = categories, totals = series. */
+    private function adhocChart(Table $t, array $def)
+    {
+        if (empty($_GET['adhoc']) || !self::toolsOn($def)) return $def;
+        $g = self::askedGroups($t, 1);
+        $a = self::askedAggs($t, 3);
+        if ($g) { $def['labelField'] = $g[0]['field']; $def['labelInterval'] = $g[0]['interval']; }
+        if ($a) $def['series'] = $a;
+        return $def;
+    }
+
     public function __construct(App $app)
     {
         $this->app = $app;
@@ -18,6 +106,16 @@ class Reports
     /** Definition from the project, or from mc_reports for user-built items ("u:<id>"). */
     private function def($kind, $name)
     {
+        // "t:<table>": no saved report, the table itself (opened from the list with "Group and total")
+        if ($kind === 'reports' && strpos($name, 't:') === 0) {
+            $tn = substr($name, 2);
+            if (!$this->app->hasTable($tn)) throw new HttpError(t('error.notfound'), 404);
+            $t = $this->app->table($tn);
+            if (!$t->enabled('list')) throw new HttpError(t('error.notfound'), 404);
+            $this->app->security->check($t->name, 'S');
+            return ['title' => $t->caption(), 'table' => $t->name, 'groups' => [], 'aggregates' => [], 'showDetails' => true,
+                'columns' => array_slice(self::toolFields($t), 0, 8)];
+        }
         if (strpos($name, 'u:') === 0) return Builder::load(substr($name, 2), $kind === 'reports' ? 'report' : 'chart');
         $all = isset($this->app->config[$kind]) ? $this->app->config[$kind] : [];
         if (!isset($all[$name])) throw new HttpError(t('error.notfound'), 404);
@@ -27,7 +125,8 @@ class Reports
 
     private function rows(Table $t, array $def)
     {
-        $req = ['q' => isset($_GET['q']) ? $_GET['q'] : '', 's' => isset($_GET['s']) && is_array($_GET['s']) ? $_GET['s'] : [], 'f' => []];
+        $req = ['q' => isset($_GET['q']) && is_string($_GET['q']) ? $_GET['q'] : '', 's' => isset($_GET['s']) && is_array($_GET['s']) ? $_GET['s'] : [], 'f' => isset($_GET['f']) && is_array($_GET['f']) ? $_GET['f'] : [],
+            'fx' => isset($def['filters']) ? $def['filters'] : []];
         $rows = $t->fetch($req, self::MAX_ROWS, 0, '', 'asc', 'report');
         $t->resolveLookups($rows, $t->def['fields']);
         return $rows;
@@ -157,6 +256,8 @@ class Reports
         $def = $this->def('reports', $name);
         $t = $this->app->table($def['table']);
         $this->app->security->check($t->name, 'S');
+        $def = $this->adhocReport($t, $def);
+        $def['aggregates'] = array_map(function ($a) use ($t) { return self::normAgg($t, $a); }, isset($def['aggregates']) ? $def['aggregates'] : []);
         $rows = $this->rows($t, $def);
         $tree = $this->group($t, $rows, isset($def['groups']) ? $def['groups'] : [], isset($def['aggregates']) ? $def['aggregates'] : []);
         $columns = [];
@@ -175,7 +276,7 @@ class Reports
         $data = [];
         $fields = [];
         foreach (isset($def['groups']) ? $def['groups'] : [] as $g) { $head[] = $t->fieldLabel($g['field']); $fields[] = ['type' => 'string']; }
-        foreach (isset($def['aggregates']) ? $def['aggregates'] : [] as $a) { $head[] = t('agg.' . $a['fn']) . ' ' . $t->fieldLabel($a['field']); $fields[] = ['type' => 'decimal']; }
+        foreach (isset($def['aggregates']) ? $def['aggregates'] : [] as $a) { $head[] = self::aggLabel($t, $a); $fields[] = ['type' => 'decimal']; }
         $walk = function ($node, $path) use (&$walk, &$data, $def) {
             if (!$node['children']) {
                 $line = $path;
@@ -204,8 +305,8 @@ class Reports
         $head = [];
         $fields = [];
         foreach (isset($def['groups']) ? $def['groups'] : [] as $g) { $head[] = $t->fieldLabel($g['field']); $fields[] = ['type' => 'string']; }
-        foreach ($cols as $c) foreach ($aggs as $a) { $head[] = $c['label'] . (count($aggs) > 1 ? ' — ' . t('agg.' . $a['fn']) . ' ' . $t->fieldLabel($a['field']) : ''); $fields[] = ['type' => 'decimal']; }
-        foreach ($aggs as $a) { $head[] = t('report.grandtotal') . (count($aggs) > 1 ? ' — ' . t('agg.' . $a['fn']) . ' ' . $t->fieldLabel($a['field']) : ''); $fields[] = ['type' => 'decimal']; }
+        foreach ($cols as $c) foreach ($aggs as $a) { $head[] = $c['label'] . (count($aggs) > 1 ? ' — ' . self::aggLabel($t, $a) : ''); $fields[] = ['type' => 'decimal']; }
+        foreach ($aggs as $a) { $head[] = t('report.grandtotal') . (count($aggs) > 1 ? ' — ' . self::aggLabel($t, $a) : ''); $fields[] = ['type' => 'decimal']; }
         $data = [];
         $walk = function ($node, $path) use (&$walk, &$data, $t, $ct, $aggs, $cols) {
             foreach ($node['children'] as $c) {
@@ -228,8 +329,11 @@ class Reports
     public function chart($name)
     {
         $def = $this->def('charts', $name);
+        $t = $this->app->table($def['table']);
+        $this->app->security->check($t->name, 'S');
+        $def = $this->adhocChart($t, $def);
         $this->app->title = $this->app->label($def['title'], $name);
-        $this->app->render('chart', ['def' => $def, 'name' => $name], !empty($_GET['embed']) ? 'layout_popup' : 'layout');
+        $this->app->render('chart', ['def' => $def, 'name' => $name, 't' => $t], !empty($_GET['embed']) ? 'layout_popup' : 'layout');
     }
 
     /** Chart.js data: {type, labels, datasets} */
@@ -238,6 +342,7 @@ class Reports
         $def = $this->def('charts', $name);
         $t = $this->app->table($def['table']);
         $this->app->security->check($t->name, 'S');
+        $def = $this->adhocChart($t, $def);
         $rows = $this->rows($t, $def);
         $buckets = [];
         foreach ($rows as $r) {
@@ -254,6 +359,7 @@ class Reports
             $links[] = $flt === null ? null : $this->app->url('list', array_merge(['t' => $t->name], $flt));
         }
         $series = isset($def['series']) && $def['series'] ? $def['series'] : [['field' => $def['labelField'], 'fn' => 'count']];
+        $series = array_map(function ($s) use ($t) { return self::normAgg($t, $s); }, $series);
         $labels = [];
         $values = [];
         foreach ($buckets as $b) {
@@ -271,7 +377,7 @@ class Reports
         }
         $datasets = [];
         foreach ($series as $i => $s) {
-            $datasets[] = ['label' => !empty($s['label']) ? $this->app->label($s['label']) : t('agg.' . $s['fn']) . ' ' . $t->fieldLabel($s['field']),
+            $datasets[] = ['label' => !empty($s['label']) ? $this->app->label($s['label']) : self::aggLabel($t, $s),
                 'data' => isset($values[$i]) ? $values[$i] : [], 'color' => isset($s['color']) ? $s['color'] : ''];
         }
         $out = ['type' => $def['type'], 'labels' => $labels, 'datasets' => $datasets, 'stacked' => !empty($def['stacked']), 'links' => $links];

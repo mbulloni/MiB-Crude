@@ -73,6 +73,9 @@ test.before(async () => {
   proj.connections.push(CONN);
   P.writeSecrets(dir, { connections: { main: PW } });
   await W.importTables(proj, CONN, PW, ['categories', 'products', 'countries', 'cities', 'customers', 'orders', 'order_items']);
+  // A joined view (orders + customers), read only: reports and "Group and total" work on it like on any table.
+  const joined = await W.addSqlView(proj, CONN, PW, 'ordini_clienti', 'SELECT o.id AS ordine, c.name AS cliente, o.status AS stato, o.total AS importo, o.order_date AS data FROM orders o LEFT JOIN customers c ON c.id = o.customer_id');
+  joined.filters = [{ field: 'stato', op: 'equals', v: 'new' }]; // fixed filter picked in the designer: only the new orders
   // Dependent dropdown city <- country.
   const cust = proj.tables.find((t) => t.name === 'customers');
   cust.layout = { edit: { sections: [
@@ -132,6 +135,8 @@ test.before(async () => {
   proj.project.settings.api = { enabled: true };
   proj.project.settings.webBuilder = { enabled: true };
   proj.reports.push({ name: 'sales', title: { it: 'Vendite', en: 'Sales' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'customer_id', 'total'], showDetails: true });
+  proj.reports.push({ name: 'onlynew', title: { it: 'Solo nuovi' }, table: 'orders', groups: [], aggregates: [{ field: 'total', fn: 'sum' }], columns: ['order_date', 'total'], showDetails: true, filters: [{ field: 'status', op: 'equals', v: 'new' }, { field: 'total', op: 'more', v: '0' }, { field: 'status', op: 'notempty' }] });
+  proj.charts.push({ name: 'onlynewchart', title: { it: 'Grafico solo nuovi' }, table: 'orders', type: 'bar', labelField: 'status', series: [], filters: [{ field: 'status', op: 'equals', v: 'new' }] });
   proj.reports.push({ name: 'cross', title: { it: 'Incrociato' }, table: 'orders', groups: [{ field: 'status' }], aggregates: [{ field: 'total', fn: 'sum' }, { field: 'id', fn: 'count' }], columns: [], showDetails: false, crosstab: { field: 'order_date', interval: 'year' } });
   proj.charts.push({ name: 'bystatus', title: { it: 'Per stato' }, table: 'orders', type: 'bar', labelField: 'status', series: [{ field: 'total', fn: 'sum' }] });
   proj.charts.push({ name: 'bymonth', title: { it: 'Per mese' }, table: 'orders', type: 'line', labelField: 'order_date', labelInterval: 'month', series: [{ field: 'total', fn: 'sum' }] });
@@ -665,6 +670,118 @@ test('crosstab report: rows × columns, row and column totals, cells link to the
   const x = await c.req('?p=report&r=cross&fmt=xlsx');
   assert.strictEqual(x.status, 200);
   assert.ok(x.text.startsWith('PK'), 'XLSX (zip) file');
+});
+
+test('report tools: search, filters and quick grouping/totals on report and chart, kept by XLSX and print', async () => {
+  const c = client();
+  let r = await c.req('?p=login');
+  await c.post('?p=login', { _csrf: c.csrf(r.text), username: 'admin', password: 'Segreta123' });
+  const num = (s) => Number(String(s).replace(/\./g, '').replace(',', '.'));
+  const grand = (t) => num((t.match(/mc-totals[\s\S]*?<span class="badge text-bg-light">(\d+)<\/span>/) || [])[1]);
+  // the bar is there, with the search box and the options panel
+  r = await c.req('?p=report&r=sales');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /id="mcTools"/);
+  assert.match(r.text, /name="q"/);
+  const all = grand(r.text);
+  assert.ok(all > 3, 'orders in the report');
+  // search: the totals follow the filtered rows, the bar keeps the text
+  const some = (await c.req('?p=dt&t=orders&draw=1&start=0&length=1')).text;
+  assert.ok(JSON.parse(some).recordsTotal === all);
+  r = await c.req('?p=report&r=sales&q=zzzznotfound');
+  assert.strictEqual(grand(r.text), 0);
+  assert.match(r.text, /value="zzzznotfound"/);
+  // filter on a field: s[total] more than a value narrows the rows (same engine as the list)
+  r = await c.req('?p=report&r=sales&s[total][op]=more&s[total][v]=0');
+  assert.ok(grand(r.text) <= all && grand(r.text) > 0);
+  r = await c.req('?p=report&r=sales&s[total][op]=more&s[total][v]=99999999');
+  assert.strictEqual(grand(r.text), 0);
+  // quick grouping and totals chosen on the page: group by status, count the records (no field)
+  r = await c.req('?p=report&r=sales&adhoc=1&gb[0]=status&ag[0][fn]=count&ag[0][field]=');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /mc-rg-0/);
+  assert.match(r.text, /Numero di record|Number of records/);
+  // …and the same with sum of a numeric field and no group: only totals
+  r = await c.req('?p=report&r=sales&adhoc=1&ag[0][fn]=sum&ag[0][field]=total&ag[1][fn]=count&ag[1][field]=');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /Somma|Sum/);
+  // a field the viewer cannot see in the list, or a made-up function, is ignored (no error)
+  r = await c.req('?p=report&r=sales&adhoc=1&gb[0]=nope&ag[0][fn]=drop&ag[0][field]=total');
+  assert.strictEqual(r.status, 200);
+  // XLSX and print carry what was asked
+  const x = await c.req('?p=report&r=sales&adhoc=1&gb[0]=status&ag[0][fn]=count&ag[0][field]=&fmt=xlsx');
+  assert.strictEqual(x.status, 200);
+  assert.ok(x.text.startsWith('PK'));
+  r = await c.req('?p=report&r=sales&print=1&q=zzzznotfound');
+  assert.doesNotMatch(r.text, /id="mcTools"/);
+  assert.strictEqual(grand(r.text), 0);
+  // the saved report is never changed: opening it again shows the original grouping
+  r = await c.req('?p=report&r=sales');
+  assert.strictEqual(grand(r.text), all);
+  // a user-built report may count the records with no field at all
+  r = await c.req('?p=builder&id=new&kind=report&t=orders');
+  r = await c.post('?p=builder', { _csrf: c.csrf(r.text), id: '0', kind: 'report', title: 'Conteggio libero', table: 'orders', 'g[0][field]': 'status', 'g[0][interval]': '', 'a[0][fn]': 'count', 'a[0][field]': '', showDetails: '' });
+  assert.ok([200, 302].includes(r.status));
+  r = await c.req('?p=builder');
+  const uid = (r.text.match(/Conteggio libero/) && r.text.match(/href="[^"]*r%3Au%3A(\d+)|href="[^"]*r=u(?:%3A|:)(\d+)/));
+  assert.ok(uid, 'the new report is listed');
+  r = await c.req('?p=report&r=u:' + (uid[1] || uid[2]));
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /Numero di record|Number of records/);
+  // "Group and total" from the list: opens the same tool on the table itself, with the list filters already applied
+  r = await c.req('?p=list&t=orders&s[total][op]=more&s[total][v]=1');
+  assert.match(r.text, /mc-group-calc/);
+  const gl = decodeURIComponent((r.text.match(/class="btn btn-outline-secondary btn-sm mc-group-calc"[^>]*href="([^"]+)"/) || [])[1] || '').replace(/&amp;/g, '&');
+  assert.match(gl, /r=t:orders/);
+  assert.match(gl, /s\[total\]\[op\]=more/);
+  r = await c.req(gl.replace(/^index\.php/, ''));
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /id="mcTools"/);
+  const sumCell = (t) => (t.match(/<tfoot>[\s\S]*?<td class="text-end fw-semibold">([^<]*)</) || [])[1];
+  r = await c.req('?p=report&r=t:orders&adhoc=1&gb[0]=status&ag[0][fn]=sum&ag[0][field]=total&ag[1][fn]=count&ag[1][field]=');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /mc-rg-0/);
+  const ordersSum = sumCell(r.text);
+  assert.match(ordersSum, /\d/, 'grand total of the sum');
+  assert.strictEqual(num(ordersSum), num(JSON.parse((await c.req('?p=dt&t=orders&draw=1&start=0&length=1')).text).totals.total.replace(/^\D+/, '')));
+  // …and the same on a joined view: group by status, count the records and sum the amount
+  r = await c.req('?p=list&t=ordini_clienti');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /mc-group-calc/);
+  r = await c.req('?p=report&r=t:ordini_clienti&adhoc=1&gb[0]=stato&ag[0][fn]=sum&ag[0][field]=importo&ag[1][fn]=count&ag[1][field]=');
+  assert.strictEqual(r.status, 200);
+  assert.match(r.text, /mc-rg-0/);
+  // the view has a fixed filter (only the new orders): its total is the one of the orders table filtered the same way
+  const viewSum = sumCell(r.text);
+  const newSum = sumCell((await c.req('?p=report&r=t:orders&adhoc=1&gb[0]=status&ag[0][fn]=sum&ag[0][field]=total&ag[1][fn]=count&ag[1][field]=&s[status][op]=equals&s[status][v]=new')).text);
+  assert.strictEqual(viewSum, newSum);
+  assert.notStrictEqual(viewSum, ordersSum);
+  // a table the viewer may not see is refused
+  assert.strictEqual((await c.req('?p=report&r=t:nonesiste')).status, 404);
+  // fixed filters picked in the designer (no SQL): report, chart and the data source itself
+  const newOnes = JSON.parse((await c.req('?p=dt&t=orders&draw=1&start=0&length=1&f[status][]=new')).text).recordsFiltered;
+  assert.ok(newOnes >= 1 && newOnes < all);
+  r = await c.req('?p=report&r=onlynew');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(grand(r.text), newOnes);
+  // the viewer's own search narrows it further, it never widens it
+  r = await c.req('?p=report&r=onlynew&q=zzzznotfound');
+  assert.strictEqual(grand(r.text), 0);
+  r = await c.req('?p=report&r=onlynew&adhoc=1&gb[0]=status&ag[0][fn]=count&ag[0][field]=');
+  assert.strictEqual(grand(r.text), newOnes);
+  const dn = JSON.parse((await c.req('?p=chartdata&c=onlynewchart')).text);
+  assert.strictEqual(dn.datasets[0].data.reduce((a, b) => a + b, 0), newOnes);
+  assert.strictEqual(dn.labels.length, 1);
+  assert.strictEqual(JSON.parse((await c.req('?p=dt&t=ordini_clienti&draw=1&start=0&length=1')).text).recordsTotal, newOnes);
+  // chart: bar, the data URL carries the asked parameters, the data follow them
+  r = await c.req('?p=chart&c=bystatus&q=zzzznotfound');
+  assert.match(r.text, /id="mcTools"/);
+  assert.match(r.text, /data-src="[^"]*q=zzzznotfound/);
+  let d = JSON.parse((await c.req('?p=chartdata&c=bystatus&q=zzzznotfound')).text);
+  assert.deepStrictEqual(d.labels, []);
+  d = JSON.parse((await c.req('?p=chartdata&c=bystatus&adhoc=1&gb[0]=status&ag[0][fn]=count&ag[0][field]=')).text);
+  assert.ok(d.labels.length >= 1);
+  assert.strictEqual(d.datasets[0].data.reduce((a, b) => a + b, 0), all);
 });
 
 test('inline add: row above the list, events and validation, JSON answer', async () => {

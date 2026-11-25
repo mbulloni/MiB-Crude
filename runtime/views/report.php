@@ -25,10 +25,16 @@ $renderNode = function ($node, $depth) use (&$renderNode, $t, $aggs, $columns, $
     return $html;
 };
 ?>
+<?php
+// what the viewer asked on the page (search, filters, grouping) goes with the export and the print
+$asked = [];
+foreach (['q', 's', 'f', 'gb', 'gi', 'ag', 'adhoc'] as $k) if (isset($_GET[$k]) && $_GET[$k] !== '' && $_GET[$k] !== []) $asked[$k] = $_GET[$k];
+?>
 <?php if (empty($embedded)): ?>
 <div class="d-flex align-items-center gap-2 mb-3"><h1 class="h4 m-0"><?= h($app->label($def['title'], $name)) ?></h1>
-  <a class="btn btn-sm btn-outline-secondary ms-auto" href="<?= h($app->url('report', ['r' => $name, 'fmt' => 'xlsx'])) ?>"><i class="bi bi-file-earmark-excel"></i> XLSX</a>
-  <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= h($app->url('report', ['r' => $name, 'print' => 1])) ?>"><i class="bi bi-printer"></i></a></div>
+  <a class="btn btn-sm btn-outline-secondary ms-auto" href="<?= h($app->url('report', array_merge(['r' => $name, 'fmt' => 'xlsx'], $asked))) ?>"><i class="bi bi-file-earmark-excel"></i> XLSX</a>
+  <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= h($app->url('report', array_merge(['r' => $name, 'print' => 1], $asked))) ?>"><i class="bi bi-printer"></i></a></div>
+<?php if (\MiB\Reports::toolsOn($def) && empty($_GET['print'])): $kind = 'report'; include __DIR__ . '/partials/data_tools.php'; endif ?>
 <?php endif ?>
 <?php if (!empty($def['crosstab']['field'])):
     // Crosstab: rows = groups (nested, with subtotals), columns = buckets of crosstab.field, cells = aggregates
@@ -64,7 +70,7 @@ $renderNode = function ($node, $depth) use (&$renderNode, $t, $aggs, $columns, $
 <div class="card"><div class="mc-scroll"><table class="table table-sm table-bordered mb-0 mc-report mc-crosstab">
 <thead><tr><th rowspan="<?= count($aggs) > 1 ? 2 : 1 ?>"><?= h(implode(' / ', array_map(function ($g) use ($t) { return $t->fieldLabel($g['field']); }, isset($def['groups']) ? $def['groups'] : []))) ?> <span class="text-secondary">×</span> <?= h($t->fieldLabel($ct['field'])) ?></th>
 <?php foreach ($cols as $col): ?><th class="text-end" colspan="<?= $nAgg ?>"><?= h($col['label']) ?></th><?php endforeach ?><th class="text-end" colspan="<?= $nAgg ?>"><?= h(t('report.grandtotal')) ?></th></tr>
-<?php if (count($aggs) > 1): ?><tr><?php for ($i = 0; $i <= count($cols); $i++): foreach ($aggs as $a): ?><th class="text-end small fw-normal"><?= h(t('agg.' . $a['fn'])) ?> <?= h($t->fieldLabel($a['field'])) ?></th><?php endforeach; endfor ?></tr><?php endif ?></thead>
+<?php if (count($aggs) > 1): ?><tr><?php for ($i = 0; $i <= count($cols); $i++): foreach ($aggs as $a): ?><th class="text-end small fw-normal"><?= h(\MiB\Reports::aggLabel($t, $a)) ?></th><?php endforeach; endfor ?></tr><?php endif ?></thead>
 <tbody><?= $crossRows($tree, 0, []) ?></tbody>
 <tfoot><tr class="mc-totals"><th><?= h(t('report.grandtotal')) ?> <span class="badge text-bg-light"><?= (int)$count ?></span></th>
 <?php foreach ($cols as $k => $col): foreach ($aggs as $a): ?><?= $cell($a, isset($grand[$k][$a['field'] . ':' . $a['fn']]) ? $grand[$k][$a['field'] . ':' . $a['fn']] : null, \MiB\Reports::cellUrl($t, [[$ct['field'], isset($ct['interval']) ? $ct['interval'] : '', $col['raw']]]), true) ?><?php endforeach; endforeach ?>
@@ -73,9 +79,9 @@ $renderNode = function ($node, $depth) use (&$renderNode, $t, $aggs, $columns, $
 <?php else: ?>
 <div class="card"><div class="mc-scroll"><table class="table table-sm mb-0 mc-report">
 <thead><tr><?php if ($columns): foreach ($columns as $f): ?><th><?= h($t->fieldLabel($f)) ?></th><?php endforeach; else: ?><th></th><?php endif ?>
-<?php foreach ($aggs as $a): ?><th class="text-end"><?= h(t('agg.' . $a['fn'])) ?> <?= h($t->fieldLabel($a['field'])) ?></th><?php endforeach ?></tr></thead>
+<?php foreach ($aggs as $a): ?><th class="text-end"><?= h(\MiB\Reports::aggLabel($t, $a)) ?></th><?php endforeach ?></tr></thead>
 <tbody><?php if ($tree['children']): echo $renderNode($tree, 0); else: foreach ($tree['rows'] as $r): ?><tr><?php foreach ($columns as $f): ?><td><?= \MiB\Format::html($t, $f, $r, 'list') ?></td><?php endforeach ?><?php foreach ($aggs as $a): ?><td></td><?php endforeach ?></tr><?php endforeach; endif ?></tbody>
-<tfoot><tr class="mc-totals"><td colspan="<?= max(1, count($columns)) ?>"><?= h(t('report.grandtotal')) ?> <span class="badge text-bg-light"><?= (int)$count ?></span></td>
+<tfoot><?php if (!$count): ?><tr><td colspan="<?= max(1, count($columns) + count($aggs)) ?>" class="text-secondary text-center py-3"><?= h(t('tools.nothing')) ?></td></tr><?php endif ?><tr class="mc-totals"><td colspan="<?= max(1, count($columns)) ?>"><?= h(t('report.grandtotal')) ?> <span class="badge text-bg-light"><?= (int)$count ?></span></td>
 <?php foreach ($aggs as $a): ?><td class="text-end fw-semibold"><?= h($fmtAgg($a, $tree['totals'][$a['field'] . ':' . $a['fn']])) ?></td><?php endforeach ?></tr></tfoot>
 </table></div></div>
 <?php endif ?>

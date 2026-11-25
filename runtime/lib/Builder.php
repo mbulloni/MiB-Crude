@@ -58,7 +58,7 @@ class Builder
                 $def['groups'] = [];
                 foreach ((array)($_POST['g'] ?? []) as $g) if ($okField($g['field'] ?? '')) $def['groups'][] = ['field' => $g['field'], 'interval' => (string)($g['interval'] ?? '')];
                 $def['aggregates'] = [];
-                foreach ((array)($_POST['a'] ?? []) as $a) if ($okField($a['field'] ?? '') && in_array($a['fn'] ?? '', ['sum', 'avg', 'count', 'min', 'max'], true)) $def['aggregates'][] = ['field' => $a['field'], 'fn' => $a['fn']];
+                foreach ((array)($_POST['a'] ?? []) as $a) if (($okField($a['field'] ?? '') || (($a['fn'] ?? '') === 'count' && ($a['field'] ?? '') === '')) && in_array($a['fn'] ?? '', ['sum', 'avg', 'count', 'min', 'max'], true)) $def['aggregates'][] = ['field' => $a['field'], 'fn' => $a['fn']];
                 $def['columns'] = array_values(array_filter((array)($_POST['columns'] ?? []), $okField));
                 $def['showDetails'] = !empty($_POST['showDetails']);
             } else {
@@ -66,7 +66,7 @@ class Builder
                 $def['labelField'] = $okField($_POST['labelField'] ?? '') ? $_POST['labelField'] : $t->def['fields'][0]['name'];
                 $def['labelInterval'] = (string)($_POST['labelInterval'] ?? '');
                 $def['series'] = [];
-                foreach ((array)($_POST['s'] ?? []) as $sv) if ($okField($sv['field'] ?? '') && in_array($sv['fn'] ?? '', ['sum', 'avg', 'count', 'min', 'max'], true)) $def['series'][] = ['field' => $sv['field'], 'fn' => $sv['fn']];
+                foreach ((array)($_POST['s'] ?? []) as $sv) if (($okField($sv['field'] ?? '') || (($sv['fn'] ?? '') === 'count' && ($sv['field'] ?? '') === '')) && in_array($sv['fn'] ?? '', ['sum', 'avg', 'count', 'min', 'max'], true)) $def['series'][] = ['field' => $sv['field'], 'fn' => $sv['fn']];
             }
             $vals = ['owner' => $me, 'kind' => $kind, 'title' => trim((string)$_POST['title']) ?: $tables[$table], 'table_name' => $table, 'def' => json_encode($def), 'shared' => empty($_POST['shared']) ? 0 : 1];
             if ($id) {

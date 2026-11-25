@@ -8,6 +8,7 @@ import FieldDialog, { EDIT_AS, VIEW_AS } from './FieldDialog';
 import { Btn, Check, Hero, I, LangText, NavLayout, Num, Row, Section, Select, Text, lbl } from './ui';
 import { useItemLock } from './TeamPanel';
 import PageDesigner from './PageDesigner';
+import { FilterBuilder } from './FilterBuilder';
 import RestPagingFields, { RestSourceOptions } from './RestPaging';
 import { ProcParams, ProcWrite } from './ProcSection';
 import DataDialog from './DataDialog';
@@ -101,7 +102,8 @@ export default function TableEditor({ name }: { name: string }) {
               if ('cacheSeconds' in patch) { if (patch.cacheSeconds) x.source.cacheSeconds = patch.cacheSeconds; else delete x.source.cacheSeconds; }
             })} />
           </> : <Row label="Tabella"><Text value={t.source.table} onChange={(v) => set((x) => { x.source.table = v; })} mono /></Row>}
-          {t.source.type !== 'rest' && <Row label="Filtro fisso (WHERE)" hint={t.source.type === 'proc' ? 'Per le procedure vale con PostgreSQL e Oracle (risultato letto con SELECT, colonne come src.nome); con MariaDB e SQL Server usa l\'evento ProcRows per filtrare in PHP' : 'SQL sempre applicato, es. src.cancellato = 0'}><Text value={t.where} onChange={(v) => set((x) => { x.where = v; })} mono /></Row>}
+          {(t.source.type === 'table' || t.source.type === 'sql') && <Row label="Filtra i dati" hint="Mostra solo i record che rispettano queste condizioni, sempre (liste, report, grafici, ricerche). Non serve scrivere SQL."><FilterBuilder fields={t.fields} value={t.filters} onChange={(v) => set((x) => { if (v) x.filters = v; else delete x.filters; })} /></Row>}
+          {t.source.type !== 'rest' && <Row label="Filtro SQL (avanzato)" hint={t.source.type === 'proc' ? 'Per le procedure vale con PostgreSQL e Oracle (risultato letto con SELECT, colonne come src.nome); con MariaDB e SQL Server usa l\'evento ProcRows per filtrare in PHP' : 'SQL sempre applicato, es. src.cancellato = 0'}><Text value={t.where} onChange={(v) => set((x) => { x.where = v; })} mono /></Row>}
         </Section>
         <Section title="Opzioni">
           <Row label="Sola lettura"><Check value={t.readOnly} onChange={(v) => set((x) => { x.readOnly = v; })} /></Row>

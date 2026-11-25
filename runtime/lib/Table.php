@@ -208,21 +208,9 @@ class Table
                     continue;
                 }
                 if ($v === '' && !in_array($op, ['empty', 'notempty'], true)) continue;
-                $col = $this->col($name);
-                switch ($op) {
-                    case 'equals': $w[] = "$col = ?"; $p[] = $v; break;
-                    case 'notequals': $w[] = "($col <> ? OR $col IS NULL)"; $p[] = $v; break;
-                    case 'starts': $w[] = $this->db->like($col); $p[] = "$v%"; break;
-                    case 'more': $w[] = "$col > ?"; $p[] = $v; break;
-                    case 'less': $w[] = "$col < ?"; $p[] = $v; break;
-                    case 'between':
-                        $w[] = "$col >= ?"; $p[] = $v;
-                        if ($v2 !== '') { $w[] = "$col <= ?"; $p[] = $this->endOfDay($f, $v2); }
-                        break;
-                    case 'empty': $w[] = "($col IS NULL OR " . $this->db->like($col) . ')'; $p[] = ''; break;
-                    case 'notempty': $w[] = "($col IS NOT NULL AND NOT " . $this->db->like($col) . ')'; $p[] = ''; break;
-                    default: $w[] = $this->db->like($col); $p[] = "%$v%";
-                }
+                list($cw, $cp) = $this->condSql($f, $op, $v, $v2);
+                $w = array_merge($w, $cw);
+                $p = array_merge($p, $cp);
             }
         }
         // Filter panel: f[field][] = value
@@ -239,6 +227,12 @@ class Table
         if ($own) { $w[] = $this->col($own['field']) . ' = ?'; $p[] = userId(); }
         // Static WHERE from the designer.
         if (!empty($this->def['where'])) $w[] = '(' . $this->def['where'] . ')';
+        // Fixed filters of the table and of the report/chart that reads it (picked field by field in the designer).
+        foreach ([isset($this->def['filters']) ? $this->def['filters'] : [], isset($req['fx']) ? $req['fx'] : []] as $conds) {
+            list($fw, $fp) = $this->fixedFilterSql($conds);
+            $w = array_merge($w, $fw);
+            $p = array_merge($p, $fp);
+        }
         // BeforeSelect event can add raw SQL.
         $extra = '';
         $order = '';
@@ -246,6 +240,53 @@ class Table
         if (trim($extra) !== '') $w[] = '(' . $extra . ')';
         $order = preg_replace('/^\s*order\s+by\s+/i', '', (string)$order);
         return [$w ? implode(' AND ', $w) : '1=1', $p, $order];
+    }
+
+    /** SQL of one test on a field ("equals", "between"…): [conditions, parameters]. Shared by the advanced search and the fixed filters. */
+    private function condSql(array $f, $op, $v, $v2)
+    {
+        $w = [];
+        $p = [];
+        $col = $this->col($f['name']);
+        switch ($op) {
+            case 'equals': $w[] = "$col = ?"; $p[] = $v; break;
+            case 'notequals': $w[] = "($col <> ? OR $col IS NULL)"; $p[] = $v; break;
+            case 'starts': $w[] = $this->db->like($col); $p[] = "$v%"; break;
+            case 'more': $w[] = "$col > ?"; $p[] = $v; break;
+            case 'less': $w[] = "$col < ?"; $p[] = $v; break;
+            case 'between':
+                $w[] = "$col >= ?"; $p[] = $v;
+                if ($v2 !== '') { $w[] = "$col <= ?"; $p[] = $this->endOfDay($f, $v2); }
+                break;
+            case 'empty': $w[] = "($col IS NULL OR " . $this->db->like($col) . ')'; $p[] = ''; break;
+            case 'notempty': $w[] = "($col IS NOT NULL AND NOT " . $this->db->like($col) . ')'; $p[] = ''; break;
+            default: $w[] = $this->db->like($col); $p[] = "%$v%";
+        }
+        return [$w, $p];
+    }
+
+    /**
+     * Fixed filters chosen in the designer (a list of {field, op, v, v2}, always applied): [conditions, parameters].
+     * A test with no value is left out (only "empty" and "not empty" need none); an unknown field is ignored.
+     */
+    public function fixedFilterSql($conds)
+    {
+        $w = [];
+        $p = [];
+        if (!is_array($conds)) return [$w, $p];
+        $known = ['contains', 'equals', 'notequals', 'starts', 'more', 'less', 'between', 'empty', 'notempty'];
+        foreach ($conds as $c) {
+            if (!is_array($c) || empty($c['field']) || !($f = $this->field($c['field']))) continue;
+            $op = isset($c['op']) && in_array($c['op'], $known, true) ? $c['op'] : 'contains';
+            if (Crypto::isEncrypted($f) && !in_array($op, ['empty', 'notempty'], true)) continue;
+            $v = isset($c['v']) && is_scalar($c['v']) ? (string)$c['v'] : '';
+            $v2 = isset($c['v2']) && is_scalar($c['v2']) ? (string)$c['v2'] : '';
+            if ($v === '' && !in_array($op, ['empty', 'notempty'], true)) continue;
+            list($cw, $cp) = $this->condSql($f, $op, $v, $v2);
+            $w = array_merge($w, $cw);
+            $p = array_merge($p, $cp);
+        }
+        return [$w, $p];
     }
 
     private function endOfDay($f, $v)
@@ -331,6 +372,9 @@ class Table
         $own = $this->app->security->ownership($this->name);
         if ($own) { $where[] = $this->col($own['field']) . ' = ?'; $params[] = userId(); }
         if (!empty($this->def['where'])) $where[] = '(' . $this->def['where'] . ')';
+        list($fw, $fp) = $this->fixedFilterSql(isset($this->def['filters']) ? $this->def['filters'] : []);
+        $where = array_merge($where, $fw);
+        $params = array_merge($params, $fp);
         // BeforeSelect also restricts single records (edit/view/delete), like the classic BeforeQueryEdit/View.
         $extra = '';
         $order = '';

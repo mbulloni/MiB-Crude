@@ -36,6 +36,9 @@
   <?php if (!\MiB\Compat::hidden('print') && $t->enabled('print') && $sec->can($t->name, 'P')): ?>
     <a class="btn btn-outline-secondary btn-sm mc-export" target="_blank" href="<?= h($app->url('print', $keep)) ?>"><i class="bi bi-printer"></i> <?= h(t('btn.print')) ?></a>
   <?php endif ?>
+  <?php if (!$embedded && $sec->can($t->name, 'S')): ?>
+    <a class="btn btn-outline-secondary btn-sm mc-group-calc" title="<?= h(t('list.group_hint')) ?>" href="<?= h($app->url('report', array_merge(['r' => 't:' . $t->name, 'adhoc' => 1, 'ag' => [['fn' => 'count', 'field' => '']]], array_filter(['q' => $req['q'], 's' => $req['s'], 'f' => $req['f']])))) ?>"><i class="bi bi-calculator"></i> <?= h(t('list.group_calc')) ?></a>
+  <?php endif ?>
   <?= \MiB\Buttons::html($t, 'list', false) ?>
   <?php if (!\MiB\Compat::hidden('import') && $t->enabled('import') && $sec->can($t->name, 'I')): ?>
     <a class="btn btn-outline-secondary btn-sm" href="<?= h($app->url('import', ['t' => $t->name])) ?>"><i class="bi bi-upload"></i> <?= h(t('btn.import')) ?></a>

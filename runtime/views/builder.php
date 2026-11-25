@@ -18,7 +18,7 @@ $sel = function ($name, $opts, $cur, $empty = true) { $h = '<select class="form-
   <h6><?= h(t('builder.groups')) ?></h6>
   <?php for ($i = 0; $i < 3; $i++): $g = $d['groups'][$i] ?? []; ?><div class="row g-2 mb-1"><div class="col-md-5"><?= $sel("g[$i][field]", $fields, $g['field'] ?? '') ?></div><div class="col-md-3"><?= $sel("g[$i][interval]", $intervals, $g['interval'] ?? '', false) ?></div></div><?php endfor ?>
   <h6 class="mt-3"><?= h(t('builder.totals')) ?></h6>
-  <?php for ($i = 0; $i < 3; $i++): $a = $d['aggregates'][$i] ?? []; ?><div class="row g-2 mb-1"><div class="col-md-3"><?= $sel("a[$i][fn]", $fnOpts, $a['fn'] ?? '') ?></div><div class="col-md-5"><?= $sel("a[$i][field]", $fields, $a['field'] ?? '') ?></div></div><?php endfor ?>
+  <?php for ($i = 0; $i < 3; $i++): $a = $d['aggregates'][$i] ?? []; ?><div class="row g-2 mb-1"><div class="col-md-3"><?= $sel("a[$i][fn]", $fnOpts, $a['fn'] ?? '') ?></div><div class="col-md-5"><?= $sel("a[$i][field]", $fields, $a['field'] ?? '') ?></div></div><?php endfor ?><div class="form-text"><?= h(t('builder.records_hint')) ?></div>
   <h6 class="mt-3"><?= h(t('builder.columns')) ?></h6>
   <div class="d-flex flex-wrap gap-3"><?php foreach ($fields as $fn => $fl): ?><div class="form-check"><input class="form-check-input" type="checkbox" name="columns[]" value="<?= h($fn) ?>" id="bc<?= h(md5($fn)) ?>"<?= in_array($fn, $d['columns'] ?? [], true) ? ' checked' : '' ?>><label class="form-check-label" for="bc<?= h(md5($fn)) ?>"><?= h($fl) ?></label></div><?php endforeach ?></div>
   <div class="form-check mt-2"><input class="form-check-input" type="checkbox" name="showDetails" value="1" id="bsd"<?= !empty($d['showDetails']) || !$edit['id'] ? ' checked' : '' ?>><label class="form-check-label" for="bsd"><?= h(t('builder.details')) ?></label></div>
@@ -29,7 +29,7 @@ $sel = function ($name, $opts, $cur, $empty = true) { $h = '<select class="form-
     <div class="col-md-3"><label class="form-label">&nbsp;</label><?= $sel('labelInterval', $intervals, $d['labelInterval'] ?? '', false) ?></div>
   </div>
   <h6><?= h(t('builder.series')) ?></h6>
-  <?php for ($i = 0; $i < 3; $i++): $sv = $d['series'][$i] ?? []; ?><div class="row g-2 mb-1"><div class="col-md-3"><?= $sel("s[$i][fn]", $fnOpts, $sv['fn'] ?? '') ?></div><div class="col-md-5"><?= $sel("s[$i][field]", $fields, $sv['field'] ?? '') ?></div></div><?php endfor ?>
+  <?php for ($i = 0; $i < 3; $i++): $sv = $d['series'][$i] ?? []; ?><div class="row g-2 mb-1"><div class="col-md-3"><?= $sel("s[$i][fn]", $fnOpts, $sv['fn'] ?? '') ?></div><div class="col-md-5"><?= $sel("s[$i][field]", $fields, $sv['field'] ?? '') ?></div></div><?php endfor ?><div class="form-text"><?= h(t('builder.records_hint')) ?></div>
   <?php endif ?>
 </div><div class="card-footer d-flex gap-2"><button class="btn btn-primary"><i class="bi bi-check-lg"></i> <?= h(t('builder.save_show')) ?></button>
   <a class="btn btn-link" href="<?= h($app->url('builder')) ?>"><?= h(t('btn.cancel')) ?></a>

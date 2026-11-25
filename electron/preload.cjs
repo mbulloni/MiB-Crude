@@ -25,6 +25,7 @@ const channels = [
   'deploy:run', 'deploy:test', 'entra:account', 'entra:signOut', 'entra:openUrl',
   'git:status', 'git:log', 'git:diff', 'git:commit', 'git:pull', 'git:push', 'git:init', 'git:setRemote', 'git:resolve', 'git:clone',
   'team:connect', 'team:disconnect', 'team:lock', 'team:unlock', 'team:state', 'team:chat', 'team:checkout', 'team:publish',
+  'teamserver:status', 'teamserver:start', 'teamserver:stop', 'teamserver:discover', 'teamserver:addUser',
 ];
 
 const api = {};

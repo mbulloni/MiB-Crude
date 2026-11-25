@@ -22,6 +22,7 @@ const preview = require('./preview.cjs');
 const deploy = require('./deploy.cjs');
 const git = require('./git.cjs');
 const team = require('./team.cjs');
+const teamserver = require('./teamserver.cjs');
 const entra = require('./entra.cjs');
 const updates = require('./updates.cjs');
 
@@ -445,5 +446,14 @@ handle('team:checkout', async (url, user, token, projectName, dir) => {
 });
 handle('team:publish', async (url, user, token, projectName) => team.publish({ url, user, token, project: projectName, dir: need().dir }));
 
+// Team server run from the designer ("Avvia un server su questo computer"): a child process, stopped when the designer closes.
+const teamServerDir = () => path.join(app.getPath('userData'), 'team-server');
+const myName = () => readSettings().user || os.userInfo().username;
+handle('teamserver:status', () => ({ port: 7300, dir: teamServerDir(), user: myName(), ...teamserver.status() }));
+handle('teamserver:start', (o) => teamserver.start({ dir: teamServerDir(), port: o && o.port, lan: !o || o.lan !== false, user: myName() }));
+handle('teamserver:stop', () => teamserver.stop());
+handle('teamserver:discover', () => teamserver.discover());
+handle('teamserver:addUser', (name, role) => teamserver.addUser(teamserver.status().dir || teamServerDir(), name, role));
+
 if (!TEAM_SERVER) app.whenReady().then(createWindow);
-if (!TEAM_SERVER) app.on('window-all-closed', () => { preview.stopAll(); app.quit(); });
+if (!TEAM_SERVER) app.on('window-all-closed', () => { preview.stopAll(); teamserver.stop(); app.quit(); });
