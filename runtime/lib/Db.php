@@ -62,6 +62,7 @@ class Db
             case 'sqlite':
                 $file = $c['file'];
                 if ($file !== '' && $file[0] !== '/' && !preg_match('~^[A-Za-z]:~', $file)) $file = App::$i->root . '/' . $file;
+                if ($file !== '' && !is_dir(dirname($file))) @mkdir(dirname($file), 0775, true);
                 $dsn = "sqlite:$file";
                 $user = null;
                 $password = null;
